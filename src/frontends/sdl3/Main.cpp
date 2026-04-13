@@ -9,7 +9,6 @@
 #include "apple2/Video.h"
 #include "frontends/sdl3/Frame.h"
 #include "core/Log.h"
-#include <X11/Xlib.h>
 #include "core/Common_Globals.h"
 #include "core/Util_Text.h"
 #include "Debugger/Debug.h"

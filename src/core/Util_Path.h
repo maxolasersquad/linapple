@@ -6,7 +6,24 @@
 #include <unistd.h>
 #include <fstream>
 
+#include <sys/stat.h>
+
 namespace Path {
+
+// Ensure directory exists (creates it recursively if it doesn't)
+inline void EnsureDirExists(const std::string& path) {
+    size_t pos = 0;
+    do {
+        pos = path.find_first_of('/', pos + 1);
+        std::string subdir = path.substr(0, pos);
+        if (!subdir.empty() && subdir != "/") {
+            struct stat st;
+            if (stat(subdir.c_str(), &st) != 0) {
+                mkdir(subdir.c_str(), 0755);
+            }
+        }
+    } while (pos != std::string::npos);
+}
 
 // Returns the directory where the executable is located.
 auto GetExecutableDir() -> std::string;
@@ -27,7 +44,7 @@ inline auto GetUserConfigDir() -> std::string {
     return GetUserDataDir();
 }
 
-// Returns a list of directories to search for data assets (ROMs, disks).
+// Returns a list of directories to search for data assets (ROMs, disks, config).
 inline auto GetDataSearchPaths() -> std::vector<std::string> {
     std::vector<std::string> paths;
 
@@ -35,11 +52,16 @@ inline auto GetDataSearchPaths() -> std::vector<std::string> {
     paths.push_back(GetUserConfigDir());
     paths.push_back(GetExecutableDir());
 
+    // Relocatable system installation paths
+    paths.push_back(GetExecutableDir() + "../share/linapple/");
+    paths.push_back(GetExecutableDir() + "../etc/linapple/");
+
 #ifdef ASSET_DIR
     paths.push_back(ASSET_DIR "/");
 #endif
-    paths.emplace_back("/usr/local/share/linapple/");
-    paths.emplace_back("/usr/share/linapple/");
+#ifdef SYSCONF_DIR
+    paths.push_back(SYSCONF_DIR "/");
+#endif
 
     return paths;
 }

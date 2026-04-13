@@ -3,7 +3,7 @@
 #include "core/asset.h"
 #include "core/Util_Path.h"
 
-#include "../../../res/icon.xpm"
+#include "icon.xpm"
 
 auto Asset_LoadBMP(const char *filename) -> SDL_Surface * {
   std::string fullPath = Path::FindDataFile(filename);

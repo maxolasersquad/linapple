@@ -10,8 +10,8 @@
 #include "apple2/Disk.h"
 #include "apple2/Video.h"
 
-#include "../res/font.xpm"
-#include "../build/obj/splash.xpm"
+#include "font.xpm"
+#include "splash.xpm"
 
 #define ASSET_MASTER_DSK "Master.dsk"
 

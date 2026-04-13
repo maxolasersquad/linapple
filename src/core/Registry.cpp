@@ -98,7 +98,9 @@ void Configuration::LoadDefaults() {
 
 auto Configuration::Save() -> bool {
     if (m_path.empty()) {
-        m_path = Path::GetUserConfigDir() + "linapple.conf";
+        std::string configDir = Path::GetUserConfigDir();
+        Path::EnsureDirExists(configDir);
+        m_path = configDir + "linapple.conf";
     }
 
 #ifdef REGISTRY_WRITEABLE

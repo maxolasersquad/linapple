@@ -60,9 +60,15 @@ static void vLogOutput(LogLevel level, const char* format, va_list args) {
   }
 }
 
+#include "core/Util_Path.h"
+
 namespace Logger {
   void Initialize() {
-    g_fh = fopen("AppleWin.log", "a+t");
+    if (!g_fh) {
+        std::string dataDir = Path::GetUserDataDir();
+        Path::EnsureDirExists(dataDir);
+        g_fh = fopen((dataDir + "linapple.log").c_str(), "a+t");
+    }
     struct timeval tv{};
     struct tm *ptm = nullptr;
     char time_str[40];

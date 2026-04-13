@@ -2,139 +2,93 @@
 
 ### Prerequisites
 
+LinApple uses **CMake** as its build system.
+
 #### Debian / Ubuntu / RetroPie
 
 ```bash
-sudo apt-get install git libzip-dev libsdl3-dev libsdl3-image-dev libcurl4-openssl-dev zlib1g-dev imagemagick
+sudo apt-get update
+sudo apt-get install git g++ cmake libzip-dev libsdl3-dev libsdl3-image-dev libcurl4-openssl-dev zlib1g-dev imagemagick
 ```
 
 #### Fedora / RHEL / CentOS
 
 ```bash
-sudo dnf install git SDL3-devel SDL3_image-devel libcurl-devel libzip-devel ImageMagick
+sudo dnf install git gcc-c++ cmake SDL3-devel SDL3_image-devel libcurl-devel libzip-devel ImageMagick
+```
+
+#### Arch Linux
+
+```bash
+sudo pacman -Syu
+sudo pacman -S base-devel cmake imagemagick libzip sdl3 sdl3_image libcurl-gnutls zlib
 ```
 
 ### Clone
 
 ```bash
 git clone https://github.com/linappleii/linapple.git
-```
-
-### Compile
-
-```bash
 cd linapple
-make help    # View all available build options and targets
-make         # Build the application (default)
 ```
 
-To enable rewrite user settings:
+### Configure and Compile
+
 ```bash
-make REGISTRY_WRITEABLE=1
+# Create a build directory and configure with CMake
+cmake -B build -DFRONTEND=sdl3
+
+# Compile using all available CPU cores
+cmake --build build -j$(nproc)
 ```
 
-For a faster compilation, you can add an option "-jX", where "X" is the number of threads of your CPU. For example, *AMD Ryzen 5 2600* has 6 cores, but 12 threads:
-```bash
-make -j12
-```
+#### Build Options
+You can pass various options to the `cmake` configuration step:
+- `-DFRONTEND=headless` : Build the emulator without GUI or SDL dependencies (useful for automated testing or server environments).
+- `-DREGISTRY_WRITEABLE=ON` : Enable saving emulator configuration settings back to the config file.
+- `-DPROFILING=ON` : Enable `gprof` profiling output.
+- `-DCMAKE_BUILD_TYPE=Debug` : Build with debugging symbols instead of release optimizations.
 
-#### Troubleshooting
-If the build fails or you want to see the exact commands being executed, use the verbosity flag:
-```bash
-make V=1
-```
+### Run Locally
 
-Don't worry about spurious warning messages, which can look like errors; chances are that the program will build successfully even with these warnings.
-
-### Run
+After building, you can run the emulator directly from the build output directory:
 
 ```bash
-cd build/bin
+cd build
 ./linapple
 ```
 
-Or, to boot automatically into a standard Apple floppy disk provided by LinApple:
+Or, to boot automatically into the standard Apple floppy disk provided with LinApple:
 
 ```bash
-./linapple --autoboot --d1 ../share/linapple/Master.dsk
+./linapple --autoboot --d1 ../res/Master.dsk
 ```
 
-### Configuration file
+### Installation
 
-A configuration file can be found at `build/etc/linapple/linapple.conf`. It is highly recommended to read this file and edit it to your liking. File is self-explanatory.
-
-Once configured, you can load the configuration file and automatically boot to floppy:
+To install LinApple so it can be run from anywhere, use the `install` target.
 
 ```bash
-./linapple --conf ../etc/linapple/linapple.conf --autoboot --d1 ../share/linapple/Master.dsk
+cmake --install build
 ```
 
-### Global Install
+#### XDG Compliance (Linux)
+The build system uses standard `GNUInstallDirs` and automatically adapts to your privileges:
+- **Non-root install (Default):** If you run `cmake --install build` as a regular user without overriding the prefix, it will install to `~/.local/bin/`, `~/.local/share/linapple/`, and `~/.config/linapple/`. This is fully compliant with XDG Base Directory specifications and does not require `sudo`.
+- **System-wide install (Root):** If you run `sudo cmake --install build`, it will install system-wide to `/usr/local/bin/`, `/usr/local/share/linapple/`, and `/usr/local/etc/linapple/`.
 
-Optional step. Some contents of the recently created "build" folder will be installed on your system. The advantage of this step is that you will be capable to access LinApple from any directory, just typing "linapple", like any other program on the system.
-
-```shell
-make install
-```
-
-#### Custom Installation Path
-To install to a different location (e.g., your home directory), you can override the `prefix` variable:
+You can also explicitly define your installation prefix during configuration:
 ```bash
-make install prefix=$HOME/.local
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr
+sudo cmake --install build
 ```
 
-Now copy both configuration file `linapple.conf` and floppy disk `Master.dsk` to user's folder:
-
-```bash
-cp /usr/local/etc/linapple/linapple.conf ~/.config/linapple/
-cp /usr/local/share/linapple/Master.dsk ~/.linapple/disks/
-```
-
-> NOTE: by default they will be in `/usr/local`, otherwise copy them from the `build` folder just mentioned.
-
-
-In a global install, LinApple will load `~/.config/linapple/linapple.conf` automatically. You can set LinApple to load `Master.dsk` and boot it at startup in `linapple.conf`.
-
-To run LinApple after a global installation, type anywhere, in any folder you are in:
-
+After installation, simply run:
 ```bash
 linapple
 ```
 
-Take a look at [README.md](README.md) for more detailed information.
+### Configuration and Assets
 
-### Uninstall
+LinApple expects to find its configuration file (`linapple.conf`) in your configuration directory (e.g., `~/.config/linapple/linapple.conf`).
 
-To uninstall a global install:
-
-```bash
-make uninstall
-```
-
-### Creating a debian package
-
-To create a debian package installable with `dpkg`:
-
-```bash
-make
-make deb
-sudo dpkg -i linapple_VERSION_all.deb
-```
-
-Where "VERSION" is the LinApple version. See the created package and enter the correct name.
-
-### Debugging and Profiling
-
-By default, the `make` command will compile an optimized version of `linapple`.
-
-It is possible to compile a version with debugging symbols:
-
-```bash
-make DEBUG=1
-```
-
-If you would like to also include extra code that writes profile information suitable for the analysis program `gprof`:
-
-```bash
-make PROFILING=1
-```
+If the emulator cannot find a required asset (like `Master.dsk` or character fonts) in the current directory, it will automatically search the `share` and `config` directories established during installation.

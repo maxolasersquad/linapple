@@ -4,7 +4,7 @@
 TEST_DIR="/tmp/linapple_tests"
 BIN_URL_6502="https://raw.githubusercontent.com/linappleii/6502_65C02_functional_tests/master/bin_files/6502_functional_test.bin"
 SUCCESS_ADDR="0x3469"
-EMULATOR="build/bin/linapple"
+EMULATOR=${EMULATOR:-"build/bin/linapple"}
 
 mkdir -p "$TEST_DIR"
 

@@ -22,7 +22,7 @@
 #include "apple2/stretch.h"
 #include "core/asset.h"
 
-#include "../../build/obj/charset40.xpm" // US/default
+#include "charset40.xpm" // US/default
 
 #define DEBUG_FORCE_DISPLAY 0
 
@@ -52,6 +52,12 @@ extern void DisasmInit();
 extern Update_t _CmdSymbolsClear( SymbolTable_Index_e eSymbolTable );
 extern void FrameRefreshStatus(int);
 extern int _6502_GetOpmodeOpbyte ( const int nBaseAddress, int & iOpmode_, int & nOpbyte_, const DisasmData_t** pData_ = NULL );
+
+extern void DrawSubWindow_Symbols(Update_t bUpdate);
+extern void DrawSubWindow_ZeroPage(Update_t bUpdate);
+extern void DrawSubWindow_Source(Update_t bUpdate);
+
+void DrawSubWindow_IO(Update_t) {}
 
 const int DISPLAY_WIDTH = 560;
 const int DISPLAY_DISASM_RIGHT = 353;
@@ -436,6 +442,33 @@ int GetConsoleTopPixels( int y )
 	return g_aWindowConfig[ WINDOW_CONSOLE ].top + (y * CONSOLE_FONT_HEIGHT);
 }
 
+void ColorizeFlags( bool bSet, int bg_default, int fg_default)
+{
+    if (bSet)
+    {
+            DebuggerSetColorBG( DebuggerGetColor( BG_INFO_INVERSE ));
+            DebuggerSetColorFG( DebuggerGetColor( FG_INFO_INVERSE ));
+    }
+    else
+    {
+            DebuggerSetColorBG( DebuggerGetColor( bg_default ));
+            DebuggerSetColorFG( DebuggerGetColor( fg_default ));
+    }
+}
+
+void DrawSubWindow_Info(Update_t bUpdate, int iWindow)
+{
+	if (g_iWindowThis == WINDOW_CONSOLE)
+		return;
+
+    (void)bUpdate; (void)iWindow;
+	DrawRegisters( 0 );
+	DrawStack( 10 );
+	DrawMemory( 20, 0 );
+	DrawMemory( 30, 1 );
+    DrawSoftSwitches( 16 );
+}
+
 char ColorizeSpecialChar(char * sText, unsigned char nData, const MemoryView_e iView,
     const int iAsciBackground, const int iTextForeground,
     const int iHighBackground, const int iHighForeground,
@@ -530,22 +563,13 @@ void InitDisasm()
   g_aWindowConfig[WINDOW_CONSOLE].top = 300;
   g_nConsoleDisplayLines = (384 - 300) / 8;
   g_nDisasmWinHeight = 300 / 8;
+  g_nDisplayMemoryLines = 8;
 }
 
-void DrawSubWindow_Info(Update_t bUpdate, int iWindow)
+void DrawWindowBottom(Update_t bUpdate, int iWindow)
 {
-	if (g_iWindowThis == WINDOW_CONSOLE)
-		return;
-
     (void)bUpdate; (void)iWindow;
-	DrawRegisters( 0 );
-	DrawStack( 10 );
-	DrawMemory( 20, 0 );
-	DrawMemory( 30, 1 );
 }
-
-void DrawSubWindow_IO(Update_t bUpdate) { (void)bUpdate; }
-void DrawWindowBottom(Update_t bUpdate, int iWindow) { (void)bUpdate; (void)iWindow; }
 
 //===========================================================================
 void UpdateDisplay ( Update_t bUpdate )

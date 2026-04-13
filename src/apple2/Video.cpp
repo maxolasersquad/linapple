@@ -56,11 +56,11 @@ static uint32_t GetTickCount() {
 #include "apple2/Disk.h"
 #include "apple2/Harddisk.h"
 
-#include "../build/obj/charset40.xpm"
-#include "../build/obj/charset40_IIplus.xpm"
-#include "../build/obj/charset40_british.xpm"
-#include "../build/obj/charset40_french.xpm"
-#include "../build/obj/charset40_german.xpm"
+#include "charset40.xpm"
+#include "charset40_IIplus.xpm"
+#include "charset40_british.xpm"
+#include "charset40_french.xpm"
+#include "charset40_german.xpm"
 
 static uint32_t g_pVideoOutput[560 * 384];
 

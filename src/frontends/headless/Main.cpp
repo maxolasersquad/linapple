@@ -1,6 +1,8 @@
 #include "core/LinAppleCore.h"
 #include "core/Common.h"
 #include "core/Common_Globals.h"
+#include "core/Registry.h"
+#include "core/Util_Path.h"
 #include <cstdio>
 #include <iostream>
 #include <getopt.h>
@@ -19,6 +21,15 @@ void TitleCallback(const char* title) {
 }
 
 auto main(int argc, char* argv[]) -> int {
+    std::string configPath = Path::FindDataFile("linapple.conf");
+    if (!configPath.empty()) {
+        Configuration::Instance().Load(configPath);
+    } else {
+        std::string fallbackPath = Path::GetUserConfigDir();
+        Path::EnsureDirExists(fallbackPath);
+        Configuration::Instance().Load(fallbackPath + "linapple.conf");
+    }
+
     static struct option long_options[] = {
         {"test-cpu", required_argument, nullptr, 't'},
         {"test-6502", no_argument, nullptr, '1'},

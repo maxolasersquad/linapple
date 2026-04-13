@@ -39,10 +39,7 @@ void SingleStep(bool bReinit) {
 }
 
 auto SysInit(bool bLog) -> int {
-  if (bLog) {
-    std::string logPath = Path::GetUserDataDir() + "/linapple.log";
-    g_fh = fopen(logPath.c_str(), "w");
-  }
+  (void)bLog; // Logging is always enabled to XDG data dir
 
   Logger::Initialize();
 
@@ -89,8 +86,15 @@ auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
   if (szConfigurationFile) {
     Configuration::Instance().Load(szConfigurationFile);
   } else {
-    std::string configPath = Path::GetUserDataDir() + "/linapple.conf";
-    Configuration::Instance().Load(configPath);
+    std::string configPath = Path::FindDataFile("linapple.conf");
+    if (!configPath.empty()) {
+        Configuration::Instance().Load(configPath);
+    } else {
+        // Fallback if not found anywhere, config will save here later
+        std::string fallbackPath = Path::GetUserConfigDir();
+        Path::EnsureDirExists(fallbackPath);
+        Configuration::Instance().Load(fallbackPath + "linapple.conf");
+    }
   }
 
   Linapple_SetTitleCallback(Frontend_SetWindowTitle);
