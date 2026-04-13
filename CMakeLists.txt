@@ -98,6 +98,8 @@ set(SOURCES_CORE
     src/core/Log.cpp
     src/core/Registry.cpp
     src/core/asset.cpp
+    src/core/Peripheral.cpp
+    src/core/Peripheral_Internal.cpp
 )
 
 set(SOURCES_A2
@@ -253,6 +255,13 @@ add_executable(test-keyboard tests/full_keyboard_test.cpp src/core/Common.cpp sr
 target_include_directories(test-keyboard PRIVATE src src/core ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
 target_link_libraries(test-keyboard PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
 add_test(NAME test-keyboard COMMAND test-keyboard)
+
+# Test ABI
+add_executable(test-abi tests/test_abi.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
+add_dependencies(test-abi generate_xpms)
+target_include_directories(test-abi PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
+target_link_libraries(test-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+add_test(NAME test-abi COMMAND test-abi)
 
 # CPU tests (using the built linapple binary)
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")

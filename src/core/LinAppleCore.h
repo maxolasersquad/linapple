@@ -41,6 +41,36 @@ void Linapple_CpuTest(const char* szTestFile);
 auto Linapple_GetTicks() -> uint32_t;
 
 
+#include "Peripheral.h"
+
+// --- Peripheral Management ---
+
+/**
+ * @brief Initialize the peripheral manager.
+ */
+void Peripheral_Manager_Init();
+
+/**
+ * @brief Reset all registered peripherals.
+ */
+void Peripheral_Manager_Reset();
+
+/**
+ * @brief Shutdown all registered peripherals.
+ */
+void Peripheral_Manager_Shutdown();
+
+/**
+ * @brief Process one frame of thinking for all peripherals.
+ */
+void Peripheral_Manager_Think(uint32_t cycles);
+
+/**
+ * @brief Register a peripheral in a specific slot.
+ */
+int Peripheral_Register(Peripheral_t* api, int slot);
+
+
 // --- Execution Control ---
 
 /**
