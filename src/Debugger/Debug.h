@@ -186,7 +186,7 @@ const char* FormatAddress(unsigned short nAddress, int nBytes);
 bool FindAddressFromSymbol(const char* pSymbol, unsigned short *pAddress_ = NULL, int *iTable_ = NULL);
 
 unsigned short GetAddressFromSymbol(const char* symbol); // HACK: returns 0 if symbol not found
-void SymbolUpdate(SymbolTable_Index_e eSymbolTable, char *pSymbolName, unsigned short nAddrss, bool bRemoveSymbol, bool bUpdateSymbol);
+void SymbolUpdate(SymbolTable_Index_e eSymbolTable, const char *pSymbolName, unsigned short nAddrss, bool bRemoveSymbol, bool bUpdateSymbol);
 
 const char* FindSymbolFromAddress(unsigned short nAdress, int *iTable_ = NULL);
 

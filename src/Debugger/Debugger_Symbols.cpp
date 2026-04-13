@@ -44,7 +44,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 // Symbols ________________________________________________________________________________________
 
-	char*     g_sFileNameSymbols[ NUM_SYMBOL_TABLES ] = {
+	const char*     g_sFileNameSymbols[ NUM_SYMBOL_TABLES ] = {
 		 "APPLE2E.SYM"
 		,"A2_BASIC.SYM"
 		,"A2_ASM.SYM"
@@ -825,7 +825,7 @@ Update_t _CmdSymbolsClear( SymbolTable_Index_e eSymbolTable )
 
 
 //===========================================================================
-void SymbolUpdate( SymbolTable_Index_e eSymbolTable, char *pSymbolName, unsigned short nAddress, bool bRemoveSymbol, bool bUpdateSymbol )
+void SymbolUpdate( SymbolTable_Index_e eSymbolTable, const char *pSymbolName, unsigned short nAddress, bool bRemoveSymbol, bool bUpdateSymbol )
 {
 	if (bRemoveSymbol)
 		pSymbolName = g_aArgs[2].sArg;

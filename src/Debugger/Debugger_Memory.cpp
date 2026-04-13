@@ -570,7 +570,7 @@ Update_t CmdMemoryLoad (int nArgs)
 
   struct KnownFileType_t
   {
-    char *pExtension;
+    const char *pExtension;
     int   nAddress;
     int   nLength;
   };

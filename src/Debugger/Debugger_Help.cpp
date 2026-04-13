@@ -411,7 +411,7 @@ void _ColorizeString(
 // pOperator is one of CHC_*
 void _ColorizeOperator(
 	char * & pDst, const char * & pSrc,
-	char * pOperator )
+	const char * pOperator )
 {
 	int nLen;
 
@@ -902,7 +902,7 @@ Update_t CmdHelpSpecific (int nArgs)
 
 		if (pCommand)
 		{
-			char *pHelp = pCommand->pHelpSummary;
+			const char *pHelp = pCommand->pHelpSummary;
 			if (pHelp)
 			{
 				if (bCategory)

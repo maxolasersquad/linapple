@@ -1,5 +1,4 @@
 #include "core/Common.h"
-#include <SDL3/SDL.h>
 #include "core/Registry.h"
 #include "core/Util_Path.h"
 #include <fstream>

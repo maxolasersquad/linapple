@@ -291,7 +291,7 @@ void _DrawSoftSwitchAddress(RECT & rect, int nAddress, int bg_default = BG_INFO)
   PrintTextCursorX(":", rect);
 }
 
-void _DrawSoftSwitch(RECT & rect, int nAddress, bool bSet, char *sPrefix, char *sOn, char *sOff, const char *sSuffix = NULL, int bg_default = BG_INFO)
+void _DrawSoftSwitch(RECT & rect, int nAddress, bool bSet, const char *sPrefix, const char *sOn, const char *sOff, const char *sSuffix = NULL, int bg_default = BG_INFO)
 {
   RECT temp = rect;
 

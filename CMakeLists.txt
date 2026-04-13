@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 project(linapple VERSION 3.0.0)
+
+if(POLICY CMP0074)
+  cmake_policy(SET CMP0074 NEW)
+endif()
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -251,10 +255,12 @@ target_link_libraries(test-ssc PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIB
 add_test(NAME test-ssc COMMAND test-ssc)
 
 # Test Keyboard
-add_executable(test-keyboard tests/full_keyboard_test.cpp src/core/Common.cpp src/core/Log.cpp)
-target_include_directories(test-keyboard PRIVATE src src/core ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
-target_link_libraries(test-keyboard PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
-add_test(NAME test-keyboard COMMAND test-keyboard)
+if(FRONTEND STREQUAL "sdl3")
+    add_executable(test-keyboard tests/full_keyboard_test.cpp src/core/Common.cpp src/core/Log.cpp)
+    target_include_directories(test-keyboard PRIVATE src src/core ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+    target_link_libraries(test-keyboard PRIVATE SDL3::SDL3 ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+    add_test(NAME test-keyboard COMMAND test-keyboard)
+endif()
 
 # Test ABI
 add_executable(test-abi tests/test_abi.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
