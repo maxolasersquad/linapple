@@ -3,26 +3,25 @@
 #include <cstdint>
 #include "frontends/sdl3/PrinterFrontend.h"
 #include "core/Common_Globals.h"
-#include "apple2/ParallelPrinter.h"
 
 static unsigned int inactivity = 0;
 static unsigned int g_PrinterIdleLimit = 10;
 static FILE *file = NULL;
 bool g_bPrinterAppend = true;
 
-static bool CheckPrint()
+static auto CheckPrint() -> bool
 {
   inactivity = 0;
-  if (file == NULL) {
+  if (file == nullptr) {
     file = fopen(g_state.sParallelPrinterFile, (g_bPrinterAppend) ? "ab" : "wb");
   }
-  return (file != NULL);
+  return (file != nullptr);
 }
 
 static void ClosePrint() {
-  if (file != NULL) {
+  if (file != nullptr) {
     fclose(file);
-    file = NULL;
+    file = nullptr;
   }
   inactivity = 0;
 }
@@ -40,7 +39,7 @@ void PrinterFrontend_Reset() {
 }
 
 void PrinterFrontend_Update(unsigned int totalcycles) {
-  if (file == NULL) {
+  if (file == nullptr) {
     return;
   }
   if ((inactivity += totalcycles) > (Printer_GetIdleLimit() * 1000 * 1000))
@@ -62,12 +61,10 @@ void PrinterFrontend_CheckStatus() {
   CheckPrint();
 }
 
-unsigned int Printer_GetIdleLimit()
-{
+auto Printer_GetIdleLimit() -> unsigned int {
   return g_PrinterIdleLimit;
 }
 
-void Printer_SetIdleLimit(unsigned int Duration)
-{
+void Printer_SetIdleLimit(unsigned int Duration) {
   g_PrinterIdleLimit = Duration;
 }

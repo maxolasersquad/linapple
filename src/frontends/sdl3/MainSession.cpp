@@ -3,14 +3,11 @@
 #include <SDL3/SDL.h>
 #include <curl/curl.h>
 #include <cstdio>
-#include <cstdlib>
 #include <cinttypes>
 #include <string>
-#include <vector>
 
 #include "core/Common.h"
 #include "core/Common_Globals.h"
-#include "Debugger/Debug.h"
 #include "frontends/sdl3/Frame.h"
 #include "core/Log.h"
 #include "core/Registry.h"
@@ -19,7 +16,6 @@
 #include "apple2/Video.h"
 #include "apple2/Disk.h"
 #include "apple2/SaveState.h"
-#include "core/asset.h"
 #include "core/LinAppleCore.h"
 #include "core/Util_Path.h"
 
@@ -29,7 +25,7 @@ using Logger::Info;
 static bool g_bBudgetVideo = false;
 
 void SetBudgetVideo(bool b) { g_bBudgetVideo = b; }
-bool GetBudgetVideo() { return g_bBudgetVideo; }
+auto GetBudgetVideo() -> bool { return g_bBudgetVideo; }
 
 void SetCurrentCLK6502() {
   g_fCurrentCLK6502 = 1.023 * 1000000.0;
@@ -42,7 +38,7 @@ void SingleStep(bool bReinit) {
   Linapple_RunFrame(1);
 }
 
-int SysInit(bool bLog) {
+auto SysInit(bool bLog) -> int {
   if (bLog) {
     std::string logPath = Path::GetUserDataDir() + "/linapple.log";
     g_fh = fopen(logPath.c_str(), "w");
@@ -87,9 +83,9 @@ static void Frontend_SetWindowTitle(const char* title) {
   }
 }
 
-int SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
+auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
                 const char* szImageName_drive1, const char* szImageName_drive2,
-                const char* szSnapshotFile, bool bBoot, bool bPAL) {
+                const char* szSnapshotFile, bool bBoot, bool bPAL) -> int {
   if (szConfigurationFile) {
     Configuration::Instance().Load(szConfigurationFile);
   } else {

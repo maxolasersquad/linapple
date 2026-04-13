@@ -4,6 +4,6 @@
 #include <SDL3/SDL.h>
 #include "apple2/Video.h"
 
-VideoSurface SDLSurfaceToVideoSurface(SDL_Surface* s);
+auto SDLSurfaceToVideoSurface(SDL_Surface* s) -> VideoSurface;
 
 #endif

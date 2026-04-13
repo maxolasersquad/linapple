@@ -23,7 +23,7 @@ enum SscStopBits {
   SSC_STOP_BITS_2 = 2
 };
 
-typedef struct {
+typedef struct SSC_DIPSW_tag {
   //DIPSW1
   unsigned int uBaudRate;
   FirmwareMode eFirmwareMode;
@@ -79,20 +79,21 @@ void SSC_Initialize(SuperSerialCard* pSSC, uint8_t* pCxRomPeripheral, unsigned i
 void SSC_Destroy(SuperSerialCard* pSSC);
 
 // Snapshot
-unsigned int SSC_GetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS);
-unsigned int SSC_SetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS);
+auto SSC_GetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> unsigned int;
+auto SSC_SetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> unsigned int;
 
 // IO Handlers
-unsigned char SSC_IORead(unsigned short PC, unsigned short uAddr, unsigned char bWrite, unsigned char uValue, uint32_t nCyclesLeft);
-unsigned char SSC_IOWrite(unsigned short PC, unsigned short uAddr, unsigned char bWrite, unsigned char uValue, uint32_t nCyclesLeft);
+auto SSC_IORead(unsigned short PC, unsigned short uAddr, unsigned char bWrite, unsigned char uValue, uint32_t nCyclesLeft) -> unsigned char;
+auto SSC_IOWrite(unsigned short PC, unsigned short uAddr, unsigned char bWrite, unsigned char uValue, uint32_t nCyclesLeft) -> unsigned char;
 
 // Interface for Frontend to Core
 void SSC_PushRxByte(SuperSerialCard* pSSC, uint8_t byte);
 
 // Interface for Core to call Frontend (implemented in Frontend)
 extern void SSCFrontend_SendByte(uint8_t byte);
-extern bool SSCFrontend_IsActive();
-extern void SSCFrontend_UpdateState(unsigned int baud, unsigned int bits, SscParity parity, SscStopBits stop);
+extern auto SSCFrontend_IsActive() -> bool;
+extern void SSCFrontend_UpdateState(unsigned int baud, unsigned int bits,
+                                           SscParity parity, SscStopBits stop);
 
 // Global instance (to be moved/handled)
 extern struct SuperSerialCard sg_SSC;

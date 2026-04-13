@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <string>
-#include <algorithm>
 
 #pragma once
 
@@ -62,7 +61,15 @@ enum AppMode_e {
 
 constexpr int MAX_PATH = 260;
 
-typedef struct SystemState_tag {
+#define SCREEN_WIDTH  560
+#define SCREEN_HEIGHT  384
+
+#define  VIEWPORTX   5
+#define  VIEWPORTY   5
+#define  VIEWPORTCX  560
+#define  VIEWPORTCY  384
+
+using SystemState_t = struct SystemState_tag {
   AppMode_e mode;
   bool restart;
   bool fullscreen;
@@ -83,7 +90,7 @@ typedef struct SystemState_tag {
   char sDebuggerScript[MAX_PATH];
   bool bVideoScannerNTSC;
   unsigned int dwClksPerFrame;
-} SystemState_t;
+};
 
 extern SystemState_t g_state;
 
@@ -176,24 +183,24 @@ constexpr const char* REGVALUE_FTP_LOCAL_DIR = "FTP Local Dir";
 constexpr const char* REGVALUE_FTP_USERPASS = "FTP UserPass";
 
 // Win32 compatibility types
-typedef void* HANDLE;
-typedef uint32_t COLORREF;
+using HANDLE = void*;
+using COLORREF = uint32_t;
 
-typedef struct tagPOINT {
+using POINT = struct tagPOINT {
   int32_t x;
   int32_t y;
-} POINT;
+};
 
-typedef struct tagRECT {
+using RECT = struct tagRECT {
   int32_t left;
   int32_t top;
   int32_t right;
   int32_t bottom;
-} RECT;
+};
 
-static inline bool IsCharLower(char ch) { return (ch >= 'a' && ch <= 'z'); }
+static inline auto IsCharLower(char ch) -> bool { return (ch >= 'a' && ch <= 'z'); }
 
-static inline bool IsCharUpper(char ch) { return (ch >= 'A' && ch <= 'Z'); }
+static inline auto IsCharUpper(char ch) -> bool { return (ch >= 'A' && ch <= 'Z'); }
 
 enum eSOUNDCARDTYPE {
   SC_UNINIT = 0,
@@ -202,7 +209,7 @@ enum eSOUNDCARDTYPE {
   SC_PHASOR
 };  // Apple soundcard type
 
-typedef unsigned char (*iofunction)(unsigned short nPC, unsigned short nAddr,
+using iofunction = unsigned char (*)(unsigned short nPC, unsigned short nAddr,
                                     unsigned char nWriteFlag,
                                     unsigned char nWriteValue,
                                     uint32_t nCyclesLeft);

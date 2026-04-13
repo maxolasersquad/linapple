@@ -19,7 +19,6 @@
 #include "Debugger_Assembler.h"
 #include "apple2/Mockingboard.h"
 #include "Video.h"
-#include "SDL3/SDL.h"
 
 // Externs for globals
 extern int g_iWindowThis;
@@ -254,6 +253,7 @@ void DrawRegister(int line, const char* name, const int nBytes, const unsigned s
 void DrawRegisters(int line)
 {
   const char **sReg = g_aBreakpointSource;
+  printf("DrawRegisters: line=%d start\n", line);
 
   DrawRegister(line++, sReg[BP_SRC_REG_A], 1, regs.a, PARAM_REG_A);
   DrawRegister(line++, sReg[BP_SRC_REG_X], 1, regs.x, PARAM_REG_X);
@@ -262,6 +262,7 @@ void DrawRegisters(int line)
   DrawFlags(line, regs.ps, NULL);
   line += 2;
   DrawRegister(line++, sReg[BP_SRC_REG_S], 2, regs.sp, PARAM_REG_SP);
+  printf("DrawRegisters: end\n");
 }
 
 void _DrawSoftSwitchHighlight(RECT & temp, bool bSet, const char *sOn, const char *sOff, int bg = BG_INFO)

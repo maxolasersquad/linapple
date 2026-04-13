@@ -3,18 +3,18 @@
 
 #include "apple2/Video.h"
 
-typedef struct assets_tag {
+using assets_t = struct assets_tag {
   void         *icon; // Platform-specific icon handle
   VideoSurface *font;
   VideoSurface *splash;
-} assets_t;
+};
 
 extern assets_t *assets;
 
-bool Asset_Init(void);
+auto Asset_Init() -> bool;
 
-void Asset_Quit(void);
+void Asset_Quit();
 
-int Asset_InsertMasterDisk(void);
+auto Asset_InsertMasterDisk() -> int;
 
 #endif

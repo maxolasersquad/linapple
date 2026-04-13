@@ -26,8 +26,8 @@
 		CONSOLE_FONT_HEIGHT = 8,
 	};
 
-	extern int g_hConsoleBrushFG;
-	extern int g_hConsoleBrushBG;
+	extern uint32_t g_hConsoleBrushFG;
+	extern uint32_t g_hConsoleBrushBG;
 
 	enum
 	{

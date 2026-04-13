@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 /* Description: MC6821 PIA Emulation */
 
-#include "core/Common.h"
 #include "apple2/6821.h"
 #include <cstring>
 #include <cstdint>
@@ -76,7 +75,7 @@ void Pia6821_Reset(Pia6821* p) {
   p->port_b_in = 0xFF;
 }
 
-uint8_t Pia6821_Read(Pia6821* p, uint8_t addr) {
+auto Pia6821_Read(Pia6821* p, uint8_t addr) -> uint8_t {
   uint8_t val = 0;
   addr &= 0x03;
 
@@ -194,8 +193,12 @@ void Pia6821_Write(Pia6821* p, uint8_t addr, uint8_t val) {
   }
 }
 
-void Pia6821_SetPortA(Pia6821* p, uint8_t val) { p->port_a_in = val; }
-void Pia6821_SetPortB(Pia6821* p, uint8_t val) { p->port_b_in = val; }
+void Pia6821_SetPortA(Pia6821* p, uint8_t val) {
+  p->port_a_in = val;
+}
+void Pia6821_SetPortB(Pia6821* p, uint8_t val) {
+  p->port_b_in = val;
+}
 
 void Pia6821_SetCA1(Pia6821* p, bool level) {
   bool old = p->ca1_in;
@@ -275,10 +278,10 @@ void Pia6821_SetCB2(Pia6821* p, bool level) {
   }
 }
 
-uint8_t Pia6821_GetPortA(Pia6821* p) {
+auto Pia6821_GetPortA(Pia6821* p) -> uint8_t {
   return p->ora & p->ddra;
 }
-uint8_t Pia6821_GetPortB(Pia6821* p) {
+auto Pia6821_GetPortB(Pia6821* p) -> uint8_t {
   return p->orb & p->ddrb;
 }
 

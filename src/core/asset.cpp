@@ -1,7 +1,3 @@
-/*
-	asset.cpp - LinApple asset management (Core)
-*/
-
 #include "core/Common.h"
 #include <cstdio>
 #include <cstring>
@@ -17,25 +13,25 @@
 #include "../res/font.xpm"
 #include "../build/obj/splash.xpm"
 
-#define ASSET_MASTER_DSK     "Master.dsk"
+#define ASSET_MASTER_DSK "Master.dsk"
 
 assets_t *assets = nullptr;
 
 auto Asset_Init() -> bool {
   assets = static_cast<assets_t *>(calloc(1, sizeof(assets_t)));
-  if (NULL == assets) {
+  if (nullptr == assets) {
     return false;
   }
 
   // Icon is loaded by the frontend and assigned to assets->icon
 
   assets->font = VideoLoadXPM(font_xpm);
-  if (NULL == assets->font) {
+  if (nullptr == assets->font) {
     return false;
   }
 
   assets->splash = VideoLoadXPM(splash_xpm);
-  return NULL != assets->splash;
+  return nullptr != assets->splash;
 }
 
 void Asset_Quit() {

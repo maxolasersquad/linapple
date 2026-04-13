@@ -12,7 +12,6 @@
 #include "Debugger_Console.h"
 #include "Debugger_Parser.h"
 #include "apple2/CPU.h"
-#include "frontends/sdl3/Frame.h"
 #include "apple2/Memory.h"
 
 #define DEBUG_ASSEMBLER 0
@@ -24,10 +23,10 @@
 
 	AddressingMode_t g_aOpmodes[ NUM_ADDRESSING_MODES ] =
 	{ // Output, but eventually used for Input when Assembler is working.
-		{"", 1, "(implied)"}, // (implied)
-        {"", 1, "n/a 1"}, // INVALID1
-        {"", 2, "n/a 2"}, // INVALID2
-        {"", 3, "n/a 3"}, // INVALID3
+		{"", 1, "(implied)"}, // AM_IMPLIED
+        {"", 1, "n/a 1"}, // AM_1
+        {"", 2, "n/a 2"}, // AM_2
+        {"", 3, "n/a 3"}, // AM_3
 		{"%02X", 2, "Immediate"}, // AM_M // #$%02X -> %02X
         {"%04X", 3, "Absolute"}, // AM_A
         {"%02X", 2, "Zero Page"}, // AM_Z
@@ -36,11 +35,12 @@
         {"%02X,X", 2, "Zero Page,X"}, // AM_ZX     // %s,X
         {"%02X,Y", 2, "Zero Page,Y"}, // AM_ZY     // %s,Y
         {"%s", 2, "Relative"}, // AM_R
-        {"(%02X,X", 2, "(Zero Page),X"}, // AM_IZX // ($%02X,X) -> %s,X
-        {"(%04X,X", 3, "(Absolute),X"}, // AM_IAX // ($%04X,X) -> %s,X
+        {"(%02X,X", 2, "(Zero Page,X)"}, // AM_IZX // ($%02X,X) -> %s,X
+        {"(%04X,X", 3, "(Absolute,X)"}, // AM_IAX // ($%04X,X) -> %s,X
         {"(%02X,Y", 2, "(Zero Page),Y"}, // AM_NZY // ($%02X),Y
         {"(%02X", 2, "(Zero Page)"}, // AM_NZ  // ($%02X) -> $%02X
-        {"(%04X", 3, "(Absolute)"}  // AM_NA  // (%04X) -> %s
+        {"(%04X", 3, "(Absolute)"},  // AM_NA  // (%04X) -> %s
+        {"", 1, "Data"} // AM_DATA
 	};
 
 
@@ -460,9 +460,23 @@ int  _6502_GetOpmodeOpbyte ( const int nBaseAddress, int & iOpmode_, int & nOpby
 	}
 #endif
 
+    if (!g_aOpcodes) {
+        iOpmode_ = 0; nOpbyte_ = 1; return 0;
+    }
+
+    if (!mem) {
+        iOpmode_ = 0; nOpbyte_ = 1; return 0;
+    }
+
 	int iOpcode_ = *(mem + nBaseAddress);
-		iOpmode_ = g_aOpcodes[ iOpcode_ ].nAddressMode;
-		nOpbyte_ = g_aOpmodes[ iOpmode_ ].m_nBytes;
+    if (iOpcode_ >= NUM_OPCODES) {
+        iOpmode_ = 0; nOpbyte_ = 1; return 0;
+    }
+    iOpmode_ = g_aOpcodes[ iOpcode_ ].nAddressMode;
+    if (iOpmode_ >= NUM_ADDRESSING_MODES) {
+        iOpmode_ = 0; nOpbyte_ = 1; return 0;
+    }
+    nOpbyte_ = g_aOpmodes[ iOpmode_ ].m_nBytes;
 
 	// 2.6.2.25 Fixed: DB DW custom data byte sizes weren't scrolling properly in the disasm view.
     //          Changed _6502_GetOpmodeOpbyte() to be aware of data bytes.
@@ -1045,7 +1059,6 @@ void AssemblerHashDirectives ()
 #include "Debugger_Parser.h"
 #include "Debugger_Symbols.h"
 #include "Debugger_Console.h"
-#include "SDL3/SDL.h"
 #include "string.h"
 #include <string.h>
 #include <string.h>
@@ -1285,6 +1298,7 @@ bool ParseAssemblyListing( bool bBytesToMemory, bool bAddSymbols )
 void AssemblerStartup ()
 
 {
+    g_aOpcodes = &g_aOpcodes65C02[0];
 	AssemblerHashOpcodes();
 	AssemblerHashDirectives();
 }

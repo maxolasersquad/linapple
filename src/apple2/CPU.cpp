@@ -52,22 +52,14 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cassert>
 #include <pthread.h>
 #include <cstdint>
-#include <cstring>
-#include <cstdio>
 
 #include "apple2/CPU.h"
 #include "apple2/Structs.h"
 #include "apple2/Memory.h"
 #include "apple2/Video.h"
-#include "apple2/Speaker.h"
-#include "apple2/Joystick.h"
-#include "apple2/ParallelPrinter.h"
-#include "apple2/SerialComms.h"
 #include "apple2/Mockingboard.h"
 #include "apple2/MouseInterface.h"
-#include "core/Log.h"
 #include "core/Common_Globals.h"
-#include "Debugger/Debug.h"
 
 #define   AF_SIGN       0x80
 #define   AF_OVERFLOW   0x40
@@ -131,7 +123,7 @@ static volatile bool g_bNmiFlank = false; // Positive going flank on NMI line
 #define PUSH(a)   *(mem+regs.sp--) = (a);            \
      if (regs.sp < 0x100)              \
        regs.sp = 0x1FF;
-extern unsigned char IOMap_Dispatch(unsigned short pc, unsigned short addr, unsigned char write, unsigned char d, uint32_t cycles);
+extern auto IOMap_Dispatch(unsigned short pc, unsigned short addr, unsigned char write, unsigned char d, uint32_t cycles) -> unsigned char;
 
 #define READ   (                  \
         ((addr & 0xF000) == 0xC000)            \
@@ -458,7 +450,7 @@ extern unsigned char IOMap_Dispatch(unsigned short pc, unsigned short addr, unsi
      flagn = 0;                \
      regs.a >>= 1;                \
      SETZ(regs.a)
-#define NOP   
+#define NOP
 #define OAL   regs.a |= 0xEE;              \
      regs.a &= READ;              \
      regs.x = regs.a;              \
@@ -3502,16 +3494,14 @@ uint32_t CpuGetCyclesThisFrame(uint32_t)  // Old func using g_uInternalExecutedC
 }
 #else
 
-uint32_t CpuGetCyclesThisFrame(uint32_t nExecutedCycles)
-{
+auto CpuGetCyclesThisFrame(uint32_t nExecutedCycles) -> uint32_t {
   CpuCalcCycles(nExecutedCycles);
   return g_dwCyclesThisFrame + g_nCyclesExecuted;
 }
 
 #endif
 
-uint32_t CpuExecute(uint32_t uCycles)
-{
+auto CpuExecute(uint32_t uCycles) -> uint32_t {
   uint32_t uExecutedCycles = 0;
 
   g_nCyclesSubmitted = uCycles;
@@ -3535,8 +3525,7 @@ uint32_t CpuExecute(uint32_t uCycles)
   return uExecutedCycles;
 }
 
-void CpuInitialize()
-{
+void CpuInitialize() {
   CpuDestroy();
   regs.a = regs.x = regs.y = regs.ps = 0xFF;
   regs.sp = 0x01FF;
@@ -3547,8 +3536,7 @@ void CpuInitialize()
   CpuNmiReset();
 }
 
-void CpuSetupBenchmark()
-{
+void CpuSetupBenchmark() {
   regs.a = 0;
   regs.x = 0;
   regs.y = 0;
@@ -3579,8 +3567,7 @@ void CpuSetupBenchmark()
   }
 }
 
-void CpuIrqReset()
-{
+void CpuIrqReset() {
   assert(g_bCritSectionValid);
   if (g_bCritSectionValid) {
     pthread_mutex_lock(&g_CriticalSection);
@@ -3591,8 +3578,7 @@ void CpuIrqReset()
   }
 }
 
-void CpuIrqAssert(eIRQSRC Device)
-{
+void CpuIrqAssert(eIRQSRC Device) {
   assert(g_bCritSectionValid);
   if (g_bCritSectionValid) {
     pthread_mutex_lock(&g_CriticalSection);
@@ -3603,8 +3589,7 @@ void CpuIrqAssert(eIRQSRC Device)
   }
 }
 
-void CpuIrqDeassert(eIRQSRC Device)
-{
+void CpuIrqDeassert(eIRQSRC Device) {
   assert(g_bCritSectionValid);
   if (g_bCritSectionValid) {
     pthread_mutex_lock(&g_CriticalSection);
@@ -3615,8 +3600,7 @@ void CpuIrqDeassert(eIRQSRC Device)
   }
 }
 
-void CpuNmiReset()
-{
+void CpuNmiReset() {
   assert(g_bCritSectionValid);
   if (g_bCritSectionValid) {
     pthread_mutex_lock(&g_CriticalSection);
@@ -3628,8 +3612,7 @@ void CpuNmiReset()
   }
 }
 
-void CpuNmiAssert(eIRQSRC Device)
-{
+void CpuNmiAssert(eIRQSRC Device) {
   assert(g_bCritSectionValid);
   if (g_bCritSectionValid) {
     pthread_mutex_lock(&g_CriticalSection);
@@ -3643,8 +3626,7 @@ void CpuNmiAssert(eIRQSRC Device)
   }
 }
 
-void CpuNmiDeassert(eIRQSRC Device)
-{
+void CpuNmiDeassert(eIRQSRC Device) {
   assert(g_bCritSectionValid);
   if (g_bCritSectionValid) {
     pthread_mutex_lock(&g_CriticalSection);
@@ -3655,36 +3637,33 @@ void CpuNmiDeassert(eIRQSRC Device)
   }
 }
 
-void CpuReset()
-{
+void CpuReset() {
   // 7 cycles
   regs.ps = (regs.ps | AF_INTERRUPT) & ~AF_DECIMAL;
-  regs.pc = *(uint16_t * )(mem + 0xFFFC);
+  regs.pc = *reinterpret_cast<uint16_t *>(mem + 0xFFFC);
   regs.sp = 0x0100 | ((regs.sp - 3) & 0xFF);
 
   regs.bJammed = 0;
 }
 
-uint32_t CpuGetSnapshot(SS_CPU6502 *pSS)
-{
+auto CpuGetSnapshot(SS_CPU6502 *pSS) -> uint32_t {
   pSS->A = regs.a;
   pSS->X = regs.x;
   pSS->Y = regs.y;
   pSS->P = regs.ps | AF_RESERVED | AF_BREAK;
-  pSS->S = (uint8_t)(regs.sp & 0xff);
+  pSS->S = static_cast<uint8_t>(regs.sp & 0xff);
   pSS->PC = regs.pc;
   pSS->g_nCumulativeCycles = g_nCumulativeCycles;
 
   return 0;
 }
 
-uint32_t CpuSetSnapshot(SS_CPU6502 *pSS)
-{
+auto CpuSetSnapshot(SS_CPU6502 *pSS) -> uint32_t {
   regs.a = pSS->A;
   regs.x = pSS->X;
   regs.y = pSS->Y;
   regs.ps = pSS->P | AF_RESERVED | AF_BREAK;
-  regs.sp = (uint16_t) pSS->S | 0x100;
+  regs.sp = static_cast<uint16_t>(pSS->S) | 0x100;
   regs.pc = pSS->PC;
   CpuIrqReset();
   CpuNmiReset();

@@ -1,3 +1,4 @@
+#include "apple2/Video.h"
 #include "core/Common.h"
 #include "Debugger_Commands.h"
 #include "Debug.h"

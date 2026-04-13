@@ -22,62 +22,63 @@ along with AppleWin; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "core/Common.h"
-#include <sys/stat.h>
-#include <unistd.h>
-#include <cstdio>
-#include <cstring>
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
+#include <cstdio>
+#include <cstring>
+
+#include "core/Common.h"
 #include "frontends/sdl3/Frame.h"
 #include "frontends/sdl3/SDL_Video.h"
 auto SDLSurfaceToVideoSurface(SDL_Surface* s) -> VideoSurface;
+#include "Debugger/Debug.h"
+#include "apple2/CPU.h"
+#include "apple2/Disk.h"
+#include "apple2/Harddisk.h"
+#include "apple2/Joystick.h"
 #include "apple2/Keyboard.h"
-#include "core/asset.h"
+#include "apple2/Memory.h"
+#include "apple2/Mockingboard.h"
+#include "apple2/ParallelPrinter.h"
+#include "apple2/SaveState.h"
+#include "apple2/SerialComms.h"
+#include "apple2/SoundCore.h"
+#include "apple2/Speaker.h"
 #include "apple2/Video.h"
 #include "apple2/stretch.h"
 #include "core/Common_Globals.h"
-#include "Debugger/Debug.h"
 #include "core/Registry.h"
-#include "apple2/Disk.h"
-#include "apple2/Harddisk.h"
-#include "apple2/SoundCore.h"
-#include "apple2/SerialComms.h"
-#include "apple2/ParallelPrinter.h"
-#include "apple2/Speaker.h"
+#include "core/asset.h"
 #include "frontends/sdl3/DiskChoose.h"
-#include "apple2/SaveState.h"
-#include "apple2/Joystick.h"
-#include "apple2/Mockingboard.h"
-#include "apple2/CPU.h"
-#include "apple2/Memory.h"
 
 #define ENABLE_MENU 0
 
-SDL_Surface *apple_icon;
-SDL_Surface *screen;
-SDL_Window *g_window = NULL;
-SDL_Renderer *g_renderer = NULL;
-SDL_Texture *g_texture = NULL;
+SDL_Surface* apple_icon;
+SDL_Surface* screen;
+SDL_Window* g_window = NULL;
+SDL_Renderer* g_renderer = NULL;
+SDL_Texture* g_texture = NULL;
 SDL_Rect origRect;
 SDL_Rect newRect;
 
-#define  VIEWPORTCX  560
+#define VIEWPORTCX 560
 #if ENABLE_MENU
-#define  VIEWPORTCY  400
+#define VIEWPORTCY 400
 #else
-#define  VIEWPORTCY  384
+#define VIEWPORTCY 384
 #endif
-#define  BUTTONX     (VIEWPORTCX+(VIEWPORTX<<1))
-#define  BUTTONY     0
-#define  BUTTONCX    45
-#define  BUTTONCY    45
-#define  FSVIEWPORTX (640-BUTTONCX-VIEWPORTX-VIEWPORTCX)
-#define  FSVIEWPORTY ((480-VIEWPORTCY)>>1)
-#define  FSBUTTONX   (640-BUTTONCX)
-#define  FSBUTTONY   (((480-VIEWPORTCY)>>1)-1)
-#define  BUTTONS     8
+#define BUTTONX (VIEWPORTCX + (VIEWPORTX << 1))
+#define BUTTONY 0
+#define BUTTONCX 45
+#define BUTTONCY 45
+#define FSVIEWPORTX (640 - BUTTONCX - VIEWPORTX - VIEWPORTCX)
+#define FSVIEWPORTY ((480 - VIEWPORTCY) >> 1)
+#define FSBUTTONX (640 - BUTTONCX)
+#define FSBUTTONY (((480 - VIEWPORTCY) >> 1) - 1)
+#define BUTTONS 8
 
 static bool g_bAppActive = false;
 
@@ -103,8 +104,7 @@ void SetIcon();
 
 bool g_bScrollLock_FullSpeed = false;
 
-void DrawAppleContent()
-{
+void DrawAppleContent() {
   g_video_draw_mutex.lock();
   VideoRealizePalette();
 
@@ -122,42 +122,56 @@ void DrawAppleContent()
   g_video_draw_mutex.unlock();
 }
 
-void DrawFrameWindow()
-{
+void DrawFrameWindow() {
   if (!g_bFrameReady) return;
 
   g_video_draw_mutex.lock();
   if (g_texture && screen) {
-      uint32_t* output = VideoGetOutputBuffer();
-      SDL_Rect r = {0, 0, 560, 384};
+    uint32_t* output = VideoGetOutputBuffer();
+    SDL_Rect r = {0, 0, 560, 384};
 
-      // Fill screen from RGB32 output buffer
-      if (g_state.mode != MODE_DEBUG) {
-          VideoSurface vs_screen = SDLSurfaceToVideoSurface(screen);
-          VideoSurface vs_output{};
-          vs_output.pixels = (uint8_t*)output;
-          vs_output.w = 560;
-          vs_output.h = 384;
-          vs_output.pitch = 560 * 4;
-          vs_output.bpp = 4;
+    // Fill screen from RGB32 output buffer
+    if (g_state.mode != MODE_DEBUG) {
+      VideoSurface vs_screen = SDLSurfaceToVideoSurface(screen);
+      VideoSurface vs_output{};
+      vs_output.pixels = (uint8_t*)output;
+      vs_output.w = 560;
+      vs_output.h = 384;
+      vs_output.pitch = 560 * 4;
+      vs_output.bpp = 4;
 
-          if (!g_WindowResized) {
-              VideoSoftStretch(&vs_output, (VideoRect*)&r, &vs_screen, (VideoRect*)&r);
-          } else {
-              VideoSoftStretch(&vs_output, (VideoRect*)&origRect, &vs_screen, (VideoRect*)&newRect);
-          }
+      if (!g_WindowResized) {
+        VideoSoftStretch(&vs_output, (VideoRect*)&r, &vs_screen,
+                         (VideoRect*)&r);
+      } else {
+        VideoSoftStretch(&vs_output, (VideoRect*)&origRect, &vs_screen,
+                         (VideoRect*)&newRect);
       }
+    } else {
+      // Debugger draws directly to g_hDebugScreen (INDEX8)
+      // We need to stretch/convert it to the RGB32 screen surface
+      extern VideoSurface* g_hDebugScreen;
+      if (g_hDebugScreen) {
+        VideoSurface vs_screen = SDLSurfaceToVideoSurface(screen);
+        if (!g_WindowResized) {
+          VideoSoftStretch(g_hDebugScreen, (VideoRect*)&r, &vs_screen,
+                           (VideoRect*)&r);
+        } else {
+          VideoSoftStretch(g_hDebugScreen, (VideoRect*)&origRect, &vs_screen,
+                           (VideoRect*)&newRect);
+        }
+      }
+    }
 
-      SDL_UpdateTexture(g_texture, nullptr, screen->pixels, screen->pitch);
-      SDL_RenderTexture(g_renderer, g_texture, nullptr, nullptr);
-      SDL_RenderPresent(g_renderer);
-      g_bFrameReady = false;
+    SDL_UpdateTexture(g_texture, nullptr, screen->pixels, screen->pitch);
+    SDL_RenderTexture(g_renderer, g_texture, nullptr, nullptr);
+    SDL_RenderPresent(g_renderer);
+    g_bFrameReady = false;
   }
   g_video_draw_mutex.unlock();
 }
 
-void DrawStatusArea(int drawflags)
-{
+void DrawStatusArea(int drawflags) {
   if (font_sfc == NULL) {
     if (!fonts_initialization()) {
       fprintf(stderr, "Font file was not loaded.\n");
@@ -179,11 +193,12 @@ void DrawStatusArea(int drawflags)
 
     // Fill background of status surface
     for (int y = srect.y; y < srect.y + srect.h; ++y) {
-        memset(g_hStatusSurface->pixels + y * g_hStatusSurface->pitch + srect.x, mybluez, srect.w);
+      memset(g_hStatusSurface->pixels + y * g_hStatusSurface->pitch + srect.x,
+             mybluez, srect.w);
     }
 
     char leds[2] = "\x64";
-    #define LEDS  1
+#define LEDS 1
     int iDrive1Status = DISK_STATUS_OFF;
     int iDrive2Status = DISK_STATUS_OFF;
     int iHDDStatus = DISK_STATUS_OFF;
@@ -206,37 +221,37 @@ void DrawStatusArea(int drawflags)
   }
 }
 
-void FrameShowHelpScreen(int sx, int sy)
-{
+void FrameShowHelpScreen(int sx, int sy) {
   (void)sy;
   const int MAX_LINES = 25;
-  const char *HelpStrings[MAX_LINES] = {"Welcome to LinApple - Apple][ emulator for Linux!",
-                                        "Conf file is linapple.conf in current directory by default",
-                                        "Hugest archive of Apple][ stuff you can find at ftp.apple.asimov.net",
-                                        "       F1 - Show help screen",
-                                        "  Ctrl+F2 - Cold reboot (Power off and back on)",
-                                        " Shift+F2 - Reload configuration file and cold reboot",
-                                        " Ctrl+F10 - Hot Reset (Control+Reset)",
-                                        "      F12 - Quit",
-                                        "",
-                                        "    F3/F4 - Load floppy disk 1/2 (Slot 6, Drive 1/2)",
-                                        "       F5 - Swap floppy disks",
-                                        " Shift+F3/F4 - Attach hard drive 1/2 (Slot 7, Drive 1/2)",
-                                        "",
-                                        "       F6 - Toggle g_state.fullscreen mode",
-                                        " Shift+F6 - Toggle character set (keyboard rocker switch)",
-                                        "       F7 - Toggle debugging view",
-                                        "       F8 - Take screenshot",
-                                        " Shift+F8 - Save runtime changes to configuration file",
-                                        "       F9 - Cycle through various video modes",
-                                        " Shift+F9 - Budget video, for smoother music/audio",
-                                        "  F10/F11 - Load/save snapshot file",
-                                        "",
-                                        "       Pause - Pause/resume emulator",
-                                        " Scroll Lock - Toggle full speed",
-                                        "  Numpad +/-/* - Increase/Decrease/Normal speed"};
+  const char* HelpStrings[MAX_LINES] = {
+      "Welcome to LinApple - Apple][ emulator for Linux!",
+      "Conf file is linapple.conf in current directory by default",
+      "Hugest archive of Apple][ stuff you can find at ftp.apple.asimov.net",
+      "       F1 - Show help screen",
+      "  Ctrl+F2 - Cold reboot (Power off and back on)",
+      " Shift+F2 - Reload configuration file and cold reboot",
+      " Ctrl+F10 - Hot Reset (Control+Reset)",
+      "      F12 - Quit",
+      "",
+      "    F3/F4 - Load floppy disk 1/2 (Slot 6, Drive 1/2)",
+      "       F5 - Swap floppy disks",
+      " Shift+F3/F4 - Attach hard drive 1/2 (Slot 7, Drive 1/2)",
+      "",
+      "       F6 - Toggle g_state.fullscreen mode",
+      " Shift+F6 - Toggle character set (keyboard rocker switch)",
+      "       F7 - Toggle debugging view",
+      "       F8 - Take screenshot",
+      " Shift+F8 - Save runtime changes to configuration file",
+      "       F9 - Cycle through various video modes",
+      " Shift+F9 - Budget video, for smoother music/audio",
+      "  F10/F11 - Load/save snapshot file",
+      "",
+      "       Pause - Pause/resume emulator",
+      " Scroll Lock - Toggle full speed",
+      "  Numpad +/-/* - Increase/Decrease/Normal speed"};
 
-  VideoSurface *tempSurface = NULL;
+  VideoSurface* tempSurface = NULL;
 
   if (font_sfc == NULL) {
     if (!fonts_initialization()) {
@@ -261,38 +276,51 @@ void FrameShowHelpScreen(int sx, int sy)
     tempSurface = &vs_screen;
   }
 
-  VideoSurface *my_screen_vs = VideoCreateSurface(tempSurface->w, tempSurface->h, tempSurface->bpp);
+  VideoSurface* my_screen_vs =
+      VideoCreateSurface(tempSurface->w, tempSurface->h, tempSurface->bpp);
   VideoSurface vs_actual_screen = SDLSurfaceToVideoSurface(screen);
 
   surface_fader(my_screen_vs, 0.2F, 0.2F, 0.2F, -1, 0);
   VideoSoftStretch(tempSurface, NULL, my_screen_vs, NULL);
   VideoSoftStretch(my_screen_vs, NULL, &vs_actual_screen, NULL);
 
-  double facx = static_cast<double>(g_state.ScreenWidth) / static_cast<double>(SCREEN_WIDTH);
-  double facy = static_cast<double>(g_state.ScreenHeight) / static_cast<double>(SCREEN_HEIGHT);
+  double facx = static_cast<double>(g_state.ScreenWidth) /
+                static_cast<double>(SCREEN_WIDTH);
+  double facy = static_cast<double>(g_state.ScreenHeight) /
+                static_cast<double>(SCREEN_HEIGHT);
 
-  font_print_centered(sx / 2, static_cast<int>(5 * facy), const_cast<char *>(HelpStrings[0]), &vs_actual_screen, 1.5 * facx, 1.3 * facy);
-  font_print_centered(sx / 2, static_cast<int>(20 * facy), const_cast<char *>(HelpStrings[1]), &vs_actual_screen, 1.3 * facx, 1.2 * facy);
-  font_print_centered(sx / 2, static_cast<int>(30 * facy), const_cast<char *>(HelpStrings[2]), &vs_actual_screen, 1.2 * facx, 1.0 * facy);
+  font_print_centered(sx / 2, static_cast<int>(5 * facy),
+                      const_cast<char*>(HelpStrings[0]), &vs_actual_screen,
+                      1.5 * facx, 1.3 * facy);
+  font_print_centered(sx / 2, static_cast<int>(20 * facy),
+                      const_cast<char*>(HelpStrings[1]), &vs_actual_screen,
+                      1.3 * facx, 1.2 * facy);
+  font_print_centered(sx / 2, static_cast<int>(30 * facy),
+                      const_cast<char*>(HelpStrings[2]), &vs_actual_screen,
+                      1.2 * facx, 1.0 * facy);
 
   int Help_TopX = int(45 * facy);
   for (int i = 3; i < MAX_LINES; i++) {
     if (HelpStrings[i])
-      font_print(4, Help_TopX + (i - 3) * 15 * facy, (char *) HelpStrings[i], &vs_actual_screen, 1.5 * facx,
-               1.5 * facy);
+      font_print(4, Help_TopX + (i - 3) * 15 * facy, (char*)HelpStrings[i],
+                 &vs_actual_screen, 1.5 * facx, 1.5 * facy);
   }
 
-  rectangle(&vs_actual_screen, 0, Help_TopX - 5, g_state.ScreenWidth - 1, int(335 * facy), 0xFFFFFF);
-  rectangle(&vs_actual_screen, 1, Help_TopX - 4, g_state.ScreenWidth, int(335 * facy), 0xFFFFFF);
-  rectangle(&vs_actual_screen, 1, 1, g_state.ScreenWidth - 2, (Help_TopX - 8), 0xFFFF00);
+  rectangle(&vs_actual_screen, 0, Help_TopX - 5, g_state.ScreenWidth - 1,
+            int(335 * facy), 0xFFFFFF);
+  rectangle(&vs_actual_screen, 1, Help_TopX - 4, g_state.ScreenWidth,
+            int(335 * facy), 0xFFFFFF);
+  rectangle(&vs_actual_screen, 1, 1, g_state.ScreenWidth - 2, (Help_TopX - 8),
+            0xFFFF00);
 
   // Logo bit
   VideoSurface vs_icon{};
-  vs_icon.pixels = static_cast<uint8_t*>((static_cast<SDL_Surface*>(assets->icon))->pixels);
+  vs_icon.pixels =
+      static_cast<uint8_t*>((static_cast<SDL_Surface*>(assets->icon))->pixels);
   vs_icon.w = (static_cast<SDL_Surface*>(assets->icon))->w;
   vs_icon.h = (static_cast<SDL_Surface*>(assets->icon))->h;
   vs_icon.pitch = (static_cast<SDL_Surface*>(assets->icon))->pitch;
-  vs_icon.bpp = 4; // Assuming RGB32
+  vs_icon.bpp = 4;  // Assuming RGB32
 
   VideoRect logo{}, scrr{};
   logo.x = logo.y = 0;
@@ -304,11 +332,11 @@ void FrameShowHelpScreen(int sx, int sy)
   VideoSoftStretchOr(&vs_icon, &logo, &vs_actual_screen, &scrr);
 
   if (g_texture && screen) {
-      SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
-      SDL_UpdateTexture(g_texture, NULL, screen->pixels, screen->pitch);
-      SDL_RenderClear(g_renderer);
-      SDL_RenderTexture(g_renderer, g_texture, NULL, NULL);
-      SDL_RenderPresent(g_renderer);
+    SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
+    SDL_UpdateTexture(g_texture, NULL, screen->pixels, screen->pitch);
+    SDL_RenderClear(g_renderer);
+    SDL_RenderTexture(g_renderer, g_texture, NULL, NULL);
+    SDL_RenderPresent(g_renderer);
   }
   SDL_Delay(1000);
 
@@ -325,11 +353,13 @@ void FrameShowHelpScreen(int sx, int sy)
   DrawFrameWindow();
 }
 
-void FrameQuickState(int num, int mod)
-{
-  // quick load or save state with number num, if Shift is pressed, state is being saved, otherwise - being loaded
+void FrameQuickState(int num, int mod) {
+  // quick load or save state with number num, if Shift is pressed, state is
+  // being saved, otherwise - being loaded
   char fpath[MAX_PATH];
-  snprintf(fpath, MAX_PATH, "%.*s/SaveState%d.aws", static_cast<int>(strlen(g_state.sSaveStateDir)), g_state.sSaveStateDir, num);
+  snprintf(fpath, MAX_PATH, "%.*s/SaveState%d.aws",
+           static_cast<int>(strlen(g_state.sSaveStateDir)),
+           g_state.sSaveStateDir, num);
   Snapshot_SetFilename(fpath);
   if (mod & SDL_KMOD_SHIFT) {
     Snapshot_SaveState();
@@ -364,17 +394,21 @@ void Frame_OnResize(int w, int h) {
   }
 
   if (screen) SDL_DestroySurface(screen);
-  screen = SDL_CreateSurface(g_state.ScreenWidth, g_state.ScreenHeight, SDL_PIXELFORMAT_XRGB8888);
+  screen = SDL_CreateSurface(g_state.ScreenWidth, g_state.ScreenHeight,
+                             SDL_PIXELFORMAT_XRGB8888);
 
   if (g_texture) SDL_DestroyTexture(g_texture);
-  g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, g_state.ScreenWidth, g_state.ScreenHeight);
+  g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_XRGB8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                g_state.ScreenWidth, g_state.ScreenHeight);
 
   if (screen == NULL || g_texture == NULL) {
     g_video_draw_mutex.unlock();
     SDL_Quit();
     return;
   } else {
-    g_WindowResized = (g_state.ScreenWidth != SCREEN_WIDTH) | (g_state.ScreenHeight != SCREEN_HEIGHT);
+    g_WindowResized = (g_state.ScreenWidth != SCREEN_WIDTH) |
+                      (g_state.ScreenHeight != SCREEN_HEIGHT);
     if (g_WindowResized) {
       origRect.x = origRect.y = newRect.x = newRect.y = 0;
       origRect.w = SCREEN_WIDTH;
@@ -389,18 +423,15 @@ void Frame_OnResize(int w, int h) {
   g_video_draw_mutex.unlock();
 }
 
-void Frame_OnFocus(bool gained) {
-    g_bAppActive = gained;
-}
+void Frame_OnFocus(bool gained) { g_bAppActive = gained; }
 
 void Frame_OnExpose() {
-    if ((g_state.mode != MODE_LOGO) && (g_state.mode != MODE_DEBUG)) {
-        VideoRedrawScreen();
-    }
+  if ((g_state.mode != MODE_LOGO) && (g_state.mode != MODE_DEBUG)) {
+    VideoRedrawScreen();
+  }
 }
 
-auto PSP_SaveStateSelectImage(bool saveit) -> bool
-{
+auto PSP_SaveStateSelectImage(bool saveit) -> bool {
   static size_t fileIndex = 0;
   static int backdx = 0;
   static int dirdx = 0;
@@ -413,8 +444,8 @@ auto PSP_SaveStateSelectImage(bool saveit) -> bool
   fullPath = g_state.sSaveStateDir;
 
   while (isDirectory) {
-    if (!ChooseAnImage(g_state.ScreenWidth, g_state.ScreenHeight, fullPath, saveit,
-                       filename, isDirectory, fileIndex)) {
+    if (!ChooseAnImage(g_state.ScreenWidth, g_state.ScreenHeight, fullPath,
+                       saveit, filename, isDirectory, fileIndex)) {
       DrawFrameWindow();
       return false;
     }
@@ -440,7 +471,8 @@ auto PSP_SaveStateSelectImage(bool saveit) -> bool
     }
   }
   strcpy(g_state.sSaveStateDir, fullPath.c_str());
-  Configuration::Instance().SetString("Preferences", REGVALUE_PREF_SAVESTATE_DIR, g_state.sSaveStateDir);
+  Configuration::Instance().SetString(
+      "Preferences", REGVALUE_PREF_SAVESTATE_DIR, g_state.sSaveStateDir);
   Configuration::Instance().Save();
 
   backdx = fileIndex;
@@ -448,7 +480,8 @@ auto PSP_SaveStateSelectImage(bool saveit) -> bool
   fullPath += "/" + filename;
 
   Snapshot_SetFilename(fullPath.c_str());
-  Configuration::Instance().SetString("Preferences", REGVALUE_SAVESTATE_FILENAME, fullPath.c_str());
+  Configuration::Instance().SetString(
+      "Preferences", REGVALUE_SAVESTATE_FILENAME, fullPath.c_str());
   Configuration::Instance().Save();
   DrawFrameWindow();
   return true;
@@ -474,8 +507,7 @@ void FrameSaveBMP(void) {
   i++;
 }
 
-void ProcessButtonClick(int button, int mod)
-{
+void ProcessButtonClick(int button, int mod) {
   SDL_Event qe;
 
   SoundCore_SetFade(FADE_OUT);
@@ -486,7 +518,8 @@ void ProcessButtonClick(int button, int mod)
       break;
 
     case BTN_RUN:
-      if ((mod & (SDL_KMOD_LCTRL)) == (SDL_KMOD_LCTRL) || (mod & (SDL_KMOD_RCTRL)) == (SDL_KMOD_RCTRL)) {
+      if ((mod & (SDL_KMOD_LCTRL)) == (SDL_KMOD_LCTRL) ||
+          (mod & (SDL_KMOD_RCTRL)) == (SDL_KMOD_RCTRL)) {
         if (g_state.mode == MODE_LOGO) {
           DiskBoot();
         } else if (g_state.mode == MODE_RUNNING) {
@@ -541,16 +574,18 @@ void ProcessButtonClick(int button, int mod)
 
     case BTN_FULLSCR:
       if (mod & SDL_KMOD_SHIFT) {
-         // only IIe and enhanced have a keyboard rocker switch (and only non-US keyboards)
-         if ((g_KeyboardLanguage != English_US)&&
-             ((g_Apple2Type == A2TYPE_APPLE2E)||(g_Apple2Type == A2TYPE_APPLE2EENHANCED)))
-         {
-           g_KeyboardRockerSwitch = !g_KeyboardRockerSwitch;
-           printf("Toggling keyboard rocker switch. Selected character set: %s...\n", (g_KeyboardRockerSwitch) ? "local" : "standard/US");
-         }
-      }
-      else
-      {
+        // only IIe and enhanced have a keyboard rocker switch (and only non-US
+        // keyboards)
+        if ((g_KeyboardLanguage != English_US) &&
+            ((g_Apple2Type == A2TYPE_APPLE2E) ||
+             (g_Apple2Type == A2TYPE_APPLE2EENHANCED))) {
+          g_KeyboardRockerSwitch = !g_KeyboardRockerSwitch;
+          printf(
+              "Toggling keyboard rocker switch. Selected character set: "
+              "%s...\n",
+              (g_KeyboardRockerSwitch) ? "local" : "standard/US");
+        }
+      } else {
         if (g_state.fullscreen) {
           g_state.fullscreen = false;
           SetNormalMode();
@@ -563,30 +598,28 @@ void ProcessButtonClick(int button, int mod)
       break;
 
     case BTN_DEBUG:
-      if (g_state.mode != MODE_DEBUG)
-      {
+      if (g_state.mode != MODE_DEBUG) {
         DebugBegin();
         SetUsingCursor(false);
-      }
-      else
-      if (g_state.mode == MODE_DEBUG)
-      {
+      } else if (g_state.mode == MODE_DEBUG) {
         g_state.mode = MODE_RUNNING;
       }
       break;
 
     case BTN_SETUP:
       if (mod & SDL_KMOD_SHIFT) {
-        Configuration::Instance().SetInt("Configuration", "Video Emulation", g_videotype);
-        Configuration::Instance().SetInt("Configuration", "Emulation Speed", g_state.dwSpeed);
-        Configuration::Instance().SetInt("Configuration", "Fullscreen", g_state.fullscreen ? 1 : 0);
+        Configuration::Instance().SetInt("Configuration", "Video Emulation",
+                                         g_videotype);
+        Configuration::Instance().SetInt("Configuration", "Emulation Speed",
+                                         g_state.dwSpeed);
+        Configuration::Instance().SetInt("Configuration", "Fullscreen",
+                                         g_state.fullscreen ? 1 : 0);
         Configuration::Instance().Save();
 
       } else {
         FrameSaveBMP();
       }
       break;
-
 
     case BTN_CYCLE:
       if (mod & SDL_KMOD_SHIFT) {
@@ -597,17 +630,13 @@ void ProcessButtonClick(int button, int mod)
           g_videotype = 0;
         }
         VideoReinitialize();
-        if (g_state.mode != MODE_LOGO)
-        {
-          if (g_state.mode == MODE_DEBUG)
-          {
+        if (g_state.mode != MODE_LOGO) {
+          if (g_state.mode == MODE_DEBUG) {
             unsigned int debugVideoMode = 0;
             if (DebugGetVideoMode(&debugVideoMode)) {
               VideoRefreshScreen();
             }
-          }
-          else
-          {
+          } else {
             VideoRefreshScreen();
           }
         }
@@ -652,7 +681,8 @@ void ProcessButtonClick(int button, int mod)
 
 void ResetMachineState() {
   DiskReset();
-  g_bFullSpeed = false;  // Might've hit reset in middle of InternalCpuExecute() - so beep may get (partially) muted
+  g_bFullSpeed = false;  // Might've hit reset in middle of InternalCpuExecute()
+                         // - so beep may get (partially) muted
 
   MemReset();
   DiskBoot();
@@ -676,18 +706,14 @@ void SetFullScreenMode() {
   }
 }
 
-void SetNormalMode()
-{
+void SetNormalMode() {
   if (bIamFullScreened) {
     bIamFullScreened = false;
     SDL_SetWindowFullscreen(g_window, false);
     if (!usingcursor) {
       SDL_ShowCursor();
     }
-  }
-  else
-  if (g_state.mode == MODE_DEBUG)
-  {
+  } else if (g_state.mode == MODE_DEBUG) {
     SDL_ShowCursor();
     SDL_SetWindowMouseGrab(g_window, false);
   }
@@ -699,7 +725,7 @@ void SetUsingCursor(bool newvalue) {
     SDL_HideCursor();
     SDL_SetWindowMouseGrab(g_window, true);
   } else {
-    if ((!bIamFullScreened)||(g_state.mode == MODE_DEBUG)) {
+    if ((!bIamFullScreened) || (g_state.mode == MODE_DEBUG)) {
       SDL_ShowCursor();
     }
     SDL_SetWindowMouseGrab(g_window, false);
@@ -709,15 +735,15 @@ void SetUsingCursor(bool newvalue) {
 extern void SDL_Asset_LoadIcon();
 extern void SDL_Asset_FreeIcon();
 
-auto FrameCreateWindow() -> int
-{
+auto FrameCreateWindow() -> int {
   SDL_Asset_LoadIcon();
   bIamFullScreened = false;
 
   Uint32 flags = 0;
   if (g_state.fullscreen) flags |= SDL_WINDOW_FULLSCREEN;
 
-  g_window = SDL_CreateWindow(g_pAppTitle, g_state.ScreenWidth, g_state.ScreenHeight, flags);
+  g_window = SDL_CreateWindow(g_pAppTitle, g_state.ScreenWidth,
+                              g_state.ScreenHeight, flags);
   if (!g_window) {
     fprintf(stderr, "Could not create SDL window: %s\n", SDL_GetError());
     return 1;
@@ -729,19 +755,23 @@ auto FrameCreateWindow() -> int
     return 1;
   }
 
-  screen = SDL_CreateSurface(g_state.ScreenWidth, g_state.ScreenHeight, SDL_PIXELFORMAT_XRGB8888);
+  screen = SDL_CreateSurface(g_state.ScreenWidth, g_state.ScreenHeight,
+                             SDL_PIXELFORMAT_XRGB8888);
   if (screen == NULL) {
     fprintf(stderr, "Could not create SDL surface: %s\n", SDL_GetError());
     return 1;
   }
 
-  g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, 560, 384);
+  g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_XRGB8888,
+                                SDL_TEXTUREACCESS_STREAMING, 560, 384);
 
-  SDL_SetRenderLogicalPresentation(g_renderer, 560, 384, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+  SDL_SetRenderLogicalPresentation(g_renderer, 560, 384,
+                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
   SDL_ShowWindow(g_window);
   SetIcon();
 
-  g_WindowResized = (g_state.ScreenWidth != SCREEN_WIDTH) | (g_state.ScreenHeight != SCREEN_HEIGHT);
+  g_WindowResized = (g_state.ScreenWidth != SCREEN_WIDTH) |
+                    (g_state.ScreenHeight != SCREEN_HEIGHT);
   printf("Screen size is %dx%d\n", g_state.ScreenWidth, g_state.ScreenHeight);
   if (g_WindowResized) {
     origRect.x = origRect.y = newRect.x = newRect.y = 0;
@@ -753,19 +783,19 @@ auto FrameCreateWindow() -> int
   return 0;
 }
 
-void SetIcon()
-{
+void SetIcon() {
   /* Black is the transparency colour.
      Part of the logo seems to use it !? */
-  Uint32 colorkey = SDL_MapRGB(SDL_GetPixelFormatDetails(((SDL_Surface*)assets->icon)->format), SDL_GetSurfacePalette((SDL_Surface*)assets->icon), 0, 0, 0);
+  Uint32 colorkey = SDL_MapRGB(
+      SDL_GetPixelFormatDetails(((SDL_Surface*)assets->icon)->format),
+      SDL_GetSurfacePalette((SDL_Surface*)assets->icon), 0, 0, 0);
   SDL_SetSurfaceColorKey((SDL_Surface*)assets->icon, true, colorkey);
 
   /* No need to pass a mask given the above. */
   SDL_SetWindowIcon(g_window, (SDL_Surface*)assets->icon);
 }
 
-int InitSDL()
-{
+int InitSDL() {
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK)) {
     fprintf(stderr, "Could not initialize SDL: %s\n", SDL_GetError());
     return 1;
@@ -775,7 +805,4 @@ int InitSDL()
   return 0;
 }
 
-void FrameRefreshStatus(int drawflags)
-{
-  DrawStatusArea(drawflags);
-}
+void FrameRefreshStatus(int drawflags) { DrawStatusArea(drawflags); }

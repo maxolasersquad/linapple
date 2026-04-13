@@ -27,11 +27,8 @@
 #include "apple2/DiskFTP.h"
 #include "apple2/ftpparse.h"
 #include "core/Common_Globals.h"
-#include "core/Util_Text.h"
-#include "frontends/sdl3/DiskChoose.h"
-#include "frontends/sdl3/Frame.h"
-#include "core/Log.h"
 #include "core/Registry.h"
+#include "frontends/sdl3/DiskChoose.h"
 
 // how many file names we are able to see at once!
 #define FILES_IN_SCREEN    21
@@ -40,21 +37,24 @@
 // define time when cache ftp dir.listing must be refreshed
 #define RENEW_TIME  24*3600
 
-char *md5str(const char *input); // forward declaration of md5str func
+auto md5str(const char *input) -> char *; // forward declaration of md5str func
 
 char g_sFTPDirListing[512] = "cache/ftp."; // name for FTP-directory listing
-int getstatFTP(struct ftpparse *fp, uintmax_t *size)
+auto getstatFTP(struct ftpparse *fp, uintmax_t *size) -> int
 {
   // gets file status and returns: 0 - special or error, 1 - file is a directory, 2 - file is a normal file
   // In: fp - ftpparse struct ftom ftpparse.h
-  if (!fp->namelen)
+  if (!fp->namelen) {
     return 0;
-  if (fp->flagtrycwd == 1)
+  }
+  if (fp->flagtrycwd == 1) {
     return 1;  // can CWD, it is dir then
+  }
 
   if (fp->flagtryretr == 1) { // we're able to RETR, it's a file then?!
-    if (size != NULL)
+    if (size != nullptr) {
       *size = fp->size / 1024;
+    }
     return 2;
   }
   return 0;
@@ -66,13 +66,13 @@ struct FTP_file_list_generator_t : public file_list_generator_t {
     directory(dir)
   {}
 
-  const std::vector<file_entry_t> generate_file_list();
+  auto generate_file_list() -> const std::vector<file_entry_t>;
 
-  const std::string get_starting_message() {
+  const std::string get_starting_message() override {
     return "Connecting to FTP server... Please wait.";
   }
 
-  const std::string get_failure_message() {
+  auto get_failure_message() -> const std::string {
     return failure_message;
   }
 
@@ -82,20 +82,19 @@ private:
 };
 
 
-const std::vector<file_entry_t> FTP_file_list_generator_t::generate_file_list()
-{
+auto FTP_file_list_generator_t::generate_file_list() -> const std::vector<file_entry_t> {
   char ftpdirpath[1024];
   int l = snprintf(ftpdirpath, sizeof(ftpdirpath), "%s/%s%s", g_state.sFTPLocalDir, g_sFTPDirListing, md5str(directory.c_str())); // get path for FTP dir listing
 
-  if (l<0 || l>=(int)sizeof(ftpdirpath)) {      // check returned value
+  if (l<0 || l>=static_cast<int>(sizeof(ftpdirpath))) {      // check returned value
     failure_message = "Failed get path for FTP dir listing";
     return {};
   }
 
 
-  bool OKI;
-  struct stat info;
-  if (stat(ftpdirpath, &info) == 0 && info.st_mtime > time(NULL) - RENEW_TIME) {
+  bool OKI = false;
+  struct stat info{};
+  if (stat(ftpdirpath, &info) == 0 && info.st_mtime > time(nullptr) - RENEW_TIME) {
     OKI = false; // use this file
   } else {
     OKI = ftp_get(directory.c_str(), ftpdirpath); // get ftp dir listing
@@ -111,16 +110,16 @@ const std::vector<file_entry_t> FTP_file_list_generator_t::generate_file_list()
 
   // build prev dir
   if (directory != "ftp://") {
-    file_list.push_back({ "..", file_entry_t::UP, 0 });
+    file_list.emplace_back( "..", file_entry_t::UP, 0 );
   }
 
   FILE *fdir = fopen(ftpdirpath, "r");
-  char *tmp;
+  char *tmp = nullptr;
   char tmpstr[512];
   while ((tmp = fgets(tmpstr, 512, fdir))) // first looking for directories
   {
     // clear and then try to fill in FTP_PARSE struct
-    struct ftpparse FTP_PARSE; // for parsing ftp directories
+    struct ftpparse FTP_PARSE{}; // for parsing ftp directories
 
     memset(&FTP_PARSE, 0, sizeof(FTP_PARSE));
     ftpparse(&FTP_PARSE, tmp, strlen(tmp));
@@ -135,11 +134,11 @@ const std::vector<file_entry_t> FTP_file_list_generator_t::generate_file_list()
 
     switch (what) {
     case 1: // is directory!
-      file_list.push_back({ trimmed_name, file_entry_t::DIR, 0 });
+      file_list.emplace_back( trimmed_name, file_entry_t::DIR, 0 );
       break;
 
     case 2: // is normal file!
-      file_list.push_back({ trimmed_name, file_entry_t::FILE, fsize*1024 });
+      file_list.emplace_back( trimmed_name, file_entry_t::FILE, fsize*1024 );
       break;
 
     default: // others: simply ignore
@@ -156,8 +155,8 @@ const std::vector<file_entry_t> FTP_file_list_generator_t::generate_file_list()
 }
 
 
-bool ChooseAnImageFTP(int sx, int sy, const std::string& ftp_dir, int slot,
-                      std::string& filename, bool& isdir, size_t& index_file)
+auto ChooseAnImageFTP(int sx, int sy, const std::string& ftp_dir, int slot,
+                      std::string& filename, bool& isdir, size_t& index_file) -> bool
 {
   /*  Parameters:
    sx, sy - window size,
@@ -181,7 +180,7 @@ bool ChooseAnImageFTP(int sx, int sy, const std::string& ftp_dir, int slot,
  */
 #define cpu_to_le32(x) (x)
 #define le32_to_cpu(x) cpu_to_le32(x)
-typedef unsigned int UINT4;
+using UINT4 = unsigned int;
 
 /* F, G, H and I are basic MD5 functions.
  */
@@ -216,8 +215,8 @@ static unsigned char buffer[64];
 
 static void md5_transform(const unsigned char block[64])
 {
-  int i, j;
-  UINT4 a, b, c, d, tmp;
+  int i = 0, j = 0;
+  UINT4 a = 0, b = 0, c = 0, d = 0, tmp = 0;
   const UINT4 *x = (UINT4 *) block;
 
   a = state[0];
@@ -272,14 +271,12 @@ static void md5_transform(const unsigned char block[64])
   state[3] += d;
 }
 
-static void md5_init(void)
-{
-  memcpy((char *) state, (char *) md5_initstate, sizeof(md5_initstate));
+static void md5_init() {
+  memcpy(reinterpret_cast<char *>(state), reinterpret_cast<char *>(md5_initstate), sizeof(md5_initstate));
   length = 0;
 }
 
-static void md5_update(const char *input, int inputlen)
-{
+static void md5_update(const char *input, int inputlen) {
   int buflen = length & 63;
   length += inputlen;
   if (buflen + inputlen < 64) {
@@ -301,9 +298,9 @@ static void md5_update(const char *input, int inputlen)
   buflen = inputlen;
 }
 
-static unsigned char *md5_final()
+static auto md5_final() -> unsigned char *
 {
-  int i, buflen = length & 63;
+  int i = 0, buflen = length & 63;
 
   buffer[buflen++] = 0x80;
   memset(buffer + buflen, 0, 64 - buflen);
@@ -317,24 +314,23 @@ static unsigned char *md5_final()
   *(UINT4 *) (buffer + 60) = 0;
   md5_transform(buffer);
 
-  for (i = 0; i < 4; i++)
+  for (i = 0; i < 4; i++) {
     state[i] = cpu_to_le32 (state[i]);
+  }
   return (unsigned char *) state;
 }
 
-static char *md5(const char *input)
-{
+static auto md5(const char *input) -> char * {
   md5_init();
   md5_update(input, strlen(input));
   return (char *) md5_final();
 }
 
 // GPH Warning: Not re-entrant!
-char *md5str(const char *input)
-{
+auto md5str(const char *input) -> char * {
   static char result[16 * 3 + 1];
   unsigned char *digest = (unsigned char *) md5(input);
-  int i;
+  int i = 0;
 
   for (i = 0; i < 16; i++) {
     sprintf(result + 2 * i, "%02X", digest[i]);

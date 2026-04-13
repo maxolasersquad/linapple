@@ -45,6 +45,18 @@ void DebugDisplay(bool bInitDisasm)
 
   UpdateDisplay( UPDATE_ALL );
 }
+
+void DebugInitialize()
+{
+    static bool bInitialized = false;
+    if (bInitialized) return;
+
+    AssemblerStartup();
+    InitDisasm();
+    
+    bInitialized = true;
+}
+
 bool IsDebugSteppingAtFullSpeed(void)
 {
   return (g_state.mode == MODE_STEPPING) && g_bDebugFullSpeed;

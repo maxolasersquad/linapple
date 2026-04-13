@@ -1400,8 +1400,7 @@ struct WindowSplit_t {
   bool bSplit;
   Window_e eTop;
   Window_e eBot;
-  // TODO: nTopHeight
-  // TODO: nBotHeight
+  int left, top, right, bottom;
 };
 
 

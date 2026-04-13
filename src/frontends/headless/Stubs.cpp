@@ -8,16 +8,15 @@ bool g_bDSAvailable = false;
 
 void SSCFrontend_Update(struct SuperSerialCard* pSSC, uint32_t cycles) { (void)pSSC; (void)cycles; }
 void PrinterFrontend_Update(uint32_t cycles) { (void)cycles; }
-void UpdateDisplay(int flags) { (void)flags; }
 
 // Printer Frontend stubs
-unsigned char PrinterFrontend_CheckStatus() { return 0; }
+auto PrinterFrontend_CheckStatus() -> unsigned char { return 0; }
 void PrinterFrontend_SendChar(unsigned char c) { (void)c; }
 void PrinterFrontend_Destroy() {}
 
 // SSC Frontend stubs
 void SSCFrontend_SendByte(uint8_t byte) { (void)byte; }
-bool SSCFrontend_IsActive() { return false; }
+auto SSCFrontend_IsActive() -> bool { return false; }
 void SSCFrontend_UpdateState(unsigned int baud, unsigned int bits, SscParity parity, SscStopBits stop) {
     (void)baud; (void)bits; (void)parity; (void)stop;
 }
@@ -30,3 +29,6 @@ void DrawAppleContent() {}
 // Legacy sound stubs
 void DSInit() {}
 void DSShutdown() {}
+
+// Debugger stubs (normally in SDL_Video.cpp)
+void StretchBltMemToFrameDC() {}

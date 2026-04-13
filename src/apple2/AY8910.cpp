@@ -20,10 +20,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 /* Description: AY-3-8910 sound chip emulation */
 
-#include "core/Common.h"
 #include "AY8910.h"
 #include <cstring>
-#include <cmath>
 #include <cstdint>
 
 // Clean-room AY-3-8910 implementation
@@ -58,8 +56,8 @@ void AY8910_reset(int chip) {
   ay_chips[chip].rng = 1;
 }
 
-uint8_t* AY8910_GetRegsPtr(unsigned int nAyNum) {
-  if (nAyNum >= MAX_8910) return NULL;
+auto AY8910_GetRegsPtr(unsigned int nAyNum) -> uint8_t* {
+  if (nAyNum >= MAX_8910) return nullptr;
   return ay_chips[nAyNum].regs;
 }
 
@@ -95,27 +93,33 @@ void AY8910Update(int chip, int16_t **buffer, int length) {
   uint8_t enable = p->regs[7];
   uint8_t shape = p->regs[13];
 
-  double psg_cycles_per_sample = (double)ay_clock / (16.0 * ay_sample_rate);
+  double psg_cycles_per_sample = static_cast<double>(ay_clock) / (16.0 * ay_sample_rate);
 
   for (int i = 0; i < length; i++) {
     p->count_accum += psg_cycles_per_sample;
-    uint32_t psg_cycles = (uint32_t)p->count_accum;
+    uint32_t psg_cycles = static_cast<uint32_t>(p->count_accum);
     p->count_accum -= psg_cycles;
 
     if (period_a > 0) {
       p->count_a += psg_cycles;
       while (p->count_a >= period_a) { p->count_a -= period_a; p->out_a ^= 1; }
-    } else p->out_a = 1;
+    } else {
+      p->out_a = 1;
+    }
 
     if (period_b > 0) {
       p->count_b += psg_cycles;
       while (p->count_b >= period_b) { p->count_b -= period_b; p->out_b ^= 1; }
-    } else p->out_b = 1;
+    } else {
+      p->out_b = 1;
+    }
 
     if (period_c > 0) {
       p->count_c += psg_cycles;
       while (p->count_c >= period_c) { p->count_c -= period_c; p->out_c ^= 1; }
-    } else p->out_c = 1;
+    } else {
+      p->out_c = 1;
+    }
 
     uint32_t n_p = noise_period ? noise_period : 1;
     p->count_n += psg_cycles;

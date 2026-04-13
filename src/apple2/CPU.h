@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include "core/Common.h"
 
-typedef struct tagSS_CPU6502 SS_CPU6502;
+using SS_CPU6502 = struct tagSS_CPU6502;
 
 typedef struct _regsrec {
   uint8_t a;
@@ -21,9 +22,9 @@ void CpuDestroy();
 
 void CpuCalcCycles(uint32_t nExecutedCycles);
 
-uint32_t CpuExecute(uint32_t);
+auto CpuExecute(uint32_t) -> uint32_t;
 
-uint32_t CpuGetCyclesThisFrame(uint32_t nExecutedCycles);
+auto CpuGetCyclesThisFrame(uint32_t nExecutedCycles) -> uint32_t;
 
 void CpuInitialize();
 
@@ -43,5 +44,5 @@ void CpuNmiDeassert(eIRQSRC Device);
 
 void CpuReset();
 
-uint32_t CpuGetSnapshot(SS_CPU6502 *pSS);
-uint32_t CpuSetSnapshot(SS_CPU6502 *pSS);
+auto CpuGetSnapshot(SS_CPU6502 *pSS) -> uint32_t;
+auto CpuSetSnapshot(SS_CPU6502 *pSS) -> uint32_t;

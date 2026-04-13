@@ -1,3 +1,4 @@
+#include "apple2/Video.h"
 /*
 linapple : An Apple //e emulator for Linux
 
@@ -34,8 +35,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "Debugger_Parser.h"
 #include "Debugger_Help.h"
 #include "Debugger_Commands.h"
-#include "frontends/sdl3/Frontend.h"
-#include "SDL3/SDL.h"
 
 
 #define DEBUG_COLOR_CONSOLE 0

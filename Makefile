@@ -94,18 +94,16 @@ endif
 
 # --- Source Discovery --------------------------------------------------------
 
-# Select frontend based on FRONTEND variable
-ifeq ($(FRONTEND),headless)
-  CPPFLAGS += -DHEADLESS
-else
-  SOURCES_DBG  := $(shell find $(SRCDIR)/Debugger -type f -name "*.cpp")
-endif
-
 # Core and hardware are always included
 SOURCES_CORE := $(shell find $(SRCDIR)/core -type f -name "*.cpp")
 SOURCES_A2   := $(shell find $(SRCDIR)/apple2 -type f -name "*.cpp")
+SOURCES_DBG  := $(shell find $(SRCDIR)/Debugger -type f -name "*.cpp")
 
 SOURCES_FE   := $(shell find $(SRCDIR)/frontends/$(FRONTEND) -type f -name "*.cpp")
+
+ifeq ($(FRONTEND),headless)
+  CPPFLAGS += -DHEADLESS
+endif
 
 SOURCES := $(SOURCES_CORE) $(SOURCES_A2) $(SOURCES_DBG) $(SOURCES_FE)
 OBJECTS := $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)

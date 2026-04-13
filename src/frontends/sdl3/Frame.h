@@ -10,15 +10,7 @@ enum {
   NOT_ASCII = 0, ASCII
 };
 
-#define  VIEWPORTX   5
-#define  VIEWPORTY   5
-#define  VIEWPORTCX  560
-#define  VIEWPORTCY  384
-
-
 // if you gonna change these values, consider changing some values in Video.cpp
-#define SCREEN_WIDTH  560
-#define SCREEN_HEIGHT  384
 #define SCREEN_BPP  8
 extern SDL_Surface *screen;
 extern SDL_Window *g_window;
@@ -32,9 +24,9 @@ extern bool g_WindowResized;
 extern SDL_Rect origRect;
 extern SDL_Rect newRect;
 
-int InitSDL();
+auto InitSDL() -> int;
 
-int FrameCreateWindow();
+auto FrameCreateWindow() -> int;
 
 void FrameRefreshStatus(int);
 

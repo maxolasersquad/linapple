@@ -10,7 +10,7 @@ extern int g_nConsoleDisplayLines;
 extern int g_nConsoleDisplayTotal;
 extern int g_nConsoleDisplayWidth;
 extern conchar_t g_aConsoleDisplay[CONSOLE_HEIGHT][CONSOLE_WIDTH];
-extern int g_hConsoleBrushBG;
+extern uint32_t g_hConsoleBrushBG;
 
 // Constants
 const int DISPLAY_DISASM_RIGHT = 353;

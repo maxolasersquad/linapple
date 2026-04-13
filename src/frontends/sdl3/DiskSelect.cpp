@@ -14,8 +14,7 @@
 // Note: These were previously in Disk.cpp but are now in the frontend
 // because they drive the UI (DiskChoose) and use frontend-specific logic.
 
-void DiskSelectImage(int drive, char* pszFilename)
-{
+void DiskSelectImage(int drive, char* pszFilename) {
   (void)pszFilename;
   // Omit pszFilename??? for some reason or not!
   static size_t fileIndex = 0; // file index will be remembered for current dir
@@ -83,15 +82,13 @@ void DiskSelectImage(int drive, char* pszFilename)
   DrawFrameWindow();
 }
 
-void DiskSelect(int drive)
-{
+void DiskSelect(int drive) {
   char szSelect[] = "";
   DiskSelectImage(drive, szSelect);  // drive is 0 for D1, 1 - for D2
 }
 
 
-void Disk_FTP_SelectImage(int drive)  // select a disk image using FTP
-{
+void Disk_FTP_SelectImage(int drive) { // select a disk image using FTP
   //  omit pszFilename??? for some reason or not!
   static size_t fileIndex = 0; // file index will be remembered for current dir
   static size_t backdx = 0;  //reserve

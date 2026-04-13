@@ -10,12 +10,11 @@
 #include "frontends/sdl3/JoystickFrontend.h"
 #include "Debugger/Debug.h"
 #include "core/LinAppleCore.h"
-#include "frontends/sdl3/DiskChoose.h"
 
 // Forward declarations for functions still in Frame.cpp
 extern void ProcessButtonClick(int button, int mod);
 extern void FrameQuickState(int state, int mod);
-extern bool IsModifierKey(SDL_Keycode key);
+extern auto IsModifierKey(SDL_Keycode key) -> bool;
 extern void SetUsingCursor(bool);
 extern void DrawStatusArea(int);
 extern int buttondown;
@@ -126,8 +125,8 @@ void SDL_HandleEvent(SDL_Event *e) {
             }
           }
         } else if (g_state.mode == MODE_DEBUG) {
-          uint8_t apple_code = Frontend_TranslateKey(mysym, mymod);
-          if (apple_code) DebuggerProcessKey(apple_code);
+          LinAppleKey core_key = Frontend_ToCoreKey(mysym, mymod);
+          if (core_key != LINAPPLE_KEY_UNKNOWN) DebuggerProcessKey(core_key);
         }
       }
       break;
@@ -165,12 +164,11 @@ void SDL_HandleEvent(SDL_Event *e) {
       SDL_Keymod mymod = SDL_GetModState();
       if (e->button.button == SDL_BUTTON_LEFT) {
         if (buttondown == -1) {
-          x_local = (int)e->button.x;
-          y_local = (int)e->button.y;
-          if (g_state.mode == MODE_DEBUG)
+          x_local = static_cast<int>(e->button.x);
+          y_local = static_cast<int>(e->button.y);
+          if (g_state.mode == MODE_DEBUG) {
             DebuggerMouseClick(x_local, y_local);
-          else
-          if (usingcursor) {
+          } else if (usingcursor) {
             if (mymod & (SDL_KMOD_SHIFT | SDL_KMOD_CTRL)) {
               SetUsingCursor(false);
             } else {
@@ -222,8 +220,8 @@ void SDL_HandleEvent(SDL_Event *e) {
       break;
 
     case SDL_EVENT_MOUSE_MOTION:
-      x_local = (int)e->motion.x;
-      y_local = (int)e->motion.y;
+      x_local = static_cast<int>(e->motion.x);
+      y_local = static_cast<int>(e->motion.y);
       if (usingcursor) {
         if (Mouse_Active()) {
           Mouse_SetPosition(x_local, VIEWPORTCX - 4, y_local, VIEWPORTCY - 4);

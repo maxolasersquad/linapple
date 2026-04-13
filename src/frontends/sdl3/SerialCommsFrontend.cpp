@@ -1,7 +1,5 @@
-#include "core/Common.h"
 #include "SerialCommsFrontend.h"
 #include "apple2/SerialComms.h"
-#include "core/Registry.h"
 #include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
@@ -19,14 +17,14 @@ static pthread_t g_CommThread;
 static volatile bool g_bThreadRunning = false;
 static volatile bool g_bThreadTerminate = false;
 
-extern bool DiskIsSpinning(); // from Disk.cpp or elsewhere
+extern auto DiskIsSpinning() -> bool; // from Disk.cpp or elsewhere
 
 void SSCFrontend_UpdateCommState(unsigned int baud, unsigned int bits, SscParity parity, SscStopBits stop) {
   if (g_hCommHandle == -1) {
     return;
   }
 
-  struct termios dcb;
+  struct termios dcb{};
   int l_databits = CS8;
   tcgetattr(g_hCommHandle, &dcb);
 
@@ -87,7 +85,7 @@ void SSCFrontend_UpdateCommState(unsigned int baud, unsigned int bits, SscParity
   tcsetattr(g_hCommHandle, TCSANOW, &dcb);
 }
 
-static void* SerialPollingThread(void* arg) {
+static auto SerialPollingThread(void* arg) -> void* {
     SuperSerialCard* pSSC = (SuperSerialCard*)arg;
     uint8_t buffer[256];
 
@@ -104,10 +102,10 @@ static void* SerialPollingThread(void* arg) {
         }
         usleep(1000); // Poll every 1ms
     }
-    return NULL;
+    return nullptr;
 }
 
-bool SSCFrontend_IsActive() {
+auto SSCFrontend_IsActive() -> bool {
   if (g_bSerialLoopback) return true;
 
   if ((g_hCommHandle == -1) && !g_sSerialPortPath.empty()) {
@@ -116,7 +114,7 @@ bool SSCFrontend_IsActive() {
         // Start polling thread if not already running
         if (!g_bThreadRunning) {
             g_bThreadTerminate = false;
-            if (pthread_create(&g_CommThread, NULL, SerialPollingThread, &sg_SSC) == 0) {
+            if (pthread_create(&g_CommThread, nullptr, SerialPollingThread, &sg_SSC) == 0) {
                 g_bThreadRunning = true;
             }
         }
@@ -132,7 +130,7 @@ void SSCFrontend_UpdateState(unsigned int baud, unsigned int bits, SscParity par
 void SSCFrontend_Close() {
   if (g_bThreadRunning) {
       g_bThreadTerminate = true;
-      pthread_join(g_CommThread, NULL);
+      pthread_join(g_CommThread, nullptr);
       g_bThreadRunning = false;
   }
 
@@ -151,12 +149,13 @@ void SSCFrontend_Update(SuperSerialCard* pSSC, uint32_t totalcycles) {
   }
 
   if ((g_dwCommInactivity += totalcycles) > 1000000) {
-    if (DiskIsSpinning())
+    if (DiskIsSpinning()) {
       g_dwCommInactivity = 0;
+    }
   }
 }
 
-bool SSCFrontend_TransmitByte(uint8_t byte) {
+auto SSCFrontend_TransmitByte(uint8_t byte) -> bool {
   if (g_bSerialLoopback) {
       pthread_mutex_lock(&g_CriticalSection);
       SSC_PushRxByte(&sg_SSC, byte);
@@ -168,7 +167,7 @@ bool SSCFrontend_TransmitByte(uint8_t byte) {
   return write(g_hCommHandle, &byte, 1) == 1;
 }
 
-bool SSCFrontend_CheckReceive(SuperSerialCard* pSSC) {
+auto SSCFrontend_CheckReceive(SuperSerialCard* pSSC) -> bool {
   (void)pSSC;
   // Now handled by SerialPollingThread
   return false;

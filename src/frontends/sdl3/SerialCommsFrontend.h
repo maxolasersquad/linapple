@@ -4,7 +4,7 @@
 #include "apple2/SerialComms.h"
 
 // Initialize the host-side serial port
-bool SSCFrontend_Initialize(const char* serialPortPath);
+auto SSCFrontend_Initialize(const char* serialPortPath) -> bool;
 
 // Close the host-side serial port
 void SSCFrontend_Close();
@@ -16,7 +16,7 @@ void SSCFrontend_Update(SuperSerialCard* pSSC, uint32_t totalCycles);
 void SSCFrontend_SendByte(uint8_t byte);
 
 // Check for and receive a byte from the host-side serial port
-bool SSCFrontend_CheckReceive(SuperSerialCard* pSSC);
+auto SSCFrontend_CheckReceive(SuperSerialCard* pSSC) -> bool;
 
 // Set the serial port path
 void SSCFrontend_SetSerialPortPath(const char* serialPortPath);

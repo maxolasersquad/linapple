@@ -1,19 +1,19 @@
 #ifndef PIA6821_H
 #define PIA6821_H
 
-#include <stdint.h>
+#include <cstdint>
 
 // Motorola MC6821 Peripheral Interface Adapter (PIA)
 // Implementation based on official MC6821 datasheet.
 
-typedef void (*PiaOutputCallback)(void* objTo, uint8_t data);
+using PiaOutputCallback = void (*)(void* objTo, uint8_t data);
 
-typedef struct {
+typedef struct PiaWriteHandler_tag {
   void* objTo;
   PiaOutputCallback func;
 } PiaWriteHandler;
 
-typedef struct {
+typedef struct Pia6821_tag {
   // Internal Registers
   uint8_t ora;  // Output Register A
   uint8_t orb;  // Output Register B
@@ -47,7 +47,7 @@ typedef struct {
 
 // Interface
 void Pia6821_Reset(Pia6821* p);
-uint8_t Pia6821_Read(Pia6821* p, uint8_t addr);
+auto Pia6821_Read(Pia6821* p, uint8_t addr) -> uint8_t;
 void Pia6821_Write(Pia6821* p, uint8_t addr, uint8_t val);
 
 // Signal Injection
@@ -59,8 +59,8 @@ void Pia6821_SetCB1(Pia6821* p, bool level);
 void Pia6821_SetCB2(Pia6821* p, bool level);
 
 // Data Retrieval
-uint8_t Pia6821_GetPortA(Pia6821* p);
-uint8_t Pia6821_GetPortB(Pia6821* p);
+auto Pia6821_GetPortA(Pia6821* p) -> uint8_t;
+auto Pia6821_GetPortB(Pia6821* p) -> uint8_t;
 
 // Configuration
 void Pia6821_SetListenerA(Pia6821* p, void* objTo, PiaOutputCallback func);

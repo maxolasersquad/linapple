@@ -1,9 +1,24 @@
+#include <cstdio>
 #include "frontends/sdl3/SDL_Video.h"
 #include "apple2/Video.h"
 #include <SDL3/SDL.h>
+#include <mutex>
+#include "frontends/sdl3/Frame.h"
 
-VideoSurface SDLSurfaceToVideoSurface(SDL_Surface* s) {
-    VideoSurface vs;
+extern VideoSurface *g_hDebugScreen;
+extern std::recursive_mutex g_video_draw_mutex;
+extern SDL_Surface* screen;
+
+void StretchBltMemToFrameDC(void)
+{
+	g_video_draw_mutex.lock();
+    // In our new architecture, we just set frame ready and let the main loop draw it.
+    g_bFrameReady = true;
+	g_video_draw_mutex.unlock();
+}
+
+auto SDLSurfaceToVideoSurface(SDL_Surface* s) -> VideoSurface {
+    VideoSurface vs{};
     vs.pixels = (uint8_t*)s->pixels;
     vs.w = s->w;
     vs.h = s->h;

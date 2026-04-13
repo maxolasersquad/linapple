@@ -5,10 +5,6 @@
 #include <cstdlib>
 
 #include "frontends/sdl3/Frontend.h"
-#include "apple2/Keyboard.h"
-#include "apple2/Speaker.h"
-#include "apple2/Disk.h"
-#include "apple2/Mockingboard.h"
 #include "apple2/SoundCore.h"
 #include "apple2/Video.h"
 #include "frontends/sdl3/Frame.h"
@@ -29,7 +25,7 @@ static void SDLCALL sdl3AudioCallback(void *userdata, SDL_AudioStream *stream, i
   (void)total_amount;
   if (additional_amount <= 0) return;
 
-  int16_t *temp_buf = (int16_t *)SDL_malloc(additional_amount);
+  int16_t *temp_buf = static_cast<int16_t *>(SDL_malloc(additional_amount));
   if (!temp_buf) return;
 
   int num_samples = additional_amount / (sizeof(int16_t) * 2); // stereo
@@ -39,7 +35,7 @@ static void SDLCALL sdl3AudioCallback(void *userdata, SDL_AudioStream *stream, i
   SDL_free(temp_buf);
 }
 
-bool DSInit() {
+auto DSInit() -> bool {
   if (g_audioStream) return true;
 
   SDL_AudioSpec desired;
@@ -48,7 +44,7 @@ bool DSInit() {
   desired.format = SDL_AUDIO_S16;
 
   g_audioStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired, sdl3AudioCallback, NULL);
-  if (g_audioStream == NULL) {
+  if (g_audioStream == nullptr) {
     printf("Unable to open SDL audio: %s\n", SDL_GetError());
     return false;
   }
@@ -57,7 +53,7 @@ bool DSInit() {
   g_bDSAvailable = true;
 
   // Register frontend callback to core
-  Linapple_SetAudioCallback([](const int16_t* samples, size_t num_samples) {
+  Linapple_SetAudioCallback([](const int16_t* samples, size_t num_samples) -> void {
       DSUploadBuffer((short*)samples, (unsigned)num_samples);
   });
 
@@ -67,7 +63,7 @@ bool DSInit() {
 void DSShutdown() {
   if (g_audioStream) {
     SDL_DestroyAudioStream(g_audioStream);
-    g_audioStream = NULL;
+    g_audioStream = nullptr;
   }
 }
 
@@ -146,12 +142,12 @@ static void PrintHelp() {
 }
 
 int main(int argc, char* argv[]) {
-  int opt;
-  const char* szImageName_drive1 = NULL;
-  const char* szImageName_drive2 = NULL;
-  const char* szSnapshotFile = NULL;
-  const char* szConfigurationFile = NULL;
-  const char* szTestFile = NULL;
+  int opt = 0;
+  const char* szImageName_drive1 = nullptr;
+  const char* szImageName_drive2 = nullptr;
+  const char* szSnapshotFile = nullptr;
+  const char* szConfigurationFile = nullptr;
+  const char* szTestFile = nullptr;
   bool bBoot = false;
   bool bBenchMark = false;
   bool bSetFullScreen = false;
@@ -160,17 +156,17 @@ int main(int argc, char* argv[]) {
   bool bTestCpu = false;
 
   static struct option OptionTable[] = {
-    {"d1",           required_argument, 0, '1'},
-    {"d2",           required_argument, 0, '2'},
-    {"debug-script", required_argument, 0, 'x'},
-    {"help",         no_argument,       0, 'h'},
-    {"pal",          no_argument,       0, 'p'},
-    {"state",        required_argument, 0, 's'},
-    {"test-cpu",     required_argument, 0, 'T'},
-    {"test-6502",    no_argument,       0, '6'},
-    {"test-65c02",   no_argument,       0, 'C'},
-    {"verbose",      no_argument,       0, 'v'},
-    {0, 0, 0, 0}
+    {"d1",           required_argument, nullptr, '1'},
+    {"d2",           required_argument, nullptr, '2'},
+    {"debug-script", required_argument, nullptr, 'x'},
+    {"help",         no_argument,       nullptr, 'h'},
+    {"pal",          no_argument,       nullptr, 'p'},
+    {"state",        required_argument, nullptr, 's'},
+    {"test-cpu",     required_argument, nullptr, 'T'},
+    {"test-6502",    no_argument,       nullptr, '6'},
+    {"test-65c02",   no_argument,       nullptr, 'C'},
+    {"verbose",      no_argument,       nullptr, 'v'},
+    {nullptr, 0, nullptr, 0}
   };
 
   while ((opt = getopt_long(argc, argv, "1:2:abc:fhlmpr:s:vx:T:6C", OptionTable, &optind)) != -1) {
@@ -220,8 +216,11 @@ int main(int argc, char* argv[]) {
         VideoRedrawScreen();
     }
 
-    if (bBenchMark) VideoBenchmark();
-    else EnterMessageLoop();
+    if (bBenchMark) {
+      VideoBenchmark();
+    } else {
+      EnterMessageLoop();
+    }
 
     SessionShutdown();
   } while (g_state.restart);
