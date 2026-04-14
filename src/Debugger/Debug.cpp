@@ -27,7 +27,9 @@
 #include <cstddef>
 
 
-#define ALLOW_INPUT_LOWERCASE 1
+enum {
+ALLOW_INPUT_LOWERCASE = 1
+};
 
 void DebugDisplay(bool bInitDisasm)
 {
@@ -57,16 +59,16 @@ void DebugInitialize()
     bInitialized = true;
 }
 
-bool IsDebugSteppingAtFullSpeed(void)
+auto IsDebugSteppingAtFullSpeed() -> bool
 {
   return (g_state.mode == MODE_STEPPING) && g_bDebugFullSpeed;
 }
 
 bool g_bDebuggerEatKey = false;
 
-unsigned short g_nDisasmTopAddress = 0;
-unsigned short g_nDisasmBotAddress = 0;
-unsigned short g_nDisasmCurAddress = 0;
+uint16_t g_nDisasmTopAddress = 0;
+uint16_t g_nDisasmBotAddress = 0;
+uint16_t g_nDisasmCurAddress = 0;
 
 bool g_bDisasmCurBad    = false;
 int  g_nDisasmCurLine   = 0; // Aligned to Top or Center
@@ -87,6 +89,22 @@ WindowSplit_t g_aWindowConfig[ NUM_WINDOWS ];
 
 int                g_nZeroPagePointers = 0;
 ZeroPagePointers_t g_aZeroPagePointers[ MAX_ZEROPAGE_POINTERS ];
+
+bool GetBreakpointInfo(uint16_t nOffset, bool &bBreakpointActive_, bool &bBreakpointEnable_)
+{
+  bBreakpointActive_ = false;
+  bBreakpointEnable_ = false;
+  for (int i = 0; i < g_nBreakpoints; i++)
+  {
+    if (g_aBreakpoints[i].bSet && g_aBreakpoints[i].nAddress == nOffset)
+    {
+      bBreakpointActive_ = true;
+      bBreakpointEnable_ = g_aBreakpoints[i].bEnabled;
+      return true;
+    }
+  }
+  return false;
+}
 
 const int DEBUGGER_VERSION = MAKE_VERSION(2,9,0,15);
 

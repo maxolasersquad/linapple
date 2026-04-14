@@ -9,7 +9,7 @@ typedef struct tagSS_IO_Speaker SS_IO_Speaker;
 
 #define MAX_SPKR_EVENTS 4096
 
-extern unsigned int soundtype;
+extern uint32_t soundtype;
 
 typedef struct {
   uint64_t cycle;
@@ -20,14 +20,14 @@ void SpkrDestroy();
 void SpkrInitialize();
 void SpkrReinitialize();
 void SpkrReset();
-void SpkrUpdate(unsigned int totalcycles);
+void SpkrUpdate(uint32_t totalcycles);
 
 bool Spkr_IsActive();
 
-unsigned int SpkrGetSnapshot(SS_IO_Speaker *pSS);
-unsigned int SpkrSetSnapshot(SS_IO_Speaker *pSS);
+uint32_t SpkrGetSnapshot(SS_IO_Speaker *pSS);
+uint32_t SpkrSetSnapshot(SS_IO_Speaker *pSS);
 
-unsigned char SpkrToggle(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
+uint8_t SpkrToggle(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
 
 // Core Speaker API for Frontend
 int SpkrGetEvents(SpkrEvent *events, int max_events);

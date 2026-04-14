@@ -9,7 +9,7 @@ void HD_SetEnabled(bool bEnabled);
 
 const char* HD_GetFullName(int drive);
 
-void HD_Load_Rom(uint8_t* pCxRomPeripheral, unsigned int uSlot);
+void HD_Load_Rom(uint8_t* pCxRomPeripheral, uint32_t uSlot);
 
 void HD_Eject(const int iDrive);
 

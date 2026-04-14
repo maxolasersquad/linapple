@@ -7,7 +7,7 @@ extern MemoryDump_t g_aMemDump[NUM_MEM_DUMPS];
 extern MemorySearchResults_t g_vMemorySearchResults;
 
 // Memory Functions
-bool MemoryDumpCheck(int nArgs, unsigned short *pAddress_);
+bool MemoryDumpCheck(int nArgs, uint16_t *pAddress_);
 Update_t CmdMemoryCompare(int nArgs);
 bool _MemoryCheckMiniDump(int iWhich);
 Update_t CmdMemoryMiniDumpHex(int nArgs);

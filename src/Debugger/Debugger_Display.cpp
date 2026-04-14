@@ -1,6 +1,7 @@
 #include "core/Common.h"
 #include <cassert>
 #include <algorithm>
+#include <cstddef>
 #include <unistd.h>
 
 #include "Debugger_Display.h"
@@ -24,12 +25,14 @@
 
 #include "charset40.xpm" // US/default
 
-#define DEBUG_FORCE_DISPLAY 0
+enum {
+DEBUG_FORCE_DISPLAY = 0
+};
 
 // Globals __________________________________________________________________
 
-VideoSurface *g_hDebugScreen = NULL;
-VideoSurface *g_hDebugCharset = NULL;
+VideoSurface *g_hDebugScreen = nullptr;
+VideoSurface *g_hDebugCharset = nullptr;
 
 uint32_t g_hConsoleBrushFG = WHITE;
 uint32_t g_hConsoleBrushBG = BLACK;
@@ -49,9 +52,9 @@ VideoScannerDisplayInfo g_videoScannerDisplayInfo;
 // Prototypes _______________________________________________________________
 
 extern void DisasmInit();
-extern Update_t _CmdSymbolsClear( SymbolTable_Index_e eSymbolTable );
+extern auto _CmdSymbolsClear( SymbolTable_Index_e eSymbolTable ) -> Update_t;
 extern void FrameRefreshStatus(int);
-extern int _6502_GetOpmodeOpbyte ( const int nBaseAddress, int & iOpmode_, int & nOpbyte_, const DisasmData_t** pData_ = NULL );
+extern auto _6502_GetOpmodeOpbyte ( const int nBaseAddress, int & iOpmode_, int & nOpbyte_, const DisasmData_t** pData_ = nullptr ) -> int;
 
 extern void DrawSubWindow_Symbols(Update_t bUpdate);
 extern void DrawSubWindow_ZeroPage(Update_t bUpdate);
@@ -80,7 +83,7 @@ const int DISPLAY_DISASM_RIGHT = 353;
 
 //===========================================================================
 
-void AllocateDebuggerMemDC(void)
+void AllocateDebuggerMemDC()
 {
   if (!g_hDebugScreen)
   {
@@ -95,7 +98,7 @@ void AllocateDebuggerMemDC(void)
   }
 }
 
-void ReleaseDebuggerMemDC(void)
+void ReleaseDebuggerMemDC()
 {
 }
 
@@ -105,20 +108,20 @@ void GetDebugViewPortScale(float *x, float *y)
     *x = 1.0f; *y = 1.0f;
     return;
   }
-	float f = ((float) g_hDebugScreen->w) / SCREEN_WIDTH;
+	float f = (static_cast<float>(g_hDebugScreen->w)) / SCREEN_WIDTH;
 	*x = (f>0.01) ? f : 0.01;
-	f = ((float) g_hDebugScreen->h) / SCREEN_HEIGHT;
+	f = (static_cast<float>(g_hDebugScreen->h)) / SCREEN_HEIGHT;
 	*y = (f>0.01) ? f : 0.01;
 }
 
 // Font: Apple Text
-void DebuggerSetColorFG( unsigned int nRGB )
+void DebuggerSetColorFG( uint32_t nRGB )
 {
 	g_hConsoleBrushFG = nRGB;
 }
 
 // Font: GDI/Console
-void DebuggerSetColorBG( unsigned int nRGB, bool bTransparent )
+void DebuggerSetColorBG( uint32_t nRGB, bool bTransparent )
 {
 	(void) bTransparent;
 	g_hConsoleBrushBG = nRGB;
@@ -156,7 +159,7 @@ void PrintGlyph( const int x, const int y, const char glyph )
             g += 32 - ' ';
     }
     else
-    if ((glyph >= '`') && ((unsigned char)glyph <= 127))
+    if ((glyph >= '`') && (static_cast<uint8_t>(glyph) <= 127))
     {
             g += 6 * 16 - '`';
     }
@@ -168,12 +171,14 @@ void PrintGlyph( const int x, const int y, const char glyph )
         int col = x / CONSOLE_FONT_WIDTH;
         int row = y / CONSOLE_FONT_HEIGHT;
 
-        if (x > DISPLAY_DISASM_RIGHT)
+        if (x > DISPLAY_DISASM_RIGHT) {
             col++;
+}
 
         if ((col >= 0) && (col < DEBUG_VIRTUAL_TEXT_WIDTH)
-        &&  (row >= 0) && (row < DEBUG_VIRTUAL_TEXT_HEIGHT))
+        &&  (row >= 0) && (row < DEBUG_VIRTUAL_TEXT_HEIGHT)) {
             g_aDebuggerVirtualTextScreen[ row ][ col ] = glyph;
+}
     }
 
     uint32_t hBrush = g_hConsoleBrushFG;
@@ -186,7 +191,7 @@ void DebuggerPrint ( int x, int y, const char *pText )
 {
     if (!pText) return;
     const int nLeft = x;
-    char c;
+    char c = 0;
     const char *p = pText;
 
     while ((c = *p))
@@ -208,11 +213,12 @@ void DebuggerPrint ( int x, int y, const char *pText )
 void DebuggerPrintColor( int x, int y, const conchar_t * pText )
 {
     int nLeft = x;
-    conchar_t g;
+    conchar_t g = 0;
     const conchar_t *pSrc = pText;
 
-    if (!pText)
+    if (!pText) {
         return;
+}
 
     while ((g = (*pSrc)))
     {
@@ -233,18 +239,18 @@ void DebuggerPrintColor( int x, int y, const conchar_t * pText )
             g = ConsoleChar_GetChar( g );
         }
 
-        PrintGlyph( x, y, (char) (g & _CONSOLE_COLOR_MASK) );
+        PrintGlyph( x, y, static_cast<char>(g & _CONSOLE_COLOR_MASK) );
         x += CONSOLE_FONT_WIDTH;
         pSrc++;
     }
 }
 
-bool CanDrawDebugger()
+auto CanDrawDebugger() -> bool
 {
     return (g_state.mode == MODE_DEBUG) || (g_state.mode == MODE_STEPPING);
 }
 
-int PrintText ( const char * pText, RECT & rRect )
+auto PrintText ( const char * pText, RECT & rRect ) -> int
 {
     if (!pText) return 0;
     int nLen = strlen( pText );
@@ -267,7 +273,7 @@ void PrintTextColor ( const conchar_t *pText, RECT & rRect )
     DebuggerPrintColor( rRect.left, rRect.top, pText );
 }
 
-int PrintTextCursorX ( const char * pText, RECT & rRect )
+auto PrintTextCursorX ( const char * pText, RECT & rRect ) -> int
 {
     int nChars = 0;
     if (pText)
@@ -279,7 +285,7 @@ int PrintTextCursorX ( const char * pText, RECT & rRect )
     return nChars;
 }
 
-int PrintTextCursorY ( const char * pText, RECT & rRect )
+auto PrintTextCursorY ( const char * pText, RECT & rRect ) -> int
 {
     int nChars = PrintText( pText, rRect );
     rRect.top    += CONSOLE_FONT_HEIGHT;
@@ -290,8 +296,9 @@ int PrintTextCursorY ( const char * pText, RECT & rRect )
 // Font: GDI/Console
 void ConsoleDrawChar( int x, int y, char ch )
 {
-	if (g_hDebugScreen == NULL || g_hDebugCharset == NULL)
+	if (g_hDebugScreen == nullptr || g_hDebugCharset == nullptr) {
 		return;
+}
 
     PrintGlyph(x, y, ch);
 }
@@ -299,20 +306,22 @@ void ConsoleDrawChar( int x, int y, char ch )
 // Font: GDI/Console
 void ConsoleDrawText( int x, int y, const char * pText )
 {
-	if (g_hDebugScreen == NULL || !pText)
+	if (g_hDebugScreen == nullptr || !pText) {
 		return;
+}
 
 	const char *pSrc = pText;
 	int xCur = x;
-	char c;
+	char c = 0;
 
 	while (pSrc && (c = *pSrc))
 	{
 		if (ConsoleColor_IsCharMeta( c ))
 		{
 			pSrc++;
-			if (! *pSrc)
+			if (! *pSrc) {
 				break;
+}
 
 			if (ConsoleColor_IsCharColor( *pSrc ))
 			{
@@ -338,8 +347,9 @@ void ConsoleDrawText( int x, int y, const char * pText )
 //===========================================================================
 void DebuggerDrawChar ( int x, int y, char ch )
 {
-	if (g_hDebugScreen == NULL || g_hDebugCharset == NULL)
+	if (g_hDebugScreen == nullptr || g_hDebugCharset == nullptr) {
 		return;
+}
 
     PrintGlyph(x, y, ch);
 }
@@ -361,8 +371,9 @@ void DebuggerDrawText ( int x, int y, const char * pText )
 //===========================================================================
 void DebuggerDrawCursor ( int x, int y, char ch )
 {
-	if (g_hDebugScreen == NULL || g_hDebugCharset == NULL)
+	if (g_hDebugScreen == nullptr || g_hDebugCharset == nullptr) {
 		return;
+}
 
     PrintGlyph(x, y, ch);
 }
@@ -370,8 +381,9 @@ void DebuggerDrawCursor ( int x, int y, char ch )
 //===========================================================================
 void DrawConsoleCursor ()
 {
-	if (g_hDebugScreen == NULL)
+	if (g_hDebugScreen == nullptr) {
 		return;
+}
 
 	DebuggerSetColorFG( WHITE );
 	DebuggerSetColorBG( BLACK, false );
@@ -386,8 +398,9 @@ void DrawConsoleCursor ()
 //===========================================================================
 void DrawConsoleInput ()
 {
-	if (g_hDebugScreen == NULL)
+	if (g_hDebugScreen == nullptr) {
 		return;
+}
 
 	DebuggerSetColorFG( WHITE );
 	DebuggerSetColorBG( BLACK, false );
@@ -401,7 +414,7 @@ void DrawConsoleInput ()
 
 	// Clear rest of line
 	DebuggerSetColorFG( BLACK );
-	VideoRect r;
+	VideoRect r{};
 	r.x   = g_aWindowConfig[ WINDOW_CONSOLE ].left + (g_nConsoleInputChars + g_nConsolePromptLen + 1) * APPLE_FONT_WIDTH;
 	r.y    = g_aWindowConfig[ WINDOW_CONSOLE ].bottom - APPLE_FONT_HEIGHT;
 	r.w  = g_aWindowConfig[ WINDOW_CONSOLE ].right - r.x;
@@ -413,14 +426,15 @@ void DrawConsoleInput ()
 //===========================================================================
 void DrawConsoleLine ( const conchar_t * pText, int y_coord )
 {
-	if (g_hDebugScreen == NULL)
+	if (g_hDebugScreen == nullptr) {
 		return;
+}
 
 	int x = g_aWindowConfig[ WINDOW_CONSOLE ].left;
 	int y = g_aWindowConfig[ WINDOW_CONSOLE ].top + y_coord * APPLE_FONT_HEIGHT;
 
 	const conchar_t *pSrc = pText;
-	conchar_t g;
+	conchar_t g = 0;
 
     if (!pText) {
         // Clear line
@@ -437,7 +451,7 @@ void DrawConsoleLine ( const conchar_t * pText, int y_coord )
 	}
 }
 
-int GetConsoleTopPixels( int y )
+auto GetConsoleTopPixels( int y ) -> int
 {
 	return g_aWindowConfig[ WINDOW_CONSOLE ].top + (y * CONSOLE_FONT_HEIGHT);
 }
@@ -458,8 +472,9 @@ void ColorizeFlags( bool bSet, int bg_default, int fg_default)
 
 void DrawSubWindow_Info(Update_t bUpdate, int iWindow)
 {
-	if (g_iWindowThis == WINDOW_CONSOLE)
+	if (g_iWindowThis == WINDOW_CONSOLE) {
 		return;
+}
 
     (void)bUpdate; (void)iWindow;
 	DrawRegisters( 0 );
@@ -469,46 +484,46 @@ void DrawSubWindow_Info(Update_t bUpdate, int iWindow)
     DrawSoftSwitches( 16 );
 }
 
-char ColorizeSpecialChar(char * sText, unsigned char nData, const MemoryView_e iView,
+auto ColorizeSpecialChar(char * sText, uint8_t nData, const MemoryView_e iView,
     const int iAsciBackground, const int iTextForeground,
     const int iHighBackground, const int iHighForeground,
-    const int iCtrlBackground, const int iCtrlForeground)
+    const int iCtrlBackground, const int iCtrlForeground) -> char
 {
     (void)iView; (void)iAsciBackground; (void)iTextForeground; (void)iHighBackground; (void)iHighForeground; (void)iCtrlBackground; (void)iCtrlForeground;
     bool bCtrlBit = false;
 
-    unsigned char nByte = (nData & 0x7F);
+    uint8_t nByte = (nData & 0x7F);
     if (nByte < 0x20) bCtrlBit = true;
 
-    char nChar = (char)nByte;
+    char nChar = static_cast<char>(nByte);
     if (bCtrlBit) nChar += '@';
 
     if (sText) sprintf(sText, "%c", nChar);
     return nChar;
 }
 
-char FormatCharTxtHigh(const unsigned char b, bool *pWasHi_) {
+auto FormatCharTxtHigh(const uint8_t b, bool *pWasHi_) -> char {
     if (pWasHi_) *pWasHi_ = (b > 0x7F);
     return b & 0x7F;
 }
 
-char FormatCharTxtCtrl(const unsigned char b, bool *pWasCtrl_) {
+auto FormatCharTxtCtrl(const uint8_t b, bool *pWasCtrl_) -> char {
     if (pWasCtrl_) *pWasCtrl_ = (b < 0x20);
     return (b < 0x20) ? b + '@' : b;
 }
 
-char FormatChar4Font(const unsigned char b, bool *pWasHi_, bool *pWasLo_) {
-    unsigned char b1 = FormatCharTxtHigh(b, pWasHi_);
+auto FormatChar4Font(const uint8_t b, bool *pWasHi_, bool *pWasLo_) -> char {
+    uint8_t b1 = FormatCharTxtHigh(b, pWasHi_);
     return FormatCharTxtCtrl(b1, pWasLo_);
 }
 
-int GetDisassemblyLine ( unsigned short nBaseAddress, DisasmLine_t & line_ )
+auto GetDisassemblyLine ( uint16_t nBaseAddress, DisasmLine_t & line_ ) -> int
 {
   line_.Clear();
 
-  int iOpcode;
-  int iOpmode;
-  int nOpbyte;
+  int iOpcode = 0;
+  int iOpmode = 0;
+  int nOpbyte = 0;
 
   iOpcode = _6502_GetOpmodeOpbyte( nBaseAddress, iOpmode, nOpbyte, &line_.pDisasmData );
   
@@ -516,48 +531,55 @@ int GetDisassemblyLine ( unsigned short nBaseAddress, DisasmLine_t & line_ )
   line_.iOpmode = iOpmode;
   line_.nOpbyte = nOpbyte;
 
-  if (iOpmode == AM_M)
+  if (iOpmode == AM_M) {
           line_.bTargetImmediate = true;
+}
 
-  if ((iOpmode >= AM_IZX) && (iOpmode <= AM_NA))
+  if ((iOpmode >= AM_IZX) && (iOpmode <= AM_NA)) {
           line_.bTargetIndirect = true;
+}
 
-  if ((iOpmode >= AM_IZX) && (iOpmode <= AM_NZY))
+  if ((iOpmode >= AM_IZX) && (iOpmode <= AM_NZY)) {
           line_.bTargetIndexed = true;
+}
 
-  if (((iOpmode >= AM_A) && (iOpmode <= AM_ZY)) || line_.bTargetIndirect)
+  if (((iOpmode >= AM_A) && (iOpmode <= AM_ZY)) || line_.bTargetIndirect) {
           line_.bTargetValue = true;
+}
 
-  if ((iOpmode == AM_AX) || (iOpmode == AM_ZX) || (iOpmode == AM_IZX) || (iOpmode == AM_IAX))
+  if ((iOpmode == AM_AX) || (iOpmode == AM_ZX) || (iOpmode == AM_IZX) || (iOpmode == AM_IAX)) {
           line_.bTargetX = true;
+}
 
-  if ((iOpmode == AM_AY) || (iOpmode == AM_ZY) || (iOpmode == AM_NZY))
+  if ((iOpmode == AM_AY) || (iOpmode == AM_ZY) || (iOpmode == AM_NZY)) {
           line_.bTargetY = true;
+}
 
   return 0; // Simplified for now
 }
 
-void GetTargets_IgnoreDirectJSRJMP(const unsigned char iOpcode, int& nTargetPointer)
+void GetTargets_IgnoreDirectJSRJMP(const uint8_t iOpcode, int& nTargetPointer)
 {
     (void)iOpcode; (void)nTargetPointer;
 }
 
-const char* FormatAddress(unsigned short nAddress, int nBytes)
+auto FormatAddress(uint16_t nAddress, int nBytes) -> const char*
 {
     static char sAddress[16];
-    if (nBytes == 1) sprintf(sAddress, "%02X", nAddress);
-    else sprintf(sAddress, "%04X", nAddress);
+    if (nBytes == 1) { sprintf(sAddress, "%02X", nAddress);
+    } else { sprintf(sAddress, "%04X", nAddress);
+}
     return sAddress;
 }
 
 void InitDisasm()
 {
-  for (int i = 0; i < NUM_WINDOWS; i++) {
-    g_aWindowConfig[i].bSplit = false;
-    g_aWindowConfig[i].left = 0;
-    g_aWindowConfig[i].top = 0;
-    g_aWindowConfig[i].right = 560;
-    g_aWindowConfig[i].bottom = 384;
+  for (auto & i : g_aWindowConfig) {
+    i.bSplit = false;
+    i.left = 0;
+    i.top = 0;
+    i.right = 560;
+    i.bottom = 384;
   }
   // Hardcoded layout for now, originally loaded from config
   g_aWindowConfig[WINDOW_CONSOLE].top = 300;
@@ -576,8 +598,9 @@ void UpdateDisplay ( Update_t bUpdate )
 {
 	static int spDrawMutex = false;
 
-	if (spDrawMutex)
+	if (spDrawMutex) {
 		return;
+}
 
 	spDrawMutex = true;
 
@@ -589,7 +612,7 @@ void UpdateDisplay ( Update_t bUpdate )
 
   if (bUpdate & UPDATE_ALL)
   {
-    memset(g_hDebugScreen->pixels, 0, g_hDebugScreen->pitch * g_hDebugScreen->h);
+    memset(g_hDebugScreen->pixels, 0, static_cast<size_t>(g_hDebugScreen->pitch * g_hDebugScreen->h));
   }
 
 	switch (g_iWindowThis)
@@ -656,7 +679,7 @@ void DebugDestroy ()
 
   for( int iTable = 0; iTable < NUM_SYMBOL_TABLES; iTable++ )
   {
-    _CmdSymbolsClear( (SymbolTable_Index_e) iTable );
+    _CmdSymbolsClear( static_cast<SymbolTable_Index_e>(iTable) );
   }
 }
 
@@ -671,7 +694,7 @@ void DebugEnd ()
   if (g_hTraceFile)
   {
     fclose(g_hTraceFile);
-    g_hTraceFile = NULL;
+    g_hTraceFile = nullptr;
   }
 
   extern std::vector<int> g_vMemorySearchResults;

@@ -96,8 +96,8 @@ inline auto SkipUntilWhiteSpaceReverse ( const char *pSrc, const char *pStart ) 
 }
 
 /** Assumes text are valid hex digits! */
-inline auto TextConvert2CharsToByte ( char *pText ) -> unsigned char {
-  unsigned char n = ((pText[0] <= '@') ? (pText[0] - '0') : (pText[0] - 'A' + 10)) << 4;
+inline auto TextConvert2CharsToByte ( char *pText ) -> uint8_t {
+  uint8_t n = ((pText[0] <= '@') ? (pText[0] - '0') : (pText[0] - 'A' + 10)) << 4;
   n += ((pText[1] <= '@') ? (pText[1] - '0') : (pText[1] - 'A' + 10)) << 0;
   return n;
 }

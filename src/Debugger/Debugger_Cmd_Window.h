@@ -64,7 +64,7 @@ void WindowUpdateDisasmSize();
 void WindowUpdateConsoleDisplayedSize();
 void WindowUpdateSizes();
 Update_t _CmdWindowViewFull(int iNewWindow);
-Update_t _CmdWindowViewCommon(int iNewWindow);
+Update_t CmdWindowViewCommon(int iNewWindow);
 
 enum ViewVideoPage_t
 {
@@ -82,6 +82,6 @@ void DisasmCalcTopFromCurAddress(bool bUpdateTop = true);
 void DisasmCalcCurFromTopAddress();
 void DisasmCalcBotFromTopAddress();
 void DisasmCalcTopBotAddress();
-unsigned short DisasmCalcAddressFromLines(unsigned short iAddress, int nLines);
+uint16_t DisasmCalcAddressFromLines(uint16_t iAddress, int nLines);
 
-bool DebugGetVideoMode(unsigned int* pVideoMode);
+bool DebugGetVideoMode(uint32_t* pVideoMode);

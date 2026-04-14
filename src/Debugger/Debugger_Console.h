@@ -24,7 +24,7 @@
 
 // Color ____________________________________________________________________
 
-	// typedef unsigned char conchar_t;
+	// typedef uint8_t conchar_t;
 	typedef short conchar_t;
 
 	// NOTE: Keep in sync ConsoleColors_e g_anConsoleColor !
@@ -96,14 +96,14 @@
 #endif
 
 	// ascii markup
-	inline bool ConsoleColor_IsCharMeta( unsigned char c )
+	inline bool ConsoleColor_IsCharMeta( uint8_t c )
 	{
 		if (CONSOLE_COLOR_ESCAPE_CHAR == c)
 			return true;
 		return false;
 	}
 
-	inline bool ConsoleColor_IsCharColor( unsigned char c )
+	inline bool ConsoleColor_IsCharColor( uint8_t c )
 	{
 		if ((c >= '0') && ((c - '0') < NUM_CONSOLE_COLORS))
 			return true;
@@ -153,7 +153,7 @@
 		return ConsoleColor_IsCharColor (g >> 8);
 	}
 
-	inline unsigned int ConsoleColor_GetColor( conchar_t g )
+	inline uint32_t ConsoleColor_GetColor( conchar_t g )
 	{
 		const int iColor = (g >> 8) - '0';
 		if (iColor < NUM_CONSOLE_COLORS)
@@ -172,18 +172,18 @@
 		return (g & _CONSOLE_COLOR_MASK);
 	}
 
-	inline char ConsoleColor_MakeMouse( unsigned char c )
+	inline char ConsoleColor_MakeMouse( uint8_t c )
 	{
 		return ((c - '@') + (_CONSOLE_COLOR_MASK + 1));
 	}
 
-	inline conchar_t ConsoleColor_MakeMeta( unsigned char c )
+	inline conchar_t ConsoleColor_MakeMeta( uint8_t c )
 	{
 		conchar_t g = (ConsoleColor_MakeMouse(c) << 8);
 		return g;
 	}
 
-	inline conchar_t ConsoleColor_MakeColor( unsigned char color, unsigned char text )
+	inline conchar_t ConsoleColor_MakeColor( uint8_t color, uint8_t text )
 	{
 		conchar_t g = (color << 8) | text;
 		return g;

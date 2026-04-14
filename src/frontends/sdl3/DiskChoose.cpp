@@ -54,7 +54,7 @@ auto getstat(const char *catalog, const char *fname, uintmax_t *size) -> int
   return 0;
 }
 
-int compareNames(const void *const A, const void *const B)
+auto compareNames(const void *const A, const void *const B) -> int
 {
     return strcasecmp(
     (*static_cast<const struct dirent * const *>(A))->d_name,
@@ -74,13 +74,13 @@ auto get_sorted_directory(const char *incoming_dir, vector<file_entry_t> &file_l
   struct dirent *entry = nullptr;
 
   dp = opendir(incoming_dir);
-  if (dp == NULL)
+  if (dp == nullptr)
   {
       fprintf(stderr, "cannot open `%s'\n", incoming_dir);
       return false;
   }
 
-  while ((entry = readdir(dp)) != NULL) {
+  while ((entry = readdir(dp)) != nullptr) {
     const char *file_name = entry->d_name;
     const size_t name_length = strlen(file_name);
 
@@ -117,13 +117,13 @@ struct disk_file_list_generator_t : public file_list_generator_t {
     directory(dir)
   {}
 
-  const std::vector<file_entry_t> generate_file_list();
+  auto generate_file_list() -> const std::vector<file_entry_t> override;
 
-  const std::string get_starting_message() {
+  auto get_starting_message() -> const std::string override {
     return "Reading directory listing…";
   }
 
-  const std::string get_failure_message() {
+  auto get_failure_message() -> const std::string override {
     return failure_message;
   }
 
@@ -260,32 +260,33 @@ void DiskChoose_Draw()
 {
   if (!g_diskChooseState.active) return;
 
-  const double facx = static_cast<double>(g_state.ScreenWidth) / static_cast<double>(SCREEN_WIDTH);
-  const double facy = static_cast<double>(g_state.ScreenHeight) / static_cast<double>(SCREEN_HEIGHT);
-  const int sx = g_state.ScreenWidth;
+  const float facx_f = static_cast<float>(g_state.ScreenWidth) / static_cast<float>(SCREEN_WIDTH);
+  const float facy_f = static_cast<float>(g_state.ScreenHeight) / static_cast<float>(SCREEN_HEIGHT);
+  const double facy = static_cast<double>(facy_f);
+  const int sx = static_cast<int>(g_state.ScreenWidth);
 
   // We assume ownership of g_video_draw_mutex is handled by the caller (main loop or blocking proxy)
 
   VideoSurface vs_bg = SDLSurfaceToVideoSurface(g_diskChooseState.bg_screen);
   VideoSurface vs_screen = SDLSurfaceToVideoSurface(screen);
 
-  VideoSoftStretch(&vs_bg, NULL, &vs_screen, NULL);
+  VideoSoftStretch(&vs_bg, nullptr, &vs_screen, nullptr);
 
   constexpr int NORMAL_LENGTH = 60;
-  font_print_centered(sx / 2, 5 * facy, g_diskChooseState.current_dir.substr(0, NORMAL_LENGTH).c_str(), &vs_screen, 1.5 * facx, 1.3 * facy);
+  font_print_centered(sx / 2, static_cast<int>(5 * facy), g_diskChooseState.current_dir.substr(0, NORMAL_LENGTH).c_str(), &vs_screen, 1.5f * facx_f, 1.3f * facy_f);
 
   if (g_diskChooseState.slot == 6) {
-    font_print_centered(sx / 2, 20 * facy, "Choose image for floppy 140KB drive", &vs_screen, 1 * facx, 1 * facy);
+    font_print_centered(sx / 2, static_cast<int>(20 * facy), "Choose image for floppy 140KB drive", &vs_screen, 1.0f * facx_f, 1.0f * facy_f);
   } else if (g_diskChooseState.slot == 7) {
-    font_print_centered(sx / 2, 20 * facy, "Choose image for Hard Disk", &vs_screen, 1 * facx, 1 * facy);
+    font_print_centered(sx / 2, static_cast<int>(20 * facy), "Choose image for Hard Disk", &vs_screen, 1.0f * facx_f, 1.0f * facy_f);
   } else if (g_diskChooseState.slot == 5) {
-    font_print_centered(sx / 2, 20 * facy, "Choose image for floppy 800KB drive", &vs_screen, 1 * facx, 1 * facy);
+    font_print_centered(sx / 2, static_cast<int>(20 * facy), "Choose image for floppy 800KB drive", &vs_screen, 1.0f * facx_f, 1.0f * facy_f);
   } else if (g_diskChooseState.slot == 1) {
-    font_print_centered(sx / 2, 20 * facy, "Select file name for saving snapshot", &vs_screen, 1 * facx, 1 * facy);
+    font_print_centered(sx / 2, static_cast<int>(20 * facy), "Select file name for saving snapshot", &vs_screen, 1.0f * facx_f, 1.0f * facy_f);
   } else if (g_diskChooseState.slot == 0) {
-    font_print_centered(sx / 2, 20 * facy, "Select snapshot file name for loading", &vs_screen, 1 * facx, 1 * facy);
+    font_print_centered(sx / 2, static_cast<int>(20 * facy), "Select snapshot file name for loading", &vs_screen, 1.0f * facx_f, 1.0f * facy_f);
   }
-  font_print_centered(sx / 2, 30 * facy, "Press ENTER to choose, or ESC to cancel", &vs_screen, 1.0 * facx, 1.0 * facy);
+  font_print_centered(sx / 2, static_cast<int>(30 * facy), "Press ENTER to choose, or ESC to cancel", &vs_screen, 1.0f * facx_f, 1.0f * facy_f);
 
   int TOPX = static_cast<int>(45 * facy);
 
@@ -300,23 +301,23 @@ void DiskChoose_Draw()
     if (i == g_diskChooseState.act_file) {
       SDL_Rect r;
       r.x = 2;
-      r.y = TOPX + j * 15 * facy - 1;
+      r.y = static_cast<int>(static_cast<double>(TOPX) + static_cast<double>(j) * 15.0 * facy - 1.0);
       if (file_name.size() > MAX_FILENAME) {
-        r.w = MAX_FILENAME * FONT_SIZE_X * 1.0 * facx;
+        r.w = static_cast<int>(static_cast<double>(MAX_FILENAME) * static_cast<double>(FONT_SIZE_X) * 1.0 * static_cast<double>(facx_f));
       } else {
-        r.w = file_name.size() * FONT_SIZE_X * 1.0 * facx;
+        r.w = static_cast<int>(static_cast<double>(file_name.size()) * static_cast<double>(FONT_SIZE_X) * 1.0 * static_cast<double>(facx_f));
       }
-      r.h = 9 * 1.0 * facy;
+      r.h = static_cast<int>(9.0 * 1.0 * facy);
       SDL_FillSurfaceRect(screen, &r, SDL_MapRGB(SDL_GetPixelFormatDetails(screen->format), SDL_GetSurfacePalette(screen), 64, 128, 190));
     }
 
-    font_print(4, TOPX + j * 15 * facy, file_name.substr(0, MAX_FILENAME).c_str(), &vs_screen, 1.0 * facx, 1.0 * facy);
-    font_print(sx - 70 * facx, TOPX + j * 15 * facy, file_entry.type_or_size_as_string().c_str(), &vs_screen, 1.0 * facx,
-               1.0 * facy);
+    font_print(4, static_cast<int>(static_cast<double>(TOPX) + static_cast<double>(j) * 15.0 * facy), file_name.substr(0, MAX_FILENAME).c_str(), &vs_screen, 1.0f * facx_f, 1.0f * facy_f);
+    font_print(sx - static_cast<int>(70.0 * static_cast<double>(facx_f)), static_cast<int>(static_cast<double>(TOPX) + static_cast<double>(j) * 15.0 * facy), file_entry.type_or_size_as_string().c_str(), &vs_screen, 1.0f * facx_f,
+               1.0f * facy_f);
   }
 
-  rectangle(&vs_screen, 0, TOPX - 5, sx, 320 * facy, RGB(255, 255, 255));
-  rectangle(&vs_screen, 480 * facx, TOPX - 5, 0, 320 * facy, RGB(255, 255, 255));
+  rectangle(&vs_screen, 0, TOPX - 5, sx, static_cast<int>(320.0 * facy), RGB(255, 255, 255));
+  rectangle(&vs_screen, static_cast<int>(480.0 * static_cast<double>(facx_f)), TOPX - 5, 0, static_cast<int>(320.0 * facy), RGB(255, 255, 255));
 
   DrawFrameWindow();
 }
@@ -345,7 +346,7 @@ auto ChooseImageDialog(int sx, int sy, const string& dir, int slot, file_list_ge
   // Wait for video refresh and claim ownership
   g_video_draw_mutex.lock();
 
-  VideoSurface *tempSurface = NULL;
+  VideoSurface *tempSurface = nullptr;
   if (!g_WindowResized) {
     if (g_state.mode == MODE_LOGO) {
       tempSurface = g_hLogoBitmap;
@@ -392,7 +393,7 @@ auto ChooseImageDialog(int sx, int sy, const string& dir, int slot, file_list_ge
       SDL_PollEvent(&event);
     }
     SDL_DestroySurface(g_diskChooseState.bg_screen);
-    g_diskChooseState.bg_screen = NULL;
+    g_diskChooseState.bg_screen = nullptr;
     return false;
   }
 
@@ -436,7 +437,7 @@ auto ChooseImageDialog(int sx, int sy, const string& dir, int slot, file_list_ge
 
   g_state.mode = old_mode;
   SDL_DestroySurface(g_diskChooseState.bg_screen);
-  g_diskChooseState.bg_screen = NULL;
+  g_diskChooseState.bg_screen = nullptr;
 
   if (g_diskChooseState.finished) {
     filename = g_diskChooseState.result_filename;

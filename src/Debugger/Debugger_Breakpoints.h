@@ -39,7 +39,7 @@
 	Update_t CmdWatchLoad      (int nArgs);
 	Update_t CmdWatchSave      (int nArgs);
 
-	bool _CmdBreakpointAddReg( Breakpoint_t *pBP, BreakpointSource_t iSrc, BreakpointOperator_t iCmp, unsigned short nAddress, int nLen, bool bIsTempBreakpoint );
+	bool _CmdBreakpointAddReg( Breakpoint_t *pBP, BreakpointSource_t iSrc, BreakpointOperator_t iCmp, uint16_t nAddress, int nLen, bool bIsTempBreakpoint );
 	int  _CmdBreakpointAddCommonArg ( int iArg, int nArg, BreakpointSource_t iSrc, BreakpointOperator_t iCmp, bool bIsTempBreakpoint = false );
 
 // BWZ (Breakpoint, Watch, ZeroPage) shared helpers

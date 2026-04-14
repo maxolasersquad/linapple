@@ -43,13 +43,13 @@ std::vector<Command_t> g_vSortedCommands;
 int g_nNumCommandsWithAliases = 0;
 
 // Implementation
-Update_t ExecuteCommand(int nArgs)
+auto ExecuteCommand(int nArgs) -> Update_t
 {
   Update_t bUpdateDisplay = UPDATE_NOTHING;
 
   if (nArgs > 0)
   {
-    CmdFuncPtr_t pFunction = NULL;
+    CmdFuncPtr_t pFunction = nullptr;
     int iCommandAlias = -1;
     int nFound = FindCommand(g_aArgs[0].sArg, pFunction, &iCommandAlias);
 
@@ -66,7 +66,7 @@ Update_t ExecuteCommand(int nArgs)
     }
     else
     {
-      unsigned short nAddress;
+      uint16_t nAddress = 0;
       if (ArgsGetValue(&g_aArgs[0], &nAddress))
       {
         g_nDisasmCurAddress = nAddress;
@@ -85,14 +85,15 @@ Update_t ExecuteCommand(int nArgs)
   return bUpdateDisplay;
 }
 
-Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
+auto DebuggerProcessCommand(const bool bEchoConsoleInput) -> Update_t
 {
   Update_t bUpdateDisplay = UPDATE_NOTHING;
 
   char sText[CONSOLE_WIDTH];
 
-  if (bEchoConsoleInput)
+  if (bEchoConsoleInput) {
     ConsoleDisplayPush(ConsoleInputPeek());
+}
 
   if (g_bAssemblerInput)
   {
@@ -167,9 +168,9 @@ Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
 		{"PROFILE", CmdProfile, CMD_PROFILE, "List/Save 6502 profiling"},
 		{"R", CmdRegisterSet, CMD_REGISTER_SET, "Set register"},
 	// CPU - Stack
-		{"POP", CmdStackPop, CMD_STACK_POP, NULL},
-		{"PPOP", CmdStackPopPseudo, CMD_STACK_POP_PSEUDO, NULL},
-		{"PUSH", CmdStackPop, CMD_STACK_PUSH, NULL},
+		{"POP", CmdStackPop, CMD_STACK_POP, nullptr},
+		{"PPOP", CmdStackPopPseudo, CMD_STACK_POP_PSEUDO, nullptr},
+		{"PUSH", CmdStackPop, CMD_STACK_PUSH, nullptr},
 //		{"RTS", CmdStackReturn, CMD_STACK_RETURN, NULL},
 		{"P", CmdStepOver, CMD_STEP_OVER, "Step current instruction"},
 		{"RTS", CmdStepOut, CMD_STEP_OUT, "Step out of subroutine"},
@@ -222,10 +223,10 @@ Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
 		{"CD", CmdConfigSetDebugDir, CMD_CONFIG_SET_DEBUG_DIR, "Updates the current debugger directory."},
 	// Cursor
 		{"RET", CmdCursorJumpRetAddr, CMD_CURSOR_JUMP_RET_ADDR, "Sets the cursor to the sub-routine caller"},
-		{"^", NULL, CMD_CURSOR_LINE_UP, NULL}, // \x2191 = Up Arrow (Unicode)
-		{"Shift ^", NULL, CMD_CURSOR_LINE_UP_1, NULL},
-		{"v", NULL, CMD_CURSOR_LINE_DOWN, NULL}, // \x2193 = Dn Arrow (Unicode)
-		{"Shift v", NULL, CMD_CURSOR_LINE_DOWN_1, NULL},
+		{"^", nullptr, CMD_CURSOR_LINE_UP, nullptr}, // \x2191 = Up Arrow (Unicode)
+		{"Shift ^", nullptr, CMD_CURSOR_LINE_UP_1, nullptr},
+		{"v", nullptr, CMD_CURSOR_LINE_DOWN, nullptr}, // \x2193 = Dn Arrow (Unicode)
+		{"Shift v", nullptr, CMD_CURSOR_LINE_DOWN_1, nullptr},
 		{"PAGEUP", CmdCursorPageUp, CMD_CURSOR_PAGE_UP, "Scroll up one screen"},
 		{"PAGEUP256", CmdCursorPageUp256, CMD_CURSOR_PAGE_UP_256, "Scroll up 256 bytes"}, // Shift
 		{"PAGEUP4K", CmdCursorPageUp4K, CMD_CURSOR_PAGE_UP_4K, "Scroll up 4096 bytes"}, // Ctrl
@@ -289,9 +290,9 @@ Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
 		{"?", CmdHelpList, CMD_HELP_LIST, "List all available commands"},
 		{"HELP", CmdHelpSpecific, CMD_HELP_SPECIFIC, "Help on specific command"},
 		{"VERSION", CmdVersion, CMD_VERSION, "Displays version of emulator/debugger"},
-		{"MOTD", CmdMOTD, CMD_MOTD, NULL},							// MOTD: Message Of The Day
+		{"MOTD", CmdMOTD, CMD_MOTD, nullptr},							// MOTD: Message Of The Day
 	// Memory
-		{"MC", CmdMemoryCompare, CMD_MEMORY_COMPARE, NULL},
+		{"MC", CmdMemoryCompare, CMD_MEMORY_COMPARE, nullptr},
 
 		{"MD1", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_1, "Hex dump in the mini memory area 1"},
 		{"MD2", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_2, "Hex dump in the mini memory area 2"},
@@ -414,13 +415,13 @@ Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
 //	{"WD", CmdShowDataWindow, NULL, NULL}, //
 
 	// Internal Consistency Check
-		{DEBUGGER__COMMANDS_VERIFY_TXT__, NULL, NUM_COMMANDS, NULL},
+		{DEBUGGER__COMMANDS_VERIFY_TXT__, nullptr, NUM_COMMANDS, nullptr},
 
 	// Aliasies - Can be in any order
-		{"->", NULL, CMD_CURSOR_JUMP_PC, NULL},
-		{"Ctrl ->", NULL, CMD_CURSOR_SET_PC, NULL},
-		{"Shift ->", NULL, CMD_CURSOR_JUMP_PC, NULL}, // at top
-		{"INPUT", CmdIn, CMD_IN, NULL},
+		{"->", nullptr, CMD_CURSOR_JUMP_PC, nullptr},
+		{"Ctrl ->", nullptr, CMD_CURSOR_SET_PC, nullptr},
+		{"Shift ->", nullptr, CMD_CURSOR_JUMP_PC, nullptr}, // at top
+		{"INPUT", CmdIn, CMD_IN, nullptr},
 		// Data
 		// Flags - Clear
 		{"RC", CmdFlagClear, CMD_FLAG_CLR_C, "Clear Flag Carry"}, // 0 // Legacy
@@ -442,21 +443,21 @@ Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
 		{"SN", CmdFlagSet, CMD_FLAG_SET_N, "Set Flag Negative"}, // 7
 	// Memory
 		{"D", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_1, "Hex dump in the mini memory area 1"}, // FIXME: Must also work in DATA screen
-		{"M1", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_1, NULL}, // alias
-		{"M2", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_2, NULL}, // alias
+		{"M1", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_1, nullptr}, // alias
+		{"M2", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_2, nullptr}, // alias
 
-		{"ME8", CmdMemoryEnterByte, CMD_MEMORY_ENTER_BYTE, NULL}, // changed from EB -- bugfix: EB:## ##
-		{"ME16", CmdMemoryEnterWord, CMD_MEMORY_ENTER_WORD, NULL},
-		{"MM", CmdMemoryMove, CMD_MEMORY_MOVE, NULL},
-		{"MS", CmdMemorySearch, CMD_MEMORY_SEARCH, NULL}, // CmdMemorySearch
-		{"P0", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_0, NULL},
-		{"P1", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_1, NULL},
-		{"P2", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_2, NULL},
-		{"P3", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_3, NULL},
-		{"P4", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_4, NULL},
-		{"REGISTER", CmdRegisterSet, CMD_REGISTER_SET, NULL},
+		{"ME8", CmdMemoryEnterByte, CMD_MEMORY_ENTER_BYTE, nullptr}, // changed from EB -- bugfix: EB:## ##
+		{"ME16", CmdMemoryEnterWord, CMD_MEMORY_ENTER_WORD, nullptr},
+		{"MM", CmdMemoryMove, CMD_MEMORY_MOVE, nullptr},
+		{"MS", CmdMemorySearch, CMD_MEMORY_SEARCH, nullptr}, // CmdMemorySearch
+		{"P0", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_0, nullptr},
+		{"P1", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_1, nullptr},
+		{"P2", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_2, nullptr},
+		{"P3", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_3, nullptr},
+		{"P4", CmdZeroPagePointer, CMD_ZEROPAGE_POINTER_4, nullptr},
+		{"REGISTER", CmdRegisterSet, CMD_REGISTER_SET, nullptr},
 //		{"RET", CmdStackReturn, CMD_STACK_RETURN, NULL},
-		{"TRACE", CmdTrace, CMD_TRACE, NULL},
+		{"TRACE", CmdTrace, CMD_TRACE, nullptr},
 
 //		{"SYMBOLS", CmdSymbols, CMD_SYMBOLS_LOOKUP, "Return "},
 //		{"SYMBOLS1", CmdSymbolsInfo, CMD_SYMBOLS_1, NULL},
@@ -468,22 +469,22 @@ Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
 //		{"SYM4", CmdSymbolsInfo, CMD_SYMBOLS_USER_2, NULL},
 //		{"SYM5", CmdSymbolsInfo, CMD_SYMBOLS_SRC_1, NULL},
 //		{"SYM6", CmdSymbolsInfo, CMD_SYMBOLS_SRC_2, NULL},
-		{"SYMDOS", CmdSymbolsCommand, CMD_SYMBOLS_DOS33, NULL},
-		{"SYMPRO", CmdSymbolsCommand, CMD_SYMBOLS_PRODOS, NULL},
+		{"SYMDOS", CmdSymbolsCommand, CMD_SYMBOLS_DOS33, nullptr},
+		{"SYMPRO", CmdSymbolsCommand, CMD_SYMBOLS_PRODOS, nullptr},
 
-		{"TEXT40", CmdViewOutput_Text4X, CMD_VIEW_TEXT4X, NULL},
-		{"TEXT41", CmdViewOutput_Text41, CMD_VIEW_TEXT41, NULL},
-		{"TEXT42", CmdViewOutput_Text42, CMD_VIEW_TEXT42, NULL},
+		{"TEXT40", CmdViewOutput_Text4X, CMD_VIEW_TEXT4X, nullptr},
+		{"TEXT41", CmdViewOutput_Text41, CMD_VIEW_TEXT41, nullptr},
+		{"TEXT42", CmdViewOutput_Text42, CMD_VIEW_TEXT42, nullptr},
 
 //		{"WATCH", CmdWatchAdd, CMD_WATCH_ADD, NULL},
-		{"WINDOW", CmdWindow, CMD_WINDOW, NULL},
+		{"WINDOW", CmdWindow, CMD_WINDOW, nullptr},
 //		{"W?", CmdWatchAdd, CMD_WATCH_ADD, NULL},
-		{"ZAP", CmdNOP, CMD_NOP, NULL},
+		{"ZAP", CmdNOP, CMD_NOP, nullptr},
 
 	// DEPRECATED  -- Probably should be removed in a future version
-		{"BENCH", CmdBenchmarkStart, CMD_BENCHMARK, NULL},
-		{"EXITBENCH", NULL, CMD_BENCHMARK, NULL}, // 2.8.03 was incorrectly alias with 'E' Bug #246. // CmdBenchmarkStop
-		{"MDB", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_1, NULL}, // MemoryDumpByte  // Did anyone actually use this??
+		{"BENCH", CmdBenchmarkStart, CMD_BENCHMARK, nullptr},
+		{"EXITBENCH", nullptr, CMD_BENCHMARK, nullptr}, // 2.8.03 was incorrectly alias with 'E' Bug #246. // CmdBenchmarkStop
+		{"MDB", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_1, nullptr}, // MemoryDumpByte  // Did anyone actually use this??
 //		{"MEMORY", CmdMemoryMiniDumpHex, CMD_MEM_MINI_DUMP_HEX_1, NULL}, // MemoryDumpByte  // Did anyone actually use this??
 };
 
@@ -495,114 +496,120 @@ Update_t DebuggerProcessCommand(const bool bEchoConsoleInput)
 	Command_t g_aParameters[] =
 	{
 // Breakpoint
-		{"<=", NULL, PARAM_BP_LESS_EQUAL, NULL},
-		{"<", NULL, PARAM_BP_LESS_THAN, NULL},
-		{"=", NULL, PARAM_BP_EQUAL, NULL},
-		{"!=", NULL, PARAM_BP_NOT_EQUAL, NULL},
-		{"!", NULL, PARAM_BP_NOT_EQUAL_1, NULL},
-		{">", NULL, PARAM_BP_GREATER_THAN, NULL},
-		{">=", NULL, PARAM_BP_GREATER_EQUAL, NULL},
-		{"R", NULL, PARAM_BP_READ, NULL},
-		{"?", NULL, PARAM_BP_READ, NULL},
-		{"W", NULL, PARAM_BP_WRITE, NULL},
-		{"@", NULL, PARAM_BP_WRITE, NULL},
-		{"*", NULL, PARAM_BP_READ_WRITE, NULL},
+		{"<=", nullptr, PARAM_BP_LESS_EQUAL, nullptr},
+		{"<", nullptr, PARAM_BP_LESS_THAN, nullptr},
+		{"=", nullptr, PARAM_BP_EQUAL, nullptr},
+		{"!=", nullptr, PARAM_BP_NOT_EQUAL, nullptr},
+		{"!", nullptr, PARAM_BP_NOT_EQUAL_1, nullptr},
+		{">", nullptr, PARAM_BP_GREATER_THAN, nullptr},
+		{">=", nullptr, PARAM_BP_GREATER_EQUAL, nullptr},
+		{"R", nullptr, PARAM_BP_READ, nullptr},
+		{"?", nullptr, PARAM_BP_READ, nullptr},
+		{"W", nullptr, PARAM_BP_WRITE, nullptr},
+		{"@", nullptr, PARAM_BP_WRITE, nullptr},
+		{"*", nullptr, PARAM_BP_READ_WRITE, nullptr},
 // Regs (for PUSH / POP)
-		{"A", NULL, PARAM_REG_A, NULL},
-		{"X", NULL, PARAM_REG_X, NULL},
-		{"Y", NULL, PARAM_REG_Y, NULL},
-		{"PC", NULL, PARAM_REG_PC, NULL},
-		{"S", NULL, PARAM_REG_SP, NULL},
+		{"A", nullptr, PARAM_REG_A, nullptr},
+		{"X", nullptr, PARAM_REG_X, nullptr},
+		{"Y", nullptr, PARAM_REG_Y, nullptr},
+		{"PC", nullptr, PARAM_REG_PC, nullptr},
+		{"S", nullptr, PARAM_REG_SP, nullptr},
 // Flags
-		{"P", NULL, PARAM_FLAGS, NULL},
-		{"C", NULL, PARAM_FLAG_C, NULL}, // ---- ---1 Carry
-		{"Z", NULL, PARAM_FLAG_Z, NULL}, // ---- --1- Zero
-		{"I", NULL, PARAM_FLAG_I, NULL}, // ---- -1-- Interrupt
-		{"D", NULL, PARAM_FLAG_D, NULL}, // ---- 1--- Decimal
-		{"B", NULL, PARAM_FLAG_B, NULL}, // ---1 ---- Break
-		{"R", NULL, PARAM_FLAG_R, NULL}, // --1- ---- Reserved
-		{"V", NULL, PARAM_FLAG_V, NULL}, // -1-- ---- Overflow
-		{"N", NULL, PARAM_FLAG_N, NULL}, // 1--- ---- Sign
+		{"P", nullptr, PARAM_FLAGS, nullptr},
+		{"C", nullptr, PARAM_FLAG_C, nullptr}, // ---- ---1 Carry
+		{"Z", nullptr, PARAM_FLAG_Z, nullptr}, // ---- --1- Zero
+		{"I", nullptr, PARAM_FLAG_I, nullptr}, // ---- -1-- Interrupt
+		{"D", nullptr, PARAM_FLAG_D, nullptr}, // ---- 1--- Decimal
+		{"B", nullptr, PARAM_FLAG_B, nullptr}, // ---1 ---- Break
+		{"R", nullptr, PARAM_FLAG_R, nullptr}, // --1- ---- Reserved
+		{"V", nullptr, PARAM_FLAG_V, nullptr}, // -1-- ---- Overflow
+		{"N", nullptr, PARAM_FLAG_N, nullptr}, // 1--- ---- Sign
 // Disasm
-		{"BRANCH", NULL, PARAM_CONFIG_BRANCH, NULL},
-		{"CLICK", NULL, PARAM_CONFIG_CLICK, NULL}, // GH#462
-		{"COLON", NULL, PARAM_CONFIG_COLON, NULL},
-		{"OPCODE", NULL, PARAM_CONFIG_OPCODE, NULL},
-		{"POINTER", NULL, PARAM_CONFIG_POINTER, NULL},
-		{"SPACES", NULL, PARAM_CONFIG_SPACES, NULL},
-		{"TARGET", NULL, PARAM_CONFIG_TARGET, NULL},
+		{"BRANCH", nullptr, PARAM_CONFIG_BRANCH, nullptr},
+		{"CLICK", nullptr, PARAM_CONFIG_CLICK, nullptr}, // GH#462
+		{"COLON", nullptr, PARAM_CONFIG_COLON, nullptr},
+		{"OPCODE", nullptr, PARAM_CONFIG_OPCODE, nullptr},
+		{"POINTER", nullptr, PARAM_CONFIG_POINTER, nullptr},
+		{"SPACES", nullptr, PARAM_CONFIG_SPACES, nullptr},
+		{"TARGET", nullptr, PARAM_CONFIG_TARGET, nullptr},
 // Disk
-		{"EJECT", NULL, PARAM_DISK_EJECT, NULL},
-		{"INFO", NULL, PARAM_DISK_INFO, NULL},
-		{"PROTECT", NULL, PARAM_DISK_PROTECT, NULL},
-		{"READ", NULL, PARAM_DISK_READ, NULL},
+		{"EJECT", nullptr, PARAM_DISK_EJECT, nullptr},
+		{"INFO", nullptr, PARAM_DISK_INFO, nullptr},
+		{"PROTECT", nullptr, PARAM_DISK_PROTECT, nullptr},
+		{"READ", nullptr, PARAM_DISK_READ, nullptr},
 // Font (Config)
-		{"MODE", NULL, PARAM_FONT_MODE, NULL}, // also INFO, CONSOLE, DISASM (from Window)
+		{"MODE", nullptr, PARAM_FONT_MODE, nullptr}, // also INFO, CONSOLE, DISASM (from Window)
 // General
-		{"FIND", NULL, PARAM_FIND, NULL},
-		{"BRANCH", NULL, PARAM_BRANCH, NULL},
-		{"CATEGORY", NULL, PARAM_CATEGORY, NULL},
-		{"CLEAR", NULL, PARAM_CLEAR, NULL},
-		{"LOAD", NULL, PARAM_LOAD, NULL},
-		{"LIST", NULL, PARAM_LIST, NULL},
-		{"OFF", NULL, PARAM_OFF, NULL},
-		{"ON", NULL, PARAM_ON, NULL},
-		{"RESET", NULL, PARAM_RESET, NULL},
-		{"SAVE", NULL, PARAM_SAVE, NULL},
-		{"START", NULL, PARAM_START, NULL}, // benchmark
-		{"STOP", NULL, PARAM_STOP, NULL}, // benchmark
+		{"FIND", nullptr, PARAM_FIND, nullptr},
+		{"BRANCH", nullptr, PARAM_BRANCH, nullptr},
+		{"CATEGORY", nullptr, PARAM_CATEGORY, nullptr},
+		{"CLEAR", nullptr, PARAM_CLEAR, nullptr},
+		{"LOAD", nullptr, PARAM_LOAD, nullptr},
+		{"LIST", nullptr, PARAM_LIST, nullptr},
+		{"OFF", nullptr, PARAM_OFF, nullptr},
+		{"ON", nullptr, PARAM_ON, nullptr},
+		{"RESET", nullptr, PARAM_RESET, nullptr},
+		{"SAVE", nullptr, PARAM_SAVE, nullptr},
+		{"START", nullptr, PARAM_START, nullptr}, // benchmark
+		{"STOP", nullptr, PARAM_STOP, nullptr}, // benchmark
 // Help Categories
-		{"*", NULL, PARAM_WILDSTAR, NULL},
-		{"BOOKMARKS", NULL, PARAM_CAT_BOOKMARKS, NULL},
-		{"BREAKPOINTS", NULL, PARAM_CAT_BREAKPOINTS, NULL},
-		{"CONFIG", NULL, PARAM_CAT_CONFIG, NULL},
-		{"CPU", NULL, PARAM_CAT_CPU, NULL},
+		{"*", nullptr, PARAM_WILDSTAR, nullptr},
+		{"BOOKMARKS", nullptr, PARAM_CAT_BOOKMARKS, nullptr},
+		{"BREAKPOINTS", nullptr, PARAM_CAT_BREAKPOINTS, nullptr},
+		{"CONFIG", nullptr, PARAM_CAT_CONFIG, nullptr},
+		{"CPU", nullptr, PARAM_CAT_CPU, nullptr},
 //		{"EXPRESSION" ,
-		{"FLAGS", NULL, PARAM_CAT_FLAGS, NULL},
-		{"HELP", NULL, PARAM_CAT_HELP, NULL},
-		{"KEYBOARD", NULL, PARAM_CAT_KEYBOARD, NULL},
-		{"MEMORY", NULL, PARAM_CAT_MEMORY, NULL}, // alias // SOURCE [SYMBOLS] [MEMORY] filename
-		{"OUTPUT", NULL, PARAM_CAT_OUTPUT, NULL},
-		{"OPERATORS", NULL, PARAM_CAT_OPERATORS, NULL},
-		{"RANGE", NULL, PARAM_CAT_RANGE, NULL},
+		{"FLAGS", nullptr, PARAM_CAT_FLAGS, nullptr},
+		{"HELP", nullptr, PARAM_CAT_HELP, nullptr},
+		{"KEYBOARD", nullptr, PARAM_CAT_KEYBOARD, nullptr},
+		{"MEMORY", nullptr, PARAM_CAT_MEMORY, nullptr}, // alias // SOURCE [SYMBOLS] [MEMORY] filename
+		{"OUTPUT", nullptr, PARAM_CAT_OUTPUT, nullptr},
+		{"OPERATORS", nullptr, PARAM_CAT_OPERATORS, nullptr},
+		{"RANGE", nullptr, PARAM_CAT_RANGE, nullptr},
 //		{"REGISTERS", NULL, PARAM_CAT_REGISTERS, NULL},
-		{"SYMBOLS", NULL, PARAM_CAT_SYMBOLS, NULL},
-		{"VIEW", NULL, PARAM_CAT_VIEW, NULL},
-		{"WATCHES", NULL, PARAM_CAT_WATCHES, NULL},
-		{"WINDOW", NULL, PARAM_CAT_WINDOW, NULL},
-		{"ZEROPAGE", NULL, PARAM_CAT_ZEROPAGE, NULL},
+		{"SYMBOLS", nullptr, PARAM_CAT_SYMBOLS, nullptr},
+		{"VIEW", nullptr, PARAM_CAT_VIEW, nullptr},
+		{"WATCHES", nullptr, PARAM_CAT_WATCHES, nullptr},
+		{"WINDOW", nullptr, PARAM_CAT_WINDOW, nullptr},
+		{"ZEROPAGE", nullptr, PARAM_CAT_ZEROPAGE, nullptr},
 // Memory
-		{"?", NULL, PARAM_MEM_SEARCH_WILD, NULL},
+		{"?", nullptr, PARAM_MEM_SEARCH_WILD, nullptr},
 //		{"*", NULL, PARAM_MEM_SEARCH_BYTE, NULL},
 // Source level debugging
-		{"MEM", NULL, PARAM_SRC_MEMORY, NULL},
-		{"MEMORY", NULL, PARAM_SRC_MEMORY, NULL},
-		{"SYM", NULL, PARAM_SRC_SYMBOLS, NULL},
-		{"SYMBOLS", NULL, PARAM_SRC_SYMBOLS, NULL},
-		{"MERLIN", NULL, PARAM_SRC_MERLIN, NULL},
-		{"ORCA", NULL, PARAM_SRC_ORCA, NULL},
+		{"MEM", nullptr, PARAM_SRC_MEMORY, nullptr},
+		{"MEMORY", nullptr, PARAM_SRC_MEMORY, nullptr},
+		{"SYM", nullptr, PARAM_SRC_SYMBOLS, nullptr},
+		{"SYMBOLS", nullptr, PARAM_SRC_SYMBOLS, nullptr},
+		{"MERLIN", nullptr, PARAM_SRC_MERLIN, nullptr},
+		{"ORCA", nullptr, PARAM_SRC_ORCA, nullptr},
+// Profile
+		{"RESET", nullptr, PARAM_PROFILE_RESET, nullptr},
+		{"SAVE", nullptr, PARAM_PROFILE_SAVE, nullptr},
+		{"LIST", nullptr, PARAM_PROFILE_LIST, nullptr},
+		{"ON", nullptr, PARAM_PROFILE_ON, nullptr},
+		{"OFF", nullptr, PARAM_PROFILE_OFF, nullptr},
 // View
 //		{"VIEW", NULL, PARAM_SRC_???, NULL},
 // Window                                                       Win   Cmd   WinEffects      CmdEffects
-		{"CODE", NULL, PARAM_CODE, NULL}, //   x     x    code win only   switch to code window
+		{"CODE", nullptr, PARAM_CODE, nullptr}, //   x     x    code win only   switch to code window
 //		{"CODE1", NULL, PARAM_CODE_1, NULL}, //   -     x    code/data win
-		{"CODE2", NULL, PARAM_CODE_2, NULL}, //   -     x    code/data win
-		{"CONSOLE", NULL, PARAM_CONSOLE, NULL}, //   x     -                    switch to console window
-		{"DATA", NULL, PARAM_DATA, NULL}, //   x     x    data win only   switch to data window
+		{"CODE2", nullptr, PARAM_CODE_2, nullptr}, //   -     x    code/data win
+		{"CONSOLE", nullptr, PARAM_CONSOLE, nullptr}, //   x     -                    switch to console window
+		{"DATA", nullptr, PARAM_DATA, nullptr}, //   x     x    data win only   switch to data window
 //		{"DATA1", NULL, PARAM_DATA_1, NULL}, //   -     x    code/data win
-		{"DATA2", NULL, PARAM_DATA_2, NULL}, //   -     x    code/data win
-		{"DISASM", NULL, PARAM_DISASM, NULL}, //
-		{"INFO", NULL, PARAM_INFO, NULL}, //   -     x    code/data       Toggles showing/hiding Regs/Stack/BP/Watches/ZP
-		{"SOURCE", NULL, PARAM_SOURCE, NULL}, //   x     x                    switch to source window
-		{"SRC", NULL, PARAM_SOURCE, NULL}, // alias
+		{"DATA2", nullptr, PARAM_DATA_2, nullptr}, //   -     x    code/data win
+		{"DISASM", nullptr, PARAM_DISASM, nullptr}, //
+		{"INFO", nullptr, PARAM_INFO, nullptr}, //   -     x    code/data       Toggles showing/hiding Regs/Stack/BP/Watches/ZP
+		{"SOURCE", nullptr, PARAM_SOURCE, nullptr}, //   x     x                    switch to source window
+		{"SRC", nullptr, PARAM_SOURCE, nullptr}, // alias
 //		{"SOURCE_1", NULL, PARAM_SOURCE_1, NULL}, //   -     x    code/data
-		{"SOURCE2 ", NULL, PARAM_SOURCE_2, NULL}, //   -     x
-		{"SYMBOLS", NULL, PARAM_SYMBOLS, NULL}, //   x     x    code/data win   switch to symbols window
-		{"SYM", NULL, PARAM_SYMBOLS, NULL}, // alias   x                    SOURCE [SYM] [MEM] filename
+		{"SOURCE2 ", nullptr, PARAM_SOURCE_2, nullptr}, //   -     x
+		{"SYMBOLS", nullptr, PARAM_SYMBOLS, nullptr}, //   x     x    code/data win   switch to symbols window
+		{"SYM", nullptr, PARAM_SYMBOLS, nullptr}, // alias   x                    SOURCE [SYM] [MEM] filename
 //		{"SYMBOL1", NULL, PARAM_SYMBOL_1, NULL}, //   -     x    code/data win
-		{"SYMBOL2", NULL, PARAM_SYMBOL_2, NULL}, //   -     x    code/data win
+		{"SYMBOL2", nullptr, PARAM_SYMBOL_2, nullptr}, //   -     x    code/data win
 // Internal Consistency Check
-		{DEBUGGER__PARAMS_VERIFY_TXT__, NULL, NUM_PARAMS, NULL},
+		{DEBUGGER__PARAMS_VERIFY_TXT__, nullptr, NUM_PARAMS, nullptr},
 	};
 
 //===========================================================================

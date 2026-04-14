@@ -31,42 +31,42 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <csignal>
 #include <sys/time.h>
 #include <ctime>
-#include <time.h>
+#include <ctime>
 #include <cassert>
 #include <cstdint>
 #include "apple2/Timer.h"
 
-static unsigned int g_dwUsecPeriod = 0;
+static uint32_t g_dwUsecPeriod = 0;
 
-bool SysClk_InitTimer() {
+auto SysClk_InitTimer() -> bool {
   return true;
 }
 
 void SysClk_UninitTimer() {
 }
 
-inline uint32_t uSecSinceStart() {
-  struct timeval latest;
+inline auto uSecSinceStart() -> uint32_t {
+  struct timeval latest{};
   static struct timeval start;
   static bool first = true;
 
   if (first) {
-    gettimeofday(&start, NULL);
+    gettimeofday(&start, nullptr);
     first = false;
     return 0;
   }
 
-  gettimeofday(&latest, NULL);
+  gettimeofday(&latest, nullptr);
   long seconds = latest.tv_sec - start.tv_sec;
   long useconds = latest.tv_usec - start.tv_usec;
 
-  return (uint32_t)(seconds * 1000000 + useconds);
+  return static_cast<uint32_t>(seconds * 1000000 + useconds);
 }
 
 inline void nsleep(unsigned long us) {
   struct timespec req = {};
-  time_t sec = (time_t) (us / 1000000);
-  long nsec = (long)((us % 1000000) * 1000);
+  auto sec = static_cast<time_t>(us / 1000000);
+  long nsec = static_cast<long>((us % 1000000) * 1000);
   req.tv_sec = sec;
   req.tv_nsec = nsec;
   while (nanosleep(&req, &req) == -1) {
@@ -76,8 +76,8 @@ inline void nsleep(unsigned long us) {
 
 void SysClk_WaitTimer() {
   static uint32_t old = 0;
-  uint32_t current;
-  uint32_t elapsed;
+  uint32_t current = 0;
+  uint32_t elapsed = 0;
 
   while (true) {
     current = uSecSinceStart();
@@ -95,7 +95,7 @@ void SysClk_WaitTimer() {
   }
 }
 
-void SysClk_StartTimerUsec(unsigned int dwUsecPeriod) {
+void SysClk_StartTimerUsec(uint32_t dwUsecPeriod) {
   g_dwUsecPeriod = dwUsecPeriod;
 }
 

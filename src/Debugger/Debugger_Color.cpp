@@ -138,9 +138,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 		G8,   // FG_VIDEOSCANNER_VISIBLE
 	};
 
-unsigned int DebuggerGetColor( int iColor )
+auto DebuggerGetColor( int iColor ) -> uint32_t
 {
-	unsigned int nColor = 1;// 0xFFFF00; // Hot Pink! -- so we notice errors. Not that there is anything wrong with pink...
+	uint32_t nColor = 1;// 0xFFFF00; // Hot Pink! -- so we notice errors. Not that there is anything wrong with pink...
 
 	if ((g_iColorScheme < NUM_COLOR_SCHEMES) && (iColor < NUM_DEBUG_COLORS))
 	{
@@ -151,7 +151,7 @@ unsigned int DebuggerGetColor( int iColor )
 }
 
 
-bool DebuggerSetColor( const int iScheme, const int iColor, const unsigned int nColor )
+auto DebuggerSetColor( const int iScheme, const int iColor, const uint32_t nColor ) -> bool
 {
 	(void) iScheme; (void) iColor; (void) nColor;
 	// color schemes ignored for Linux
@@ -180,7 +180,7 @@ static void _SetupColorRamp(const int iPrimary, int & iColor_)
 		int nR = bR ? nC : 0;
 		int nG = bG ? nC : 0;
 		int nB = bB ? nC : 0;
-		unsigned int nColor = RGB(nR, nG, nB);
+		uint32_t nColor = RGB(nR, nG, nB);
 		g_aColorPalette[iColor_] = nColor;
 #if DEBUG_COLOR_RAMP
 		wsprintf(sText, "RGB(%3d,%3d,%3d, ", nR, nG, nB);
@@ -199,7 +199,7 @@ static void _SetupColorRamp(const int iPrimary, int & iColor_)
 
 
 //===========================================================================
-void ConfigColorsReset(void)
+void ConfigColorsReset()
 {
 	//	int iColor = 1; // black only has one level, skip it, since black levels same as white levels
 	//	for (int iPrimary = 1; iPrimary < 8; iPrimary++ )
@@ -212,7 +212,7 @@ void ConfigColorsReset(void)
 	int iColor;
 	for (iColor = 0; iColor < NUM_DEBUG_COLORS; iColor++)
 	{
-		unsigned int nColor = g_aColorPalette[g_aColorIndex[iColor]];
+		uint32_t nColor = g_aColorPalette[g_aColorIndex[iColor]];
 
 		int R = (nColor >> 0) & 0xFF;
 		int G = (nColor >> 8) & 0xFF;
@@ -230,8 +230,8 @@ void ConfigColorsReset(void)
 		else
 			BW = 255;
 
-		unsigned int nMono = RGB(M, M, M);
-		unsigned int nBW = RGB(BW, BW, BW);
+		uint32_t nMono = RGB(M, M, M);
+		uint32_t nBW = RGB(BW, BW, BW);
 
 		DebuggerSetColor(SCHEME_COLOR, iColor, nColor);
 		DebuggerSetColor(SCHEME_MONO, iColor, nMono);
@@ -240,7 +240,7 @@ void ConfigColorsReset(void)
 #endif
 }
 
-void _ColorPrint( int iColor, unsigned int nColor )
+void _ColorPrint( int iColor, uint32_t nColor )
 {
 	int R = (nColor >>  0) & 0xFF;
 	int G = (nColor >>  8) & 0xFF;
@@ -255,8 +255,8 @@ void _CmdColorGet( const int iScheme, const int iColor )
 	(void)iScheme;
 	if (iColor < NUM_DEBUG_COLORS)
 	{
-		DebugColors_e eColor = static_cast<DebugColors_e>( iColor );
-		unsigned int nColor = DebuggerGetColor( eColor );
+		auto eColor = static_cast<DebugColors_e>( iColor );
+		uint32_t nColor = DebuggerGetColor( eColor );
 		_ColorPrint( iColor, nColor );
 	}
 	else

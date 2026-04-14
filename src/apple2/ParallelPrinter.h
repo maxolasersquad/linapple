@@ -4,6 +4,6 @@
 void PrintInitialize();
 void PrintDestroy();
 void PrintReset();
-void PrintLoadRom(uint8_t* pCxRomPeripheral, unsigned int uSlot);
+void PrintLoadRom(uint8_t* pCxRomPeripheral, uint32_t uSlot);
 void PrintReset();
-void PrintUpdate(unsigned int);
+void PrintUpdate(uint32_t);

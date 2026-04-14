@@ -1,4 +1,5 @@
 #include "core/Common.h"
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
@@ -35,29 +36,33 @@ char Hddrvr_dat[] = "\xA9\x20\xA9\x00\xA9\x03\xA9\x3C\xA9\x00\x8D\xF2\xC0\xA9\x7
                     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\x7F\xD7\x46";
 
 
-typedef struct {
+using HDD = struct {
   char hd_imagename[16];
   char hd_fullname[128];
-  unsigned char hd_error;
-  unsigned short hd_memblock;
-  unsigned short hd_diskblock;
-  unsigned short hd_buf_ptr;
+  uint8_t hd_error;
+  uint16_t hd_memblock;
+  uint16_t hd_diskblock;
+  uint16_t hd_buf_ptr;
   bool hd_imageloaded;
-  FILE* hd_file;
-  unsigned char hd_buf[513];
-} HDD, *PHDD;
+  FilePtr hd_file;
+  uint8_t hd_buf[513];
+};
+using PHDD = HDD*;
 
 static bool g_bHD_RomLoaded = false;
 bool g_bHD_Enabled = false;
 
-static unsigned char g_nHD_UnitNum = DRIVE_1;
-static unsigned char g_nHD_Command;
-static HDD g_HardDrive[2] = {};
-static unsigned int g_uSlot = 7;
+static uint8_t g_nHD_UnitNum = DRIVE_1;
+static uint8_t g_nHD_Command;
+static HDD g_HardDrive[2] = {
+  {{0}, {0}, 0, 0, 0, 0, false, FilePtr(nullptr, fclose), {0}},
+  {{0}, {0}, 0, 0, 0, 0, false, FilePtr(nullptr, fclose), {0}}
+};
+static uint32_t g_uSlot = 7;
 static int HDDStatus = DISK_STATUS_OFF;
 
-int HD_GetStatus(void) { return HDDStatus; }
-void HD_ResetStatus(void) { HDDStatus = DISK_STATUS_OFF; }
+auto HD_GetStatus() -> int { return HDDStatus; }
+void HD_ResetStatus() { HDDStatus = DISK_STATUS_OFF; }
 
 static void GetImageTitle(const char* imageFileName, PHDD pHardDrive)
 {
@@ -73,8 +78,9 @@ static void GetImageTitle(const char* imageFileName, PHDD pHardDrive)
   bool found = false;
   int loop = 0;
   while (imagetitle[loop] && !found) {
-    if (IsCharLower(imagetitle[loop])) found = true;
-    else loop++;
+    if (IsCharLower(imagetitle[loop])) { found = true;
+    } else { loop++;
+}
   }
 
   Util_SafeStrCpy(pHardDrive->hd_fullname, imagetitle, 127);
@@ -89,52 +95,50 @@ static void GetImageTitle(const char* imageFileName, PHDD pHardDrive)
 
 static void NotifyInvalidImage(char *filename) { printf("HDD: Could not load %s\n", filename); }
 
-static size_t Util_GetFileSize(FILE* f) {
+static auto Util_GetFileSize(FILE* f) -> size_t {
   long current = ftell(f);
   fseek(f, 0, SEEK_END);
-  size_t size = ftell(f);
+  size_t size = static_cast<size_t>(ftell(f));
   fseek(f, current, SEEK_SET);
   return size;
 }
 
 static void HD_CleanupDrive(int nDrive)
 {
-  if (g_HardDrive[nDrive].hd_file) {
-    fclose(g_HardDrive[nDrive].hd_file);
-    g_HardDrive[nDrive].hd_file = NULL;
-  }
+  g_HardDrive[nDrive].hd_file.reset();
   g_HardDrive[nDrive].hd_imageloaded = false;
   g_HardDrive[nDrive].hd_imagename[0] = 0;
   g_HardDrive[nDrive].hd_fullname[0] = 0;
 }
 
-static bool HD_Load_Image(int nDrive, const char *filename)
+static auto HD_Load_Image(int nDrive, const char *filename) -> bool
 {
-  g_HardDrive[nDrive].hd_file = fopen(filename, "r+b");
-  g_HardDrive[nDrive].hd_imageloaded = g_HardDrive[nDrive].hd_file != NULL;
+  g_HardDrive[nDrive].hd_file.reset(fopen(filename, "r+b"));
+  g_HardDrive[nDrive].hd_imageloaded = g_HardDrive[nDrive].hd_file != nullptr;
   return g_HardDrive[nDrive].hd_imageloaded;
 }
 
-static unsigned char HD_IO_EMUL(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
+static auto HD_IO_EMUL(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
 
-bool HD_CardIsEnabled() { return g_bHD_RomLoaded && g_bHD_Enabled; }
+auto HD_CardIsEnabled() -> bool { return g_bHD_RomLoaded && g_bHD_Enabled; }
 
 void HD_SetEnabled(bool bEnabled) {
   if (g_bHD_Enabled == bEnabled) return;
   g_bHD_Enabled = bEnabled;
   uint8_t* pCxRomPeripheral = MemGetCxRomPeripheral();
-  if (pCxRomPeripheral == NULL) return;
-  if (g_bHD_Enabled) HD_Load_Rom(pCxRomPeripheral, g_uSlot);
-  else memset(pCxRomPeripheral + g_uSlot * 256, 0, 0x100);
-  RegisterIoHandler(g_uSlot, HD_IO_EMUL, HD_IO_EMUL, NULL, NULL, NULL, NULL);
+  if (pCxRomPeripheral == nullptr) return;
+  if (g_bHD_Enabled) { HD_Load_Rom(pCxRomPeripheral, g_uSlot);
+  } else { memset(pCxRomPeripheral + static_cast<size_t>(g_uSlot * 256), 0, 0x100);
+}
+  RegisterIoHandler(g_uSlot, HD_IO_EMUL, HD_IO_EMUL, nullptr, nullptr, nullptr, nullptr);
 }
 
-const char* HD_GetFullName(int nDrive) { return g_HardDrive[nDrive].hd_fullname; }
+auto HD_GetFullName(int nDrive) -> const char* { return g_HardDrive[nDrive].hd_fullname; }
 
-void HD_Load_Rom(uint8_t* pCxRomPeripheral, unsigned int uSlot) {
+void HD_Load_Rom(uint8_t* pCxRomPeripheral, uint32_t uSlot) {
   if (!g_bHD_Enabled) return;
   g_uSlot = uSlot;
-  memcpy(pCxRomPeripheral + uSlot * 256, Hddrvr_dat, 0x100);
+  memcpy(pCxRomPeripheral + static_cast<size_t>(uSlot * 256), Hddrvr_dat, 0x100);
   g_bHD_RomLoaded = true;
 }
 
@@ -154,25 +158,28 @@ void HD_Eject(const int iDrive) {
   }
 }
 
-bool HD_InsertDisk(int nDrive, const char* imageFileName) {
+auto HD_InsertDisk(int nDrive, const char* imageFileName) -> bool {
   if (!imageFileName || *imageFileName == 0x00) return false;
   if (g_HardDrive[nDrive].hd_imageloaded) HD_CleanupDrive(nDrive);
   bool result = HD_Load_Image(nDrive, imageFileName);
-  if (result) GetImageTitle(imageFileName, &g_HardDrive[nDrive]);
-  else NotifyInvalidImage((char *) imageFileName);
+  if (result) { GetImageTitle(imageFileName, &g_HardDrive[nDrive]);
+  } else { NotifyInvalidImage(const_cast<char *>(imageFileName));
+}
   return result;
 }
 
-bool HD_InsertDisk2(int nDrive, const char* pszFilename) {
+auto HD_InsertDisk2(int nDrive, const char* pszFilename) -> bool {
   return HD_InsertDisk(nDrive, pszFilename);
 }
 
-#define DEVICE_OK        0x00
-#define DEVICE_UNKNOWN_ERROR  0x03
-#define DEVICE_IO_ERROR      0x08
+enum {
+DEVICE_OK =        0x00,
+DEVICE_UNKNOWN_ERROR =  0x03,
+DEVICE_IO_ERROR =      0x08
+};
 
-static unsigned char HD_IO_EMUL(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft) {
-  unsigned char r = DEVICE_OK;
+static auto HD_IO_EMUL(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+  uint8_t r = DEVICE_OK;
   addr &= 0xFF;
   if (!HD_CardIsEnabled()) return r;
   PHDD pHDD = &g_HardDrive[g_nHD_UnitNum >> 7];
@@ -183,7 +190,7 @@ static unsigned char HD_IO_EMUL(unsigned short pc, unsigned short addr, unsigned
           switch (g_nHD_Command) {
             default:
             case 0x00: //status
-              if (Util_GetFileSize(pHDD->hd_file) == 0) {
+              if (Util_GetFileSize(pHDD->hd_file.get()) == 0) {
                 pHDD->hd_error = 1;
                 r = DEVICE_IO_ERROR;
               }
@@ -191,10 +198,10 @@ static unsigned char HD_IO_EMUL(unsigned short pc, unsigned short addr, unsigned
             case 0x01: //read
             {
               HDDStatus = DISK_STATUS_READ;
-              size_t br = Util_GetFileSize(pHDD->hd_file);
-              if ((size_t)(pHDD->hd_diskblock * 512) <= br) {
-                fseek(pHDD->hd_file, pHDD->hd_diskblock * 512, SEEK_SET);
-                if (fread(pHDD->hd_buf, 1, 512, pHDD->hd_file) == 512) {
+              size_t br = Util_GetFileSize(pHDD->hd_file.get());
+              if (static_cast<size_t>(pHDD->hd_diskblock * 512) <= br) {
+                fseek(pHDD->hd_file.get(), static_cast<long>(pHDD->hd_diskblock * 512), SEEK_SET);
+                if (fread(pHDD->hd_buf, 1, 512, pHDD->hd_file.get()) == 512) {
                   pHDD->hd_error = 0;
                   r = 0;
                   pHDD->hd_buf_ptr = 0;
@@ -211,11 +218,11 @@ static unsigned char HD_IO_EMUL(unsigned short pc, unsigned short addr, unsigned
             case 0x02: //write
             {
               HDDStatus = DISK_STATUS_WRITE;
-              size_t bw = Util_GetFileSize(pHDD->hd_file);
-              if ((size_t)(pHDD->hd_diskblock * 512) <= bw) {
+              size_t bw = Util_GetFileSize(pHDD->hd_file.get());
+              if (static_cast<size_t>(pHDD->hd_diskblock * 512) <= bw) {
                 memmove(pHDD->hd_buf,  mem + pHDD->hd_memblock,  512);
-                fseek(pHDD->hd_file, pHDD->hd_diskblock * 512, SEEK_SET);
-                if (fwrite(pHDD->hd_buf, 1, 512, pHDD->hd_file) == 512) {
+                fseek(pHDD->hd_file.get(), static_cast<long>(pHDD->hd_diskblock * 512), SEEK_SET);
+                if (fwrite(pHDD->hd_buf, 1, 512, pHDD->hd_file.get()) == 512) {
                   pHDD->hd_error = 0;
                   r = 0;
                 } else {
@@ -223,14 +230,14 @@ static unsigned char HD_IO_EMUL(unsigned short pc, unsigned short addr, unsigned
                   r = DEVICE_IO_ERROR;
                 }
               } else {
-                fseek(pHDD->hd_file, 0, SEEK_END);
-                size_t fsize = ftell(pHDD->hd_file);
-                unsigned int addblocks = pHDD->hd_diskblock - (fsize / 512);
+                fseek(pHDD->hd_file.get(), 0, SEEK_END);
+                size_t fsize = ftell(pHDD->hd_file.get());
+                uint32_t addblocks = pHDD->hd_diskblock - (fsize / 512);
                 memset(pHDD->hd_buf,  0,  512);
-                while (addblocks--) fwrite(pHDD->hd_buf, 1, 512, pHDD->hd_file);
-                if (fseek(pHDD->hd_file, pHDD->hd_diskblock * 512, SEEK_SET) == 0) {
+                while (addblocks--) fwrite(pHDD->hd_buf, 1, 512, pHDD->hd_file.get());
+                if (fseek(pHDD->hd_file.get(), static_cast<long>(pHDD->hd_diskblock * 512), SEEK_SET) == 0) {
                   memmove(pHDD->hd_buf,  mem + pHDD->hd_memblock,  512);
-                  if (fwrite(pHDD->hd_buf, 1, 512, pHDD->hd_file) == 512) {
+                  if (fwrite(pHDD->hd_buf, 1, 512, pHDD->hd_file.get()) == 512) {
                     pHDD->hd_error = 0;
                     r = 0;
                   } else {
@@ -255,10 +262,10 @@ static unsigned char HD_IO_EMUL(unsigned short pc, unsigned short addr, unsigned
       case 0xF1: r = pHDD->hd_error; break;
       case 0xF2: r = g_nHD_Command; break;
       case 0xF3: r = g_nHD_UnitNum; break;
-      case 0xF4: r = (unsigned char)(pHDD->hd_memblock & 0x00FF); break;
-      case 0xF5: r = (unsigned char)((pHDD->hd_memblock & 0xFF00) >> 8); break;
-      case 0xF6: r = (unsigned char)(pHDD->hd_diskblock & 0x00FF); break;
-      case 0xF7: r = (unsigned char)((pHDD->hd_diskblock & 0xFF00) >> 8); break;
+      case 0xF4: r = static_cast<uint8_t>(pHDD->hd_memblock & 0x00FF); break;
+      case 0xF5: r = static_cast<uint8_t>((pHDD->hd_memblock & 0xFF00) >> 8); break;
+      case 0xF6: r = static_cast<uint8_t>(pHDD->hd_diskblock & 0x00FF); break;
+      case 0xF7: r = static_cast<uint8_t>((pHDD->hd_diskblock & 0xFF00) >> 8); break;
       case 0xF8: r = pHDD->hd_buf[pHDD->hd_buf_ptr]; pHDD->hd_buf_ptr++; break;
       default: return IO_Null(pc, addr, bWrite, d, nCyclesLeft);
     }

@@ -31,16 +31,16 @@ bool KeybGetCapsStatus();
 bool KeybGetCtrlStatus();
 bool KeybGetShiftStatus();
 void KeybUpdateCtrlShiftStatus();
-unsigned char KeybGetKeycode();
+uint8_t KeybGetKeycode();
 
-unsigned char KeybReadData(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
-unsigned char KeybReadFlag(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
+uint8_t KeybReadData(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
+uint8_t KeybReadFlag(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
 
 void ClipboardInitiatePaste();
-unsigned int KeybGetNumQueries();
-unsigned int KeybGetSnapshot(SS_IO_Keyboard *pSS);
-unsigned int KeybSetSnapshot(SS_IO_Keyboard *pSS);
+uint32_t KeybGetNumQueries();
+uint32_t KeybGetSnapshot(SS_IO_Keyboard *pSS);
+uint32_t KeybSetSnapshot(SS_IO_Keyboard *pSS);
 
-unsigned char KeybReadData(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
-unsigned char KeybReadFlag(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
-unsigned char KeybClearFlag(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
+uint8_t KeybReadData(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
+uint8_t KeybReadFlag(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
+uint8_t KeybClearFlag(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);

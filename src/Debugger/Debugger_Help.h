@@ -28,7 +28,7 @@
 
 	Update_t HelpLastCommand();
 
-inline void  UnpackVersion( const unsigned int nVersion,
+inline void  UnpackVersion( const uint32_t nVersion,
 		int & nMajor_, int & nMinor_, int & nFixMajor_ , int & nFixMinor_ )
 	{
 		nMajor_    = (nVersion >> 24) & 0xFF;

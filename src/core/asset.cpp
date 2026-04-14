@@ -15,13 +15,15 @@
 
 #define ASSET_MASTER_DSK "Master.dsk"
 
+static std::unique_ptr<assets_t, void (*)(void *)> assets_ptr(nullptr, free);
 assets_t *assets = nullptr;
 
 auto Asset_Init() -> bool {
-  assets = static_cast<assets_t *>(calloc(1, sizeof(assets_t)));
-  if (nullptr == assets) {
+  assets_ptr.reset(static_cast<assets_t *>(calloc(1, sizeof(assets_t))));
+  if (!assets_ptr) {
     return false;
   }
+  assets = assets_ptr.get();
 
   // Icon is loaded by the frontend and assigned to assets->icon
 
@@ -48,7 +50,7 @@ void Asset_Quit() {
       assets->splash = nullptr;
     }
 
-    free(assets);
+    assets_ptr.reset();
     assets = nullptr;
   }
 }
@@ -66,16 +68,12 @@ auto Asset_FindMasterDisk(char *path_out) -> int {
 }
 
 auto Asset_InsertMasterDisk() -> int {
-  char *path = static_cast<char *>(malloc(MAX_PATH));
+  std::unique_ptr<char, void (*)(void *)> path(static_cast<char *>(malloc(MAX_PATH)), free);
 
-  int err = Asset_FindMasterDisk(path);
+  int err = Asset_FindMasterDisk(path.get());
   if (err) {
-    free(path);
     return 255;
   }
 
-  int rc = DiskInsert(0, path, false, false);
-
-  free(path);
-  return rc;
+  return DiskInsert(0, path.get(), false, false);
 }

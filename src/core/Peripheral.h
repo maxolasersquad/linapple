@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#define LINAPPLE_ABI_VERSION 1
+constexpr int LINAPPLE_ABI_VERSION = 1;
 
 /**
  * @brief Standard return codes for ABI functions.

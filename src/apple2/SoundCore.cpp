@@ -44,9 +44,9 @@ struct sample_buffer {
   std::vector<int16_t> buffer;
   std::atomic<size_t> read_index;
   std::atomic<size_t> write_index;
-  int16_t last_value;
+  int16_t last_value{0};
 
-  sample_buffer(size_t size) : buffer(size), read_index(0), write_index(0), last_value(0) {}
+  sample_buffer(size_t size) : buffer(size), read_index(0), write_index(0) {}
 
   void reinit() {
     std::fill(buffer.begin(), buffer.end(), 0);
@@ -55,14 +55,14 @@ struct sample_buffer {
     last_value = 0;
   }
 
-  size_t get_filled() const {
+  auto get_filled() const -> size_t {
     size_t r = read_index.load(std::memory_order_relaxed);
     size_t w = write_index.load(std::memory_order_relaxed);
     if (r <= w) return w - r;
     return buffer.size() + w - r;
   }
 
-  size_t get_free() const {
+  auto get_free() const -> size_t {
     size_t filled = get_filled();
     if (filled >= buffer.size() - 1) return 0;
     return buffer.size() - 1 - filled;
@@ -91,13 +91,14 @@ struct sample_buffer {
     size_t num = (len < available) ? len : available;
     
     size_t r = read_index.load(std::memory_order_relaxed);
-    auto process = [&](const int16_t* src, size_t count, size_t offset) {
+    auto process = [&](const int16_t* src, size_t count, size_t offset) -> void {
       if (mix) {
         for (size_t i = 0; i < count; ++i) {
-          int32_t val = (int32_t)dest[offset + i] + (int32_t)src[i];
-          if (val > 32767) val = 32767;
-          else if (val < -32768) val = -32768;
-          dest[offset + i] = (int16_t)val;
+          int32_t val = static_cast<int32_t>(dest[offset + i]) + static_cast<int32_t>(src[i]);
+          if (val > 32767) { val = 32767;
+          } else if (val < -32768) { val = -32768;
+}
+          dest[offset + i] = static_cast<int16_t>(val);
         }
       } else {
         memcpy(dest + offset, src, count * sizeof(int16_t));
@@ -123,10 +124,11 @@ struct sample_buffer {
     if (num < len) {
         if (mix) {
             for (size_t i = num; i < len; ++i) {
-                int32_t val = (int32_t)dest[i] + (int32_t)last_value;
-                if (val > 32767) val = 32767;
-                else if (val < -32768) val = -32768;
-                dest[i] = (int16_t)val;
+                int32_t val = static_cast<int32_t>(dest[i]) + static_cast<int32_t>(last_value);
+                if (val > 32767) { val = 32767;
+                } else if (val < -32768) { val = -32768;
+}
+                dest[i] = static_cast<int16_t>(val);
             }
         } else {
             for (size_t i = num; i < len; ++i) dest[i] = last_value;

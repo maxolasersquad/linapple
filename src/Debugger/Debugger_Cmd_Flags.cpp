@@ -10,7 +10,7 @@
 
 extern int g_iCommand;
 
-Update_t CmdFlagClear (int nArgs)
+auto CmdFlagClear (int nArgs) -> Update_t
 {
   int iFlag = (g_iCommand - CMD_FLAG_CLR_C);
 
@@ -40,7 +40,7 @@ Update_t CmdFlagClear (int nArgs)
   return UPDATE_FLAGS;
 }
 
-Update_t CmdFlagSet (int nArgs)
+auto CmdFlagSet (int nArgs) -> Update_t
 {
   int iFlag = (g_iCommand - CMD_FLAG_SET_C);
 
@@ -69,13 +69,14 @@ Update_t CmdFlagSet (int nArgs)
   return UPDATE_FLAGS;
 }
 
-Update_t CmdFlag (int nArgs)
+auto CmdFlag (int nArgs) -> Update_t
 {
-  if (g_iCommand == CMD_FLAG_CLEAR)
+  if (g_iCommand == CMD_FLAG_CLEAR) {
     return CmdFlagClear( nArgs );
-  else
-  if (g_iCommand == CMD_FLAG_SET)
+  } else
+  if (g_iCommand == CMD_FLAG_SET) {
     return CmdFlagSet( nArgs );
+}
 
   return UPDATE_ALL;
 }

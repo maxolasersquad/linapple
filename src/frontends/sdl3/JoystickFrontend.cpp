@@ -1,6 +1,7 @@
 #include "core/Common.h"
 #include <iostream>
 #include <cstring>
+#include <array>
 #include "apple2/Joystick.h"
 #include "SDL3/SDL.h"
 #include "apple2/Structs.h"
@@ -8,26 +9,33 @@
 #include "core/Common_Globals.h"
 #include "frontends/sdl3/JoystickFrontend.h"
 
-#define  DEVICE_NONE      0
-#define  DEVICE_JOYSTICK  1
-#define  DEVICE_KEYBOARD  2
-#define  DEVICE_MOUSE     3
+enum {
+DEVICE_NONE =      0,
+DEVICE_JOYSTICK =  1,
+DEVICE_KEYBOARD =  2,
+DEVICE_MOUSE =     3
+};
 
-#define  MODE_NONE        0
-#define  MODE_STANDARD    1
-#define  MODE_CENTERING   2
-#define  MODE_SMOOTH      3
+enum {
+MODE_NONE =        0,
+MODE_STANDARD =    1,
+MODE_CENTERING =   2,
+MODE_SMOOTH =      3
+};
 
-typedef struct _joyinforec {
+using joyinforec = struct joyinforec {
   int device;
   int mode;
-} joyinforec, *joyinfoptr;
+};
+using joyinfoptr = joyinforec*;
 
-static const joyinforec joyinfo[5] = {{DEVICE_NONE,     MODE_NONE},
-                                      {DEVICE_JOYSTICK, MODE_STANDARD},
-                                      {DEVICE_KEYBOARD, MODE_STANDARD},
-                                      {DEVICE_KEYBOARD, MODE_CENTERING},
-                                      {DEVICE_MOUSE,    MODE_STANDARD}};
+static const std::array<joyinforec, 5> joyinfo = {{
+  {DEVICE_NONE,     MODE_NONE},
+  {DEVICE_JOYSTICK, MODE_STANDARD},
+  {DEVICE_KEYBOARD, MODE_STANDARD},
+  {DEVICE_KEYBOARD, MODE_CENTERING},
+  {DEVICE_MOUSE,    MODE_STANDARD}
+}};
 
 // Key pad [1..9]; Key pad 0,Key pad '.'; Left ALT,Right ALT
 enum JOYKEY {
@@ -47,31 +55,33 @@ enum JOYKEY {
   JK_MAX
 };
 
-const unsigned int PDL_CENTRAL = 127;
-const unsigned int PDL_MAX = 255;
+const uint32_t PDL_CENTRAL = 127;
+const uint32_t PDL_MAX = 255;
 
-static bool keydown[JK_MAX] = {false};
+static std::array<bool, JK_MAX> keydown = {false};
 const int PDL_SMAX = 127;
 const int PDL_SCENTRAL = 0;
 const int PDL_SMIN = -127;
 
-static POINT keyvalue[9] = {{PDL_SMIN,     PDL_SMAX},
-                            {PDL_SCENTRAL, PDL_SMAX},
-                            {PDL_SMAX,     PDL_SMAX},
-                            {PDL_SMIN,     PDL_SCENTRAL},
-                            {PDL_SCENTRAL, PDL_SCENTRAL},
-                            {PDL_SMAX,     PDL_SCENTRAL},
-                            {PDL_SMIN,     PDL_SMIN},
-                            {PDL_SCENTRAL, PDL_SMIN},
-                            {PDL_SMAX,     PDL_SMIN}};
+static std::array<POINT, 9> keyvalue = {{
+  {PDL_SMIN,     PDL_SMAX},
+  {PDL_SCENTRAL, PDL_SMAX},
+  {PDL_SMAX,     PDL_SMAX},
+  {PDL_SMIN,     PDL_SCENTRAL},
+  {PDL_SCENTRAL, PDL_SCENTRAL},
+  {PDL_SMAX,     PDL_SCENTRAL},
+  {PDL_SMIN,     PDL_SMIN},
+  {PDL_SCENTRAL, PDL_SMIN},
+  {PDL_SMAX,     PDL_SMIN}
+}};
 
-static int joyshrx[2] = {8, 8};
-static int joyshry[2] = {8, 8};
-static int joysubx[2] = {0, 0};
-static int joysuby[2] = {0, 0};
+static std::array<int, 2> joyshrx = {8, 8};
+static std::array<int, 2> joyshry = {8, 8};
+static std::array<int, 2> joysubx = {0, 0};
+static std::array<int, 2> joysuby = {0, 0};
 
-SDL_Joystick *joy1 = NULL;
-SDL_Joystick *joy2 = NULL;
+SDL_Joystick *joy1 = nullptr;
+SDL_Joystick *joy2 = nullptr;
 
 void JoyFrontend_Initialize() {
   #define AXIS_MIN        -32768  /* minimum value for axis coordinate */
@@ -79,24 +89,24 @@ void JoyFrontend_Initialize() {
 
   if (joy1) {
     SDL_CloseJoystick(joy1);
-    joy1 = NULL;
+    joy1 = nullptr;
   }
   if (joy2) {
     SDL_CloseJoystick(joy2);
-    joy2 = NULL;
+    joy2 = nullptr;
   }
   int number_of_joysticks = 0;
   SDL_JoystickID *joysticks = SDL_GetJoysticks(&number_of_joysticks);
 
   if (joyinfo[joytype[0]].device == DEVICE_JOYSTICK) {
-    if (number_of_joysticks > 0 && (int)joy1index < number_of_joysticks) {
+    if (number_of_joysticks > 0 && static_cast<int>(joy1index) < number_of_joysticks) {
       joy1 = SDL_OpenJoystick(joysticks[joy1index]);
       joyshrx[0] = 0;
       joyshry[0] = 0;
       joysubx[0] = AXIS_MIN;
       joysuby[0] = AXIS_MIN;
-      unsigned int xrange = AXIS_MAX - AXIS_MIN;
-      unsigned int yrange = AXIS_MAX - AXIS_MIN;
+      uint32_t xrange = AXIS_MAX - AXIS_MIN;
+      uint32_t yrange = AXIS_MAX - AXIS_MIN;
       while (xrange > 256) {
         xrange >>= 1;
         ++joyshrx[0];
@@ -111,14 +121,14 @@ void JoyFrontend_Initialize() {
   }
 
   if (joyinfo[joytype[1]].device == DEVICE_JOYSTICK) {
-    if (number_of_joysticks > 1 && (int)joy2index < number_of_joysticks) {
+    if (number_of_joysticks > 1 && static_cast<int>(joy2index) < number_of_joysticks) {
       joy2 = SDL_OpenJoystick(joysticks[joy2index]);
       joyshrx[1] = 0;
       joyshry[1] = 0;
       joysubx[1] = AXIS_MIN;
       joysuby[1] = AXIS_MIN;
-      unsigned int xrange = AXIS_MAX - AXIS_MIN;
-      unsigned int yrange = AXIS_MAX - AXIS_MIN;
+      uint32_t xrange = AXIS_MAX - AXIS_MIN;
+      uint32_t yrange = AXIS_MAX - AXIS_MIN;
       while (xrange > 256) {
         xrange >>= 1;
         ++joyshrx[1];
@@ -139,18 +149,18 @@ void JoyFrontend_Initialize() {
 void JoyFrontend_ShutDown() {
   if (joy1) {
     SDL_CloseJoystick(joy1);
-    joy1 = NULL;
+    joy1 = nullptr;
   }
   if (joy2) {
     SDL_CloseJoystick(joy2);
-    joy2 = NULL;
+    joy2 = nullptr;
   }
 }
 
 void JoyFrontend_CheckExit() {
   if (!joy1) return;
   SDL_UpdateJoysticks();
-  joyquitevent = SDL_GetJoystickButton(joy1, joyexitbutton0) && SDL_GetJoystickButton(joy1, joyexitbutton1);
+  joyquitevent = SDL_GetJoystickButton(joy1, static_cast<int>(joyexitbutton0)) && SDL_GetJoystickButton(joy1, static_cast<int>(joyexitbutton1));
 }
 
 void JoyFrontend_Update() {
@@ -162,33 +172,33 @@ void JoyFrontend_Update() {
       lastcheck = currtime;
       SDL_UpdateJoysticks();
 
-      bool b0 = SDL_GetJoystickButton(joy1, joy1button1);
+      bool b0 = SDL_GetJoystickButton(joy1, static_cast<int>(joy1button1));
       bool b1 = false;
       if (joyinfo[joytype[1]].device == DEVICE_NONE) {
-        b1 = SDL_GetJoystickButton(joy1, joy1button2);
+        b1 = SDL_GetJoystickButton(joy1, static_cast<int>(joy1button2));
       }
       JoySetRawButton(0, b0);
       JoySetRawButton(1, b1);
 
-      int x = (SDL_GetJoystickAxis(joy1, joy1axis0) - joysubx[0]) >> joyshrx[0];
-      int y = (SDL_GetJoystickAxis(joy1, joy1axis1) - joysuby[0]) >> joyshry[0];
+      int x = (static_cast<int>(SDL_GetJoystickAxis(joy1, static_cast<int>(joy1axis0))) - joysubx[0]) >> joyshrx[0];
+      int y = (static_cast<int>(SDL_GetJoystickAxis(joy1, static_cast<int>(joy1axis1))) - joysuby[0]) >> joyshry[0];
 
       // "Square" a modern analog stick
-      if (y < (int)PDL_CENTRAL / 2) {
-        if (x < (int)PDL_CENTRAL / 2) {
-          x = x - (PDL_CENTRAL / 2 - y) / 2;
-          y = y - (PDL_CENTRAL / 2 - x) / 2;
-        } else if (x > (int)(PDL_CENTRAL + PDL_CENTRAL / 2)) {
-          x = x + (PDL_CENTRAL / 2 - y) / 2;
-          y = y - (x - (PDL_CENTRAL + PDL_CENTRAL / 2)) / 2;
+      if (y < static_cast<int>(PDL_CENTRAL) / 2) {
+        if (x < static_cast<int>(PDL_CENTRAL) / 2) {
+          x = x - (static_cast<int>(PDL_CENTRAL) / 2 - y) / 2;
+          y = y - (static_cast<int>(PDL_CENTRAL) / 2 - x) / 2;
+        } else if (x > static_cast<int>(PDL_CENTRAL) + static_cast<int>(PDL_CENTRAL) / 2) {
+          x = x + (static_cast<int>(PDL_CENTRAL) / 2 - y) / 2;
+          y = y - (x - (static_cast<int>(PDL_CENTRAL) + static_cast<int>(PDL_CENTRAL) / 2)) / 2;
         }
-      } else if (y > (int)(PDL_CENTRAL + PDL_CENTRAL / 2)) {
-        if (x < (int)PDL_CENTRAL / 2) {
-          x = x - (y - (PDL_CENTRAL + PDL_CENTRAL / 2)) / 2;
-          y = y + (PDL_CENTRAL / 2 - x) / 2;
-        } else if (x > (int)(PDL_CENTRAL + PDL_CENTRAL / 2)) {
-          x = x + (y - (PDL_CENTRAL + PDL_CENTRAL / 2)) / 2;
-          y = y + (x - (PDL_CENTRAL + PDL_CENTRAL / 2)) / 2;
+      } else if (y > static_cast<int>(PDL_CENTRAL) + static_cast<int>(PDL_CENTRAL) / 2) {
+        if (x < static_cast<int>(PDL_CENTRAL) / 2) {
+          x = x - (y - (static_cast<int>(PDL_CENTRAL) + static_cast<int>(PDL_CENTRAL) / 2)) / 2;
+          y = y + (static_cast<int>(PDL_CENTRAL) / 2 - x) / 2;
+        } else if (x > static_cast<int>(PDL_CENTRAL) + static_cast<int>(PDL_CENTRAL) / 2) {
+          x = x + (y - (static_cast<int>(PDL_CENTRAL) + static_cast<int>(PDL_CENTRAL) / 2)) / 2;
+          y = y + (x - (static_cast<int>(PDL_CENTRAL) + static_cast<int>(PDL_CENTRAL) / 2)) / 2;
         }
       }
       if (x < 0) x = 0;
@@ -208,14 +218,14 @@ void JoyFrontend_Update() {
       lastcheck = currtime;
       SDL_UpdateJoysticks();
 
-      bool b2 = SDL_GetJoystickButton(joy2, joy2button1);
+      bool b2 = SDL_GetJoystickButton(joy2, static_cast<int>(joy2button1));
       JoySetRawButton(2, b2);
       if (joyinfo[joytype[1]].device != DEVICE_NONE) {
         JoySetRawButton(1, b2); // Remap for 2nd joystick
       }
 
-      int x = (SDL_GetJoystickAxis(joy2, joy2axis0) - joysubx[1]) >> joyshrx[1];
-      int y = (SDL_GetJoystickAxis(joy2, joy2axis1) - joysuby[1]) >> joyshry[1];
+      int x = (static_cast<int>(SDL_GetJoystickAxis(joy2, static_cast<int>(joy2axis0))) - joysubx[1]) >> joyshrx[1];
+      int y = (static_cast<int>(SDL_GetJoystickAxis(joy2, static_cast<int>(joy2axis1))) - joysuby[1]) >> joyshry[1];
 
       if (x == 127 || x == 128) x += JoyGetTrim(true);
       if (y == 127 || y == 128) y += JoyGetTrim(false);
@@ -261,14 +271,14 @@ void JoyFrontend_UpdateTrimViaKey(SDL_Keycode virtkey) {
   JoySetTrim(ty, false);
 }
 
-bool JoyFrontend_ProcessKey(SDL_Keycode virtkey, bool extended, bool down, bool autorep) {
+auto JoyFrontend_ProcessKey(SDL_Keycode virtkey, bool extended, bool down, bool autorep) -> bool {
   int nJoyNum = (joyinfo[joytype[0]].device == DEVICE_KEYBOARD) ? 0 : 1;
-  int nCenteringType = joyinfo[joytype[nJoyNum]].mode;
+  int nCenteringType = joyinfo[joytype[static_cast<size_t>(nJoyNum)]].mode;
 
   bool keychange = !extended;
   if (!extended) {
     if ((virtkey >= SDLK_KP_1) && (virtkey <= SDLK_KP_9)) {
-      keydown[virtkey - SDLK_KP_1] = down;
+      keydown[static_cast<size_t>(virtkey - SDLK_KP_1)] = down;
     } else {
       switch (virtkey) {
         case SDLK_KP_1: case SDLK_END:      keydown[0] = down; break;
@@ -316,29 +326,29 @@ bool JoyFrontend_ProcessKey(SDL_Keycode virtkey, bool extended, bool down, bool 
       }
     } else if ((down && !autorep) || (nCenteringType == MODE_CENTERING)) {
       int xsum = 0, ysum = 0, keydown_count = 0;
-      static int corner_convert_lookup[16] = {-1, -1, -1, 8, -1, 6, -1, -1, -1, -1, 2, -1, 0, -1, -1, -1};
-      int corner_idx = ((int)(0==keydown[1])) | ((int)(0==keydown[3])<<1) | ((int)(0==keydown[5])<<2) | ((int)(0==keydown[7])<<3);
-      int corner_override_idx = corner_convert_lookup[corner_idx];
+      static std::array<int, 16> corner_convert_lookup = {{-1, -1, -1, 8, -1, 6, -1, -1, -1, -1, 2, -1, 0, -1, -1, -1}};
+      int corner_idx = (static_cast<int>(0==keydown[1])) | (static_cast<int>(0==keydown[3])<<1) | (static_cast<int>(0==keydown[5])<<2) | (static_cast<int>(0==keydown[7])<<3);
+      int corner_override_idx = corner_convert_lookup[static_cast<size_t>(corner_idx)];
       if (corner_override_idx >= 0) {
-        xsum = keyvalue[corner_override_idx].x;
-        ysum = keyvalue[corner_override_idx].y;
+        xsum = keyvalue[static_cast<size_t>(corner_override_idx)].x;
+        ysum = keyvalue[static_cast<size_t>(corner_override_idx)].y;
         keydown_count = 1;
       } else {
         for (int i=0; i<9; i++) {
-          if (keydown[i]) {
+          if (keydown[static_cast<size_t>(i)]) {
             keydown_count++;
-            xsum += keyvalue[i].x;
-            ysum += keyvalue[i].y;
+            xsum += keyvalue[static_cast<size_t>(i)].x;
+            ysum += keyvalue[static_cast<size_t>(i)].y;
           }
         }
       }
-      int x, y;
+      int x = 0, y = 0;
       if (keydown_count) {
-        x = (xsum / keydown_count) + PDL_CENTRAL + JoyGetTrim(true);
-        y = (ysum / keydown_count) + PDL_CENTRAL + JoyGetTrim(false);
+        x = (xsum / keydown_count) + static_cast<int>(PDL_CENTRAL) + JoyGetTrim(true);
+        y = (ysum / keydown_count) + static_cast<int>(PDL_CENTRAL) + JoyGetTrim(false);
       } else {
-        x = PDL_CENTRAL + JoyGetTrim(true);
-        y = PDL_CENTRAL + JoyGetTrim(false);
+        x = static_cast<int>(PDL_CENTRAL) + JoyGetTrim(true);
+        y = static_cast<int>(PDL_CENTRAL) + JoyGetTrim(false);
       }
       JoySetRawPosition(nJoyNum, x, y);
     }

@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 #include "core/Common.h"
 #include <cstdarg>
+#include <cstddef>
 #include <cstring>
 #include "Debug.h"
 #include "Debugger_Console.h"
@@ -57,7 +58,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 // tests if pSrc fits into pDst
 // returns true if pSrc safely fits into pDst, else false (pSrc would of overflowed pDst)
 //===========================================================================
-bool TestStringCat ( char * pDst, const char* pSrc, const int nDstSize )
+auto TestStringCat ( char * pDst, const char* pSrc, const int nDstSize ) -> bool
 {
 	int nLenDst = strlen( pDst );
 	int nLenSrc = strlen( pSrc );
@@ -71,7 +72,7 @@ bool TestStringCat ( char * pDst, const char* pSrc, const int nDstSize )
 // tests if pSrc fits into pDst
 // returns true if pSrc safely fits into pDst, else false (pSrc would of overflowed pDst)
 //===========================================================================
-bool TryStringCat ( char * pDst, const char* pSrc, const int nDstSize )
+auto TryStringCat ( char * pDst, const char* pSrc, const int nDstSize ) -> bool
 {
 	if (!TestStringCat( pDst, pSrc, nDstSize ))
 	{
@@ -85,14 +86,15 @@ bool TryStringCat ( char * pDst, const char* pSrc, const int nDstSize )
 // cats string as much as possible
 // returns true if pSrc safely fits into pDst, else false (pSrc would of overflowed pDst)
 //===========================================================================
-int StringCat ( char * pDst, const char* pSrc, const int nDstSize )
+auto StringCat ( char * pDst, const char* pSrc, const int nDstSize ) -> int
 {
-	int nLenDst = (int)strlen( pDst );
-	int nLenSrc = (int)strlen( pSrc );
+	int nLenDst = static_cast<int>(strlen( pDst ));
+	int nLenSrc = static_cast<int>(strlen( pSrc ));
 	int nRemaining = nDstSize - nLenDst - 1;
 
-	if (nRemaining <= 0)
+	if (nRemaining <= 0) {
 		return 0;
+}
 
 	if (nLenSrc > nRemaining)
 	{
@@ -186,14 +188,14 @@ static const HelpEntry_t g_aHelpTable[] =
 	{ CMD_ZEROPAGE_POINTER_ADD, HELP_TYPE_USAGE, "<address | symbol>" },
 	{ CMD_ZEROPAGE_POINTER_ADD, HELP_TYPE_USAGE, "# <address | symbol> [address...]" },
 	{ CMD_VERSION,              HELP_TYPE_USAGE, "[*]" },
-	{ 0, NUM_HELP_TYPES, NULL }
+	{ 0, NUM_HELP_TYPES, nullptr }
 };
 
 // Help ___________________________________________________________________________________________
 
 
 //===========================================================================
-Update_t HelpLastCommand()
+auto HelpLastCommand() -> Update_t
 {
 	return Help_Arg_1( g_iCommand );
 }
@@ -201,7 +203,7 @@ Update_t HelpLastCommand()
 
 // Loads the arguments with the command to get help on and call display help.
 //===========================================================================
-Update_t Help_Arg_1( int iCommandHelp )
+auto Help_Arg_1( int iCommandHelp ) -> Update_t
 {
 	_Arg_1( iCommandHelp );
 
@@ -372,9 +374,9 @@ void Help_KeyboardShortcuts()
 }
 
 
-void _ColorizeHeader( char * & pDst, const char * & pSrc, const char * pHeader, const int nHeaderLen )
+void ColorizeHeader( char * & pDst, const char * & pSrc, const char * pHeader, const int nHeaderLen )
 {
-	int nLen;
+	int nLen = 0;
 
 	nLen = strlen( CHC_USAGE );
 	strcpy( pDst, CHC_USAGE );
@@ -399,7 +401,7 @@ void _ColorizeHeader( char * & pDst, const char * & pSrc, const char * pHeader, 
 }
 
 
-void _ColorizeString(
+void ColorizeString(
 	char * & pDst,
 	const char *pSrc, const size_t nLen )
 {
@@ -409,11 +411,11 @@ void _ColorizeString(
 
 
 // pOperator is one of CHC_*
-void _ColorizeOperator(
+void ColorizeOperator(
 	char * & pDst, const char * & pSrc,
 	const char * pOperator )
 {
-	int nLen;
+	int nLen = 0;
 
 	nLen = strlen( pOperator );
 	strcpy( pDst, pOperator );
@@ -432,7 +434,7 @@ void _ColorizeOperator(
 
 
 
-bool isHexDigit( char c )
+auto isHexDigit( char c ) -> bool
 {
 	if ((c >= '0') &&  (c <= '9')) return true;
 	if ((c >= 'A') &&  (c <= 'F')) return true;
@@ -442,13 +444,15 @@ bool isHexDigit( char c )
 }
 
 
-bool Colorize( char * pDst, const char * pSrc )
+auto Colorize( char * pDst, const char * pSrc ) -> bool
 {
-	if (! pSrc)
+	if (! pSrc) {
 		return false;
+}
 
-	if (! pDst)
+	if (! pDst) {
 		return false;
+}
 
 	const char sNote [] = "Note:";
 	const int  nNote    = sizeof( sNote ) - 1; 
@@ -469,74 +473,75 @@ bool Colorize( char * pDst, const char * pSrc )
 	{
 		if (strncmp( sUsage, pSrc, nUsage) == 0)
 		{
-			_ColorizeHeader( pDst, pSrc, sUsage, nUsage );
+			ColorizeHeader( pDst, pSrc, sUsage, nUsage );
 		}
 		else
 		if (strncmp( sSeeAlso, pSrc, nSeeAlso) == 0)
 		{
-			_ColorizeHeader( pDst, pSrc, sSeeAlso, nSeeAlso );
+			ColorizeHeader( pDst, pSrc, sSeeAlso, nSeeAlso );
 		}
 		else
 		if (strncmp( sNote, pSrc, nNote) == 0)
 		{
-			_ColorizeHeader( pDst, pSrc, sNote, nNote );
+			ColorizeHeader( pDst, pSrc, sNote, nNote );
 		}
 		else
 		if (strncmp( sTotal, pSrc, nNote) == 0)
 		{
-			_ColorizeHeader( pDst, pSrc, sTotal, nTotal );
+			ColorizeHeader( pDst, pSrc, sTotal, nTotal );
 		}
 		else
 		if (strncmp( sExamples, pSrc, nExamples) == 0)
 		{
-			_ColorizeHeader( pDst, pSrc, sExamples, nExamples );
+			ColorizeHeader( pDst, pSrc, sExamples, nExamples );
 		}
 		else
 		if (*pSrc == '[')
 		{
-			_ColorizeOperator( pDst, pSrc, CHC_ARG_OPT );
+			ColorizeOperator( pDst, pSrc, CHC_ARG_OPT );
 		}
 		else
 		if (*pSrc == ']')
 		{
-			_ColorizeOperator( pDst, pSrc, CHC_ARG_OPT );
+			ColorizeOperator( pDst, pSrc, CHC_ARG_OPT );
 		}
 		else
 		if (*pSrc == '<')
 		{
-			_ColorizeOperator( pDst, pSrc, CHC_ARG_MAND );
+			ColorizeOperator( pDst, pSrc, CHC_ARG_MAND );
 		}
 		else
 		if (*pSrc == '>')
 		{
-			_ColorizeOperator( pDst, pSrc, CHC_ARG_MAND );
+			ColorizeOperator( pDst, pSrc, CHC_ARG_MAND );
 		}
 		else
 		if (*pSrc == '|')
 		{
-			_ColorizeOperator( pDst, pSrc, CHC_ARG_SEP );
+			ColorizeOperator( pDst, pSrc, CHC_ARG_SEP );
 		}
 		else
 		if (*pSrc == '\'')
 		{
-			_ColorizeOperator( pDst, pSrc, CHC_ARG_SEP );
+			ColorizeOperator( pDst, pSrc, CHC_ARG_SEP );
 		}
 		else
 		if ((*pSrc == '$') && isHexDigit(pSrc[1])) // Hex Number
 		{
-			_ColorizeOperator( pDst, pSrc, CHC_ARG_SEP );
+			ColorizeOperator( pDst, pSrc, CHC_ARG_SEP );
 
 			const char *start = pSrc;
 			const char *end   = pSrc;
 
-			while( isHexDigit( *end ) )
+			while( isHexDigit( *end ) ) {
 				end++;
+}
 
 			size_t nDigits = end - start;
 
-			_ColorizeString( pDst, CHC_NUM_HEX, strlen( CHC_NUM_HEX ) );
-			_ColorizeString( pDst, start      , nDigits               );
-			_ColorizeString( pDst, CHC_DEFAULT, strlen( CHC_DEFAULT ) );
+			ColorizeString( pDst, CHC_NUM_HEX, strlen( CHC_NUM_HEX ) );
+			ColorizeString( pDst, start      , nDigits               );
+			ColorizeString( pDst, CHC_DEFAULT, strlen( CHC_DEFAULT ) );
 
 			pSrc += nDigits;
 		}
@@ -552,39 +557,39 @@ bool Colorize( char * pDst, const char * pSrc )
 }
 
 // NOTE: This appends a new line
-inline bool ConsoleColorizePrint( char* colorizeBuf, size_t /*colorizeBufSz*/,
-                                  const char* pText )
+inline auto ConsoleColorizePrint( char* colorizeBuf, size_t /*colorizeBufSz*/,
+                                  const char* pText ) -> bool
 {
    if (!Colorize(colorizeBuf, pText)) return false;
    return ConsolePrint(colorizeBuf);
 }
 
-template<size_t _ColorizeBufSz>
-inline bool ConsoleColorizePrint( char (&colorizeBuf)[_ColorizeBufSz],
-                                  const char* pText )
+template<size_t ColorizeBufSz>
+inline auto ConsoleColorizePrint( char (&colorizeBuf)[ColorizeBufSz],
+                                  const char* pText ) -> bool
 {
-   return ConsoleColorizePrint(colorizeBuf, _ColorizeBufSz, pText);
+   return ConsoleColorizePrint(colorizeBuf, ColorizeBufSz, pText);
 }
 
-inline bool ConsoleColorizePrintVa( char* colorizeBuf, size_t colorizeBufSz,
+inline auto ConsoleColorizePrintVa( char* colorizeBuf, size_t colorizeBufSz,
                                     char* buf, size_t bufsz,
-                                    const char* format, va_list va )
+                                    const char* format, va_list va ) -> bool
 {
    vsnprintf(buf, bufsz, format, va);
    return ConsoleColorizePrint(colorizeBuf, colorizeBufSz, buf);
 }
 
-template<size_t _ColorizeBufSz, size_t _BufSz>
-inline bool ConsoleColorizePrintVa( char (&colorizeBuf)[_ColorizeBufSz],
-                                    char (&buf)[_BufSz],
-                                    const char* format, va_list va )
+template<size_t ColorizeBufSz, size_t BufSz>
+inline auto ConsoleColorizePrintVa( char (&colorizeBuf)[ColorizeBufSz],
+                                    char (&buf)[BufSz],
+                                    const char* format, va_list va ) -> bool
 {
-   return ConsoleColorizePrintVa(colorizeBuf, _ColorizeBufSz, buf, _BufSz, format, va);
+   return ConsoleColorizePrintVa(colorizeBuf, ColorizeBufSz, buf, BufSz, format, va);
 }
 
-inline bool ConsoleColorizePrintFormat( char* colorizeBuf, size_t colorizeBufSz,
+inline auto ConsoleColorizePrintFormat( char* colorizeBuf, size_t colorizeBufSz,
                                         char* buf, size_t bufsz,
-                                        const char* format, ... )
+                                        const char* format, ... ) -> bool
 {
    va_list va;
    va_start(va, format);
@@ -593,10 +598,10 @@ inline bool ConsoleColorizePrintFormat( char* colorizeBuf, size_t colorizeBufSz,
    return r;
 }
 
-template<size_t _ColorizeBufSz, size_t _BufSz>
-inline bool ConsoleColorizePrintFormat( char (&colorizeBuf)[_ColorizeBufSz],
-                                        char (&buf)[_BufSz],
-                                        const char* format, ... )
+template<size_t ColorizeBufSz, size_t BufSz>
+inline auto ConsoleColorizePrintFormat( char (&colorizeBuf)[ColorizeBufSz],
+                                        char (&buf)[BufSz],
+                                        const char* format, ... ) -> bool
 {
    va_list va;
    va_start(va, format);
@@ -606,7 +611,7 @@ inline bool ConsoleColorizePrintFormat( char (&colorizeBuf)[_ColorizeBufSz],
 }
 
 //===========================================================================
-Update_t CmdMOTD( int nArgs )	// Message Of The Day
+auto CmdMOTD( int nArgs ) -> Update_t	// Message Of The Day
 {
   (void)nArgs;
 	char sText[ CONSOLE_WIDTH*2 ];
@@ -643,13 +648,13 @@ Update_t CmdMOTD( int nArgs )	// Message Of The Day
 
 // Help on specific command
 //===========================================================================
-Update_t CmdHelpSpecific (int nArgs)
+auto CmdHelpSpecific (int nArgs) -> Update_t
 {
-	int iArg;
+	int iArg = 0;
 	char sText[ CONSOLE_WIDTH * 2 ];
 	char sTemp[ CONSOLE_WIDTH * 2 ];
-	memset( sText, 0, CONSOLE_WIDTH*2 );
-	memset( sTemp, 0, CONSOLE_WIDTH*2 );
+	memset( sText, 0, static_cast<size_t>(CONSOLE_WIDTH*2) );
+	memset( sTemp, 0, static_cast<size_t>(CONSOLE_WIDTH*2) );
 
 	if (! nArgs)
 	{
@@ -657,7 +662,7 @@ Update_t CmdHelpSpecific (int nArgs)
 		return ConsoleUpdate();
 	}
 
-	CmdFuncPtr_t pFunction = NULL;
+	CmdFuncPtr_t pFunction = nullptr;
 	bool bAllCommands = false;
 	bool bCategory = false;
 	bool bDisplayCategory = true;
@@ -695,9 +700,9 @@ Update_t CmdHelpSpecific (int nArgs)
 				case PARAM_CAT_CPU        : iCmdBegin = CMD_ASSEMBLE        ; iCmdEnd = CMD_UNASSEMBLE           ; break;
 				case PARAM_CAT_FLAGS      :
 					nFound = FindCommand( g_aArgs[iArg].sArg, pFunction, & iCommand ); // check if we have an exact command match first
-					if ( nFound ) // && (iCommand != CMD_MEMORY_FILL))
+					if ( nFound ) { // && (iCommand != CMD_MEMORY_FILL))
 						bCategory = false;
-					else if ( nFoundCategory )
+					} else if ( nFoundCategory )
 					{
 						iCmdBegin = CMD_FLAG_CLEAR     ; iCmdEnd = CMD_FLAG_SET_N;
 					}
@@ -714,27 +719,27 @@ Update_t CmdHelpSpecific (int nArgs)
 					break;
 				case PARAM_CAT_MEMORY     :
 					nFound = FindCommand( g_aArgs[iArg].sArg, pFunction, & iCommand );  // check if we have an exact command match first
-					if ( nFound )// && (iCommand != CMD_MEMORY_MOVE))
+					if ( nFound ) {// && (iCommand != CMD_MEMORY_MOVE))
 						bCategory = false;
-					else if ( nFoundCategory )
+					} else if ( nFoundCategory )
 					{
 						iCmdBegin = CMD_MEMORY_COMPARE                      ; iCmdEnd = CMD_MEMORY_FILL           ;
 					}
 					break;
 				case PARAM_CAT_OUTPUT     :
 					nFound = FindCommand( g_aArgs[iArg].sArg, pFunction, & iCommand );  // check if we have an exact command match first
-					if ( nFound ) // && (iCommand != CMD_OUT))
+					if ( nFound ) { // && (iCommand != CMD_OUT))
 						bCategory = false;
-					else if ( nFoundCategory )
+					} else if ( nFoundCategory )
 					{
 						iCmdBegin = CMD_OUTPUT_CALC                         ; iCmdEnd = CMD_OUTPUT_RUN           ;
 					}
 					break;
 				case PARAM_CAT_SYMBOLS    :
 					nFound = FindCommand( g_aArgs[iArg].sArg, pFunction, & iCommand );  // check if we have an exact command match first
-					if ( nFound ) // && (iCommand != CMD_SYMBOLS_LOOKUP) && (iCommand != CMD_MEMORY_SEARCH))
+					if ( nFound ) { // && (iCommand != CMD_SYMBOLS_LOOKUP) && (iCommand != CMD_MEMORY_SEARCH))
 						bCategory = false;
-					else if ( nFoundCategory )
+					} else if ( nFoundCategory )
 					{
 						iCmdBegin = CMD_SYMBOLS_LOOKUP                      ; iCmdEnd = CMD_SYMBOLS_LIST         ;
 					}
@@ -772,11 +777,13 @@ Update_t CmdHelpSpecific (int nArgs)
 					bCategory = false;
 					break;
 			}
-			if (iCmdEnd)
+			if (iCmdEnd) {
 				iCmdEnd++;
+}
 			nNewArgs = (iCmdEnd - iCmdBegin);
-			if (nNewArgs > 0)
+			if (nNewArgs > 0) {
 				break;
+}
 		}
 	}
 
@@ -809,30 +816,34 @@ Update_t CmdHelpSpecific (int nArgs)
 		if (bAllCommands)
 		{
 			iCommand = iArg;
-			if (iCommand == NUM_COMMANDS) // skip: Internal Consistency Check __COMMANDS_VERIFY_TXT__
+			if (iCommand == NUM_COMMANDS) { // skip: Internal Consistency Check __COMMANDS_VERIFY_TXT__
 				continue;
+}
 			nFound = 1;
 		}
-		else
+		else {
 			nFound = FindCommand( g_aArgs[iArg].sArg, pFunction, & iCommand );
+}
 
 		if (nFound > 1)
 		{
 			DisplayAmbigiousCommands( nFound );
 		}
 
-		if (iCommand > NUM_COMMANDS)
+		if (iCommand > NUM_COMMANDS) {
 			continue;
+}
 
-		if ((nArgs == 1) && (! nFound))
+		if ((nArgs == 1) && (! nFound)) {
 			iCommand = g_aArgs[iArg].nValue;
+}
 
 		Command_t *pCommand = & g_aCommands[ iCommand ];
 
 		if (! nFound)
 		{
 			iCommand = NUM_COMMANDS;
-			pCommand = NULL;
+			pCommand = nullptr;
 		}
 
 //		if (nFound && (! bAllCommands) && (! bCategory))
@@ -842,52 +853,53 @@ Update_t CmdHelpSpecific (int nArgs)
 			int iCmd = g_aCommands[ iCommand ].iCommand; // Unaliased command
 
 			// HACK: Major kludge to display category!!!
-			if (iCmd <= CMD_UNASSEMBLE)
+			if (iCmd <= CMD_UNASSEMBLE) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_CPU ].m_sName );
-			else
-			if (iCmd <= CMD_BOOKMARK_SAVE)
+			} else
+			if (iCmd <= CMD_BOOKMARK_SAVE) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_BOOKMARKS ].m_sName );
-			else
-			if (iCmd <= CMD_BREAKPOINT_SAVE)
+			} else
+			if (iCmd <= CMD_BREAKPOINT_SAVE) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_BREAKPOINTS ].m_sName );
-			else
-			if (iCmd <= CMD_CONFIG_SET_DEBUG_DIR)
+			} else
+			if (iCmd <= CMD_CONFIG_SET_DEBUG_DIR) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_CONFIG ].m_sName );
-			else
-			if (iCmd <= CMD_CURSOR_PAGE_DOWN_4K)
+			} else
+			if (iCmd <= CMD_CURSOR_PAGE_DOWN_4K) {
 				sprintf( sCategory, "Scrolling" );
-			else
-			if (iCmd <= CMD_FLAG_SET_N)
+			} else
+			if (iCmd <= CMD_FLAG_SET_N) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_FLAGS ].m_sName );
-			else
-			if (iCmd <= CMD_MOTD)
+			} else
+			if (iCmd <= CMD_MOTD) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_HELP ].m_sName );
-			else
-			if (iCmd <= CMD_MEMORY_FILL)
+			} else
+			if (iCmd <= CMD_MEMORY_FILL) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_MEMORY ].m_sName );
-			else
-			if (iCmd <= CMD_OUTPUT_RUN)
+			} else
+			if (iCmd <= CMD_OUTPUT_RUN) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_OUTPUT ].m_sName );
-			else
-			if (iCmd <= CMD_SYNC)
+			} else
+			if (iCmd <= CMD_SYNC) {
 				sprintf( sCategory, "Source" );
-			else
-			if (iCmd <= CMD_SYMBOLS_LIST)
+			} else
+			if (iCmd <= CMD_SYMBOLS_LIST) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_SYMBOLS ].m_sName );
-			else
-			if (iCmd <= CMD_VIEW_DHGR2)
+			} else
+			if (iCmd <= CMD_VIEW_DHGR2) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_VIEW ].m_sName );
-			else
-			if (iCmd <= CMD_WATCH_SAVE)
+			} else
+			if (iCmd <= CMD_WATCH_SAVE) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_WATCHES ].m_sName );
-			else
-			if (iCmd <= CMD_WINDOW_OUTPUT)
+			} else
+			if (iCmd <= CMD_WINDOW_OUTPUT) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_WINDOW ].m_sName );
-			else
-			if (iCmd <= CMD_ZEROPAGE_POINTER_SAVE)
+			} else
+			if (iCmd <= CMD_ZEROPAGE_POINTER_SAVE) {
 				sprintf( sCategory, "%s", g_aParameters[ PARAM_CAT_ZEROPAGE ].m_sName );
-			else
+			} else {
 				sprintf( sCategory, "Unknown!" );
+}
 
 			ConsolePrintFormat( sText, "%sCategory%s: %s%s"
 				, CHC_USAGE
@@ -895,9 +907,11 @@ Update_t CmdHelpSpecific (int nArgs)
 				, CHC_CATEGORY
 				, sCategory );
 
-			if (bCategory)
-				if (bDisplayCategory)
+			if (bCategory) {
+				if (bDisplayCategory) {
 					bDisplayCategory = false;
+}
+}
 		}
 
 		if (pCommand)
@@ -905,18 +919,19 @@ Update_t CmdHelpSpecific (int nArgs)
 			const char *pHelp = pCommand->pHelpSummary;
 			if (pHelp)
 			{
-				if (bCategory)
+				if (bCategory) {
 					sprintf( sText, "%s%8s%s, "
 						, CHC_COMMAND
 						, pCommand->m_sName
 						, CHC_ARG_SEP
 					);
-				else
+				} else {
 					sprintf( sText, "%s%s%s, "
 						, CHC_COMMAND
 						, pCommand->m_sName
 						, CHC_ARG_SEP
 					);
+}
 
 //				if (! TryStringCat( sText, pHelp, g_nConsoleDisplayWidth ))
 //				{
@@ -942,13 +957,14 @@ Update_t CmdHelpSpecific (int nArgs)
 #endif
 			}
 
-			if (bCategory)
+			if (bCategory) {
 				continue;
+}
 		}
 
 		// MASTER HELP
 		bool bFoundAny = false;
-		for (int iHelp = 0; g_aHelpTable[iHelp].pText != NULL; iHelp++)
+		for (int iHelp = 0; g_aHelpTable[iHelp].pText != nullptr; iHelp++)
 		{
 			if (g_aHelpTable[iHelp].iCommand == iCommand)
 			{
@@ -998,7 +1014,7 @@ Update_t CmdHelpSpecific (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdHelpList (int nArgs)
+auto CmdHelpList (int nArgs) -> Update_t
 {
   (void)nArgs;
 	const int nBuf = CONSOLE_WIDTH * 2;
@@ -1006,7 +1022,7 @@ Update_t CmdHelpList (int nArgs)
 	char sText[ nBuf ] = "";
 
 	int nMaxWidth = g_nConsoleDisplayWidth - 1;
-	int iCommand;
+	int iCommand = 0;
 
 	extern std::vector<Command_t> g_vSortedCommands;
 
@@ -1033,8 +1049,9 @@ Update_t CmdHelpList (int nArgs)
 //		Command_t *pCommand = & g_aCommands[ iCommand ];
 		char      *pName = pCommand->m_sName;
 
-		if (! pCommand->pFunction)
+		if (! pCommand->pFunction) {
 			continue; // not implemented function
+}
 
 		int nLenCmd = strlen( pName );
 		if ((nLen + nLenCmd) < (nMaxWidth))
@@ -1063,15 +1080,15 @@ Update_t CmdHelpList (int nArgs)
 }
 
 
-Update_t CmdVersion (int nArgs)
+auto CmdVersion (int nArgs) -> Update_t
 {
 	char sText[ CONSOLE_WIDTH ];
 
-	unsigned int nVersion = DEBUGGER_VERSION;
-	int nMajor;
-	int nMinor;
-	int nFixMajor;
-	int nFixMinor;
+	uint32_t nVersion = DEBUGGER_VERSION;
+	int nMajor = 0;
+	int nMinor = 0;
+	int nFixMajor = 0;
+	int nFixMinor = 0;
 	UnpackVersion( nVersion, nMajor, nMinor, nFixMajor, nFixMinor );
 
 	ConsolePrintFormat( sText, "  Emulator:  %s%s%s    Debugger: %s%d.%d.%d.%d%s"
@@ -1110,8 +1127,9 @@ Update_t CmdVersion (int nArgs)
 
 				break;
 			}
-			else
+			else {
 				return Help_Arg_1( CMD_VERSION );
+}
 		}
 	}
 

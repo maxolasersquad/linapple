@@ -43,8 +43,8 @@ static void vLogOutput(LogLevel level, const char* format, va_list args) {
   vsnprintf(output, sizeof(output) - 1, format, args);
 
   if (g_fh) {
-    fprintf(g_fh, "%s", output);
-    fflush(g_fh);
+    fprintf(g_fh.get(), "%s", output);
+    fflush(g_fh.get());
   }
 
   // Terminal visibility
@@ -67,7 +67,7 @@ namespace Logger {
     if (!g_fh) {
         std::string dataDir = Path::GetUserDataDir();
         Path::EnsureDirExists(dataDir);
-        g_fh = fopen((dataDir + "linapple.log").c_str(), "a+t");
+        g_fh.reset(fopen((dataDir + "linapple.log").c_str(), "a+t"));
     }
     struct timeval tv{};
     struct tm *ptm = nullptr;
@@ -76,7 +76,7 @@ namespace Logger {
     ptm = localtime(&tv.tv_sec);
     strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", ptm);
     if (g_fh) {
-      fprintf(g_fh, "*** Logging started: %s\n", time_str);
+      fprintf(g_fh.get(), "*** Logging started: %s\n", time_str);
     }
   }
 
@@ -121,9 +121,8 @@ namespace Logger {
 
   void Destroy() {
     if (g_fh) {
-      fprintf(g_fh, "*** Logging ended\n\n");
-      fclose(g_fh);
-      g_fh = NULL;
+      fprintf(g_fh.get(), "*** Logging ended\n\n");
+      g_fh.reset();
     }
   }
 } // namespace Logger

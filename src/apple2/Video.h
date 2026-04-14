@@ -6,6 +6,26 @@
 struct SS_IO_Video;
 
 // Types
+enum
+{
+  APPLE2_VISIBLE_WIDTH  = 280,
+  APPLE2_VISIBLE_HEIGHT = 192,
+
+  VIDEO_SCALE_FACTOR    = 2,
+
+  VIDEO_WIDTH           = APPLE2_VISIBLE_WIDTH * VIDEO_SCALE_FACTOR, // 560
+  VIDEO_HEIGHT          = APPLE2_VISIBLE_HEIGHT * VIDEO_SCALE_FACTOR, // 384
+
+  TEXT_COLUMNS          = 40,
+  TEXT_ROWS             = 24,
+  DIRTY_CELL_ROWS       = 32,
+
+  MAX_PALETTE_SIZE      = 256,
+  DEFAULT_GRAY_COMPONENT = 0xC0,
+
+  HGR_MATRIX_YOFFSET    = 2
+};
+
 enum VIDEOTYPE {
   VT_MONO_CUSTOM,
   VT_COLOR_STANDARD,
@@ -130,10 +150,10 @@ extern int g_iStatusCycle; // cycler for status panel showing
 extern bool g_ShowLeds; // if we should show drive leds
 
 extern bool graphicsmode;
-extern unsigned int monochrome;
-extern unsigned int g_videotype;
-extern unsigned int g_uVideoMode;
-extern unsigned int g_singlethreaded;
+extern uint32_t monochrome;
+extern uint32_t g_videotype;
+extern uint32_t g_uVideoMode;
+extern uint32_t g_singlethreaded;
 extern std::recursive_mutex g_video_draw_mutex; // drawing mutex for writing to SDL surface
 extern std::atomic<bool> g_bFrameReady;
 
@@ -208,11 +228,11 @@ void VideoReinitialize();
 
 void VideoResetState();
 
-unsigned short VideoGetScannerAddress(bool *pbVblBar_OUT, const unsigned int uExecutedCycles);
+uint16_t VideoGetScannerAddress(bool *pbVblBar_OUT, const uint32_t uExecutedCycles);
 
-bool VideoGetVbl(unsigned int uExecutedCycles);
+bool VideoGetVbl(uint32_t uExecutedCycles);
 
-void VideoUpdateVbl(unsigned int dwCyclesThisFrame);
+void VideoUpdateVbl(uint32_t dwCyclesThisFrame);
 
 void VideoUpdateFlash();
 
@@ -225,12 +245,12 @@ bool VideoGetSWPAGE2(void);
 bool VideoGetSWTEXT(void);
 bool VideoGetSWAltCharSet(void);
 
-unsigned int VideoGetSnapshot(SS_IO_Video *pSS);
+uint32_t VideoGetSnapshot(SS_IO_Video *pSS);
 
-unsigned int VideoSetSnapshot(SS_IO_Video *pSS);
+uint32_t VideoSetSnapshot(SS_IO_Video *pSS);
 
-unsigned char VideoCheckMode(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
+uint8_t VideoCheckMode(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
 
-unsigned char VideoCheckVbl(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
+uint8_t VideoCheckVbl(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
 
-unsigned char VideoSetMode(unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft);
+uint8_t VideoSetMode(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);

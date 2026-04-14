@@ -25,12 +25,12 @@ extern int g_nConsoleDisplayWidth;
 extern int g_nDisasmWinHeight;
 extern int g_nDisasmCurLine;
 
-extern unsigned short g_nDisasmTopAddress;
-extern unsigned short g_nDisasmBotAddress;
-extern unsigned short g_nDisasmCurAddress;
+extern uint16_t g_nDisasmTopAddress;
+extern uint16_t g_nDisasmBotAddress;
+extern uint16_t g_nDisasmCurAddress;
 extern bool g_bDisasmCurBad;
 
-extern unsigned int g_uVideoMode;
+extern uint32_t g_uVideoMode;
 
 const int MIN_DISPLAY_CONSOLE_LINES = 5;
 
@@ -65,7 +65,7 @@ void _WindowSwitch( int eNewWindow )
 }
 
 //===========================================================================
-Update_t _CmdWindowViewCommon ( int iNewWindow )
+auto CmdWindowViewCommon ( int iNewWindow ) -> Update_t
 {
   // Switching to same window, remove split
   if (g_iWindowThis == iNewWindow)
@@ -82,7 +82,7 @@ Update_t _CmdWindowViewCommon ( int iNewWindow )
 }
 
 //===========================================================================
-Update_t _CmdWindowViewFull ( int iNewWindow )
+auto _CmdWindowViewFull ( int iNewWindow ) -> Update_t
 {
   if (g_iWindowThis != iNewWindow)
   {
@@ -121,7 +121,7 @@ void WindowUpdateConsoleDisplayedSize()
 }
 
 //===========================================================================
-int WindowGetHeight( int iWindow )
+auto WindowGetHeight( int iWindow ) -> int
 {
   (void)iWindow;
   return g_nDisasmWinHeight;
@@ -149,12 +149,13 @@ void WindowUpdateSizes()
 }
 
 //===========================================================================
-Update_t CmdWindowCycleNext( int nArgs )
+auto CmdWindowCycleNext( int nArgs ) -> Update_t
 {
   (void)nArgs;
   g_iWindowThis++;
-  if (g_iWindowThis >= NUM_WINDOWS)
+  if (g_iWindowThis >= NUM_WINDOWS) {
     g_iWindowThis = 0;
+}
 
   WindowUpdateSizes();
 
@@ -162,12 +163,13 @@ Update_t CmdWindowCycleNext( int nArgs )
 }
 
 //===========================================================================
-Update_t CmdWindowCyclePrev( int nArgs )
+auto CmdWindowCyclePrev( int nArgs ) -> Update_t
 {
   (void)nArgs;
   g_iWindowThis--;
-  if (g_iWindowThis < 0)
+  if (g_iWindowThis < 0) {
     g_iWindowThis = NUM_WINDOWS-1;
+}
 
   WindowUpdateSizes();
 
@@ -175,7 +177,7 @@ Update_t CmdWindowCyclePrev( int nArgs )
 }
 
 //===========================================================================
-Update_t CmdWindowShowCode (int nArgs)
+auto CmdWindowShowCode (int nArgs) -> Update_t
 {
   (void)nArgs;
 
@@ -197,14 +199,14 @@ Update_t CmdWindowShowCode (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdWindowShowCode1 (int nArgs)
+auto CmdWindowShowCode1 (int nArgs) -> Update_t
 {
   (void)nArgs;
   return UPDATE_CONSOLE_DISPLAY;
 }
 
 //===========================================================================
-Update_t CmdWindowShowCode2 (int nArgs)
+auto CmdWindowShowCode2 (int nArgs) -> Update_t
 {
   (void)nArgs;
   if ((g_iWindowThis == WINDOW_CODE) || (g_iWindowThis == WINDOW_DATA))
@@ -227,7 +229,7 @@ Update_t CmdWindowShowCode2 (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdWindowShowData (int nArgs)
+auto CmdWindowShowData (int nArgs) -> Update_t
 {
   (void)nArgs;
   if (g_iWindowThis == WINDOW_CODE)
@@ -248,14 +250,14 @@ Update_t CmdWindowShowData (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdWindowShowData1 (int nArgs)
+auto CmdWindowShowData1 (int nArgs) -> Update_t
 {
   (void)nArgs;
   return UPDATE_CONSOLE_DISPLAY;
 }
 
 //===========================================================================
-Update_t CmdWindowShowData2 (int nArgs)
+auto CmdWindowShowData2 (int nArgs) -> Update_t
 {
   (void)nArgs;
   if ((g_iWindowThis == WINDOW_CODE) || (g_iWindowThis == WINDOW_DATA))
@@ -276,21 +278,21 @@ Update_t CmdWindowShowData2 (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdWindowShowSource (int nArgs)
+auto CmdWindowShowSource (int nArgs) -> Update_t
 {
   (void)nArgs;
   return UPDATE_CONSOLE_DISPLAY;
 }
 
 //===========================================================================
-Update_t CmdWindowShowSource1 (int nArgs)
+auto CmdWindowShowSource1 (int nArgs) -> Update_t
 {
   (void)nArgs;
   return UPDATE_CONSOLE_DISPLAY;
 }
 
 //===========================================================================
-Update_t CmdWindowShowSource2 (int nArgs)
+auto CmdWindowShowSource2 (int nArgs) -> Update_t
 {
   (void)nArgs;
   _WindowSplit( WINDOW_SOURCE );
@@ -300,28 +302,28 @@ Update_t CmdWindowShowSource2 (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdWindowViewCode (int nArgs)
+auto CmdWindowViewCode( int nArgs ) -> Update_t
 {
   (void)nArgs;
-  return _CmdWindowViewCommon( WINDOW_CODE );
+  return CmdWindowViewCommon( WINDOW_CODE );
 }
 
 //===========================================================================
-Update_t CmdWindowViewConsole (int nArgs)
+auto CmdWindowViewConsole (int nArgs) -> Update_t
 {
   (void)nArgs;
   return _CmdWindowViewFull( WINDOW_CONSOLE );
 }
 
 //===========================================================================
-Update_t CmdWindowViewData (int nArgs)
+auto CmdWindowViewData( int nArgs ) -> Update_t
 {
   (void)nArgs;
-  return _CmdWindowViewCommon( WINDOW_DATA );
+  return CmdWindowViewCommon( WINDOW_DATA );
 }
 
 //===========================================================================
-Update_t CmdWindowViewOutput (int nArgs)
+auto CmdWindowViewOutput (int nArgs) -> Update_t
 {
   (void)nArgs;
   VideoRedrawScreen();
@@ -332,26 +334,27 @@ Update_t CmdWindowViewOutput (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdWindowViewSource (int nArgs)
+auto CmdWindowViewSource (int nArgs) -> Update_t
 {
   (void)nArgs;
   return _CmdWindowViewFull( WINDOW_CONSOLE );
 }
 
 //===========================================================================
-Update_t CmdWindowViewSymbols (int nArgs)
+auto CmdWindowViewSymbols (int nArgs) -> Update_t
 {
   (void)nArgs;
   return _CmdWindowViewFull( WINDOW_CONSOLE );
 }
 
 //===========================================================================
-Update_t CmdWindow (int nArgs)
+auto CmdWindow (int nArgs) -> Update_t
 {
-  if (!nArgs)
+  if (!nArgs) {
     return Help_Arg_1( CMD_WINDOW );
+}
 
-  int iParam;
+  int iParam = 0;
   char *pName = g_aArgs[1].sArg;
   int nFound = FindParam( pName, MATCH_EXACT, iParam, _PARAM_WINDOW_BEGIN, _PARAM_WINDOW_END );
   if (nFound)
@@ -375,7 +378,7 @@ Update_t CmdWindow (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdWindowLast (int nArgs)
+auto CmdWindowLast (int nArgs) -> Update_t
 {
   (void)nArgs;
   _WindowLast();
@@ -409,9 +412,9 @@ void DisasmCalcTopFromCurAddress( bool bUpdateTop )
   bool bFound = false;
   while (iTop <= iCur)
   {
-    unsigned short iAddress = (unsigned short)iTop;
-    int iOpmode;
-    int nOpbytes;
+    auto iAddress = static_cast<uint16_t>(iTop);
+    int iOpmode = 0;
+    int nOpbytes = 0;
 
     for( int iLine = 0; iLine <= nLen; iLine++ ) // min 1 opcode/instruction
     {
@@ -421,7 +424,7 @@ void DisasmCalcTopFromCurAddress( bool bUpdateTop )
       {
         if (iAddress == g_nDisasmCurAddress)
         {
-          g_nDisasmTopAddress = (unsigned short)iTop;
+          g_nDisasmTopAddress = static_cast<uint16_t>(iTop);
           bFound = true;
           break;
         }
@@ -443,12 +446,12 @@ void DisasmCalcTopFromCurAddress( bool bUpdateTop )
 }
 
 //===========================================================================
-unsigned short DisasmCalcAddressFromLines( unsigned short iAddress, int nLines )
+auto DisasmCalcAddressFromLines( uint16_t iAddress, int nLines ) -> uint16_t
 {
   while (nLines-- > 0)
   {
-    int iOpmode;
-    int nOpbytes;
+    int iOpmode = 0;
+    int nOpbytes = 0;
     _6502_GetOpmodeOpbyte( iAddress, iOpmode, nOpbytes );
     iAddress += nOpbytes;
   }
@@ -474,13 +477,13 @@ void DisasmCalcTopBotAddress ()
   DisasmCalcBotFromTopAddress();
 }
 
-bool DebugGetVideoMode(unsigned int* pVideoMode)
+auto DebugGetVideoMode(uint32_t* pVideoMode) -> bool
 {
   return DebugVideoMode::Instance().Get(pVideoMode);
 }
-Update_t CmdCursorFollowTarget ( int nArgs )
+auto CmdCursorFollowTarget ( int nArgs ) -> Update_t
 {
-  unsigned short nAddress = 0;
+  uint16_t nAddress = 0;
   if (_6502_GetTargetAddress( g_nDisasmCurAddress, nAddress ))
   {
     g_nDisasmCurAddress = nAddress;
@@ -501,7 +504,7 @@ Update_t CmdCursorFollowTarget ( int nArgs )
 }
 
 
-Update_t CmdCursorLineUp (int nArgs)
+auto CmdCursorLineUp (int nArgs) -> Update_t
 {
   if (g_iWindowThis == WINDOW_DATA)
   {
@@ -526,10 +529,10 @@ Update_t CmdCursorLineUp (int nArgs)
 
 
 //===========================================================================
-Update_t CmdCursorLineDown (int nArgs)
+auto CmdCursorLineDown (int nArgs) -> Update_t
 {
-  int iOpmode;
-  int nOpbytes;
+  int iOpmode = 0;
+  int nOpbytes = 0;
   _6502_GetOpmodeOpbyte( g_nDisasmCurAddress, iOpmode, nOpbytes ); // g_nDisasmTopAddress
 
   if (g_iWindowThis == WINDOW_DATA)
@@ -551,8 +554,8 @@ Update_t CmdCursorLineDown (int nArgs)
   {
 #if DEBUG_SCROLL == 6
     // Works except on one case: G FB53, SPACE, DOWN
-    unsigned short nTop = g_nDisasmTopAddress;
-    unsigned short nCur = g_nDisasmCurAddress + nOpbytes;
+    uint16_t nTop = g_nDisasmTopAddress;
+    uint16_t nCur = g_nDisasmCurAddress + nOpbytes;
     if (g_bDisasmCurBad)
     {
       g_nDisasmCurAddress = nCur;
@@ -608,7 +611,7 @@ Update_t CmdCursorLineDown (int nArgs)
       int _nOpbytes;
     };
 
-Update_t CmdCursorJumpPC (int nArgs)
+auto CmdCursorJumpPC (int nArgs) -> Update_t
 {
   // TODO: Allow user to decide if they want next g_aOpcodes at
   // 1) Centered (traditionaly), or
@@ -634,9 +637,9 @@ Update_t CmdCursorJumpPC (int nArgs)
 
 
 //===========================================================================
-Update_t CmdCursorJumpRetAddr (int nArgs)
+auto CmdCursorJumpRetAddr (int nArgs) -> Update_t
 {
-  unsigned short nAddress = 0;
+  uint16_t nAddress = 0;
   if (_6502_GetStackReturnAddress( nAddress ))
   {
     g_nDisasmCurAddress = nAddress;
@@ -657,14 +660,15 @@ Update_t CmdCursorJumpRetAddr (int nArgs)
 }
 
 
-Update_t CmdCursorPageDown (int nArgs)
+auto CmdCursorPageDown (int nArgs) -> Update_t
 {
   (void)nArgs;
   int iLines = 0; // show at least 1 line from previous display
   int nLines = WindowGetHeight( g_iWindowThis );
 
-  if (nLines < 2)
+  if (nLines < 2) {
     nLines = 2;
+}
 
   if (g_iWindowThis == WINDOW_DATA)
   {
@@ -679,8 +683,9 @@ Update_t CmdCursorPageDown (int nArgs)
 
 // 5
     nLines -= (g_nDisasmCurLine + 1);
-    if (nLines < 1)
+    if (nLines < 1) {
       nLines = 1;
+}
 
     while (iLines++ < nLines)
     {
@@ -695,7 +700,7 @@ Update_t CmdCursorPageDown (int nArgs)
 
 
 //===========================================================================
-Update_t CmdCursorPageDown256 (int nArgs)
+auto CmdCursorPageDown256 (int nArgs) -> Update_t
 {
   (void)nArgs;
   const int nStep = 256;
@@ -704,7 +709,7 @@ Update_t CmdCursorPageDown256 (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdCursorPageDown4K (int nArgs)
+auto CmdCursorPageDown4K (int nArgs) -> Update_t
 {
   (void)nArgs;
   const int nStep = 4096;
@@ -713,14 +718,15 @@ Update_t CmdCursorPageDown4K (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdCursorPageUp (int nArgs)
+auto CmdCursorPageUp (int nArgs) -> Update_t
 {
   (void)nArgs;
   int iLines = 0; // show at least 1 line from previous display
   int nLines = WindowGetHeight( g_iWindowThis );
 
-  if (nLines < 2)
+  if (nLines < 2) {
     nLines = 2;
+}
 
   if (g_iWindowThis == WINDOW_DATA)
   {
@@ -732,8 +738,9 @@ Update_t CmdCursorPageUp (int nArgs)
 //    while (++iLines < nLines)
 //      CmdCursorLineUp(nArgs);
     nLines -= (g_nDisasmCurLine + 1);
-    if (nLines < 1)
+    if (nLines < 1) {
       nLines = 1;
+}
 
     while (iLines++ < nLines)
     {
@@ -746,7 +753,7 @@ Update_t CmdCursorPageUp (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdCursorPageUp256 (int nArgs)
+auto CmdCursorPageUp256 (int nArgs) -> Update_t
 {
   (void)nArgs;
   const int nStep = 256;
@@ -755,7 +762,7 @@ Update_t CmdCursorPageUp256 (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdCursorPageUp4K (int nArgs)
+auto CmdCursorPageUp4K (int nArgs) -> Update_t
 {
   (void)nArgs;
   const int nStep = 4096;
@@ -764,7 +771,7 @@ Update_t CmdCursorPageUp4K (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdCursorSetPC( int nArgs) // TODO rename
+auto CmdCursorSetPC( int nArgs) -> Update_t // TODO rename
 {
   (void)nArgs;
   regs.pc = g_nDisasmCurAddress; // set PC to current cursor address
@@ -775,97 +782,97 @@ Update_t CmdCursorSetPC( int nArgs) // TODO rename
 // Flags __________________________________________________________________________________________
 
 
-  Update_t CmdViewOutput_Text4X (int nArgs)
+  auto CmdViewOutput_Text4X (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_X, VF_TEXT );
   }
-  Update_t CmdViewOutput_Text41 (int nArgs)
+  auto CmdViewOutput_Text41 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_1, VF_TEXT );
   }
-  Update_t CmdViewOutput_Text42 (int nArgs)
+  auto CmdViewOutput_Text42 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_2, VF_TEXT );
   }
 // Text 80
-  Update_t CmdViewOutput_Text8X (int nArgs)
+  auto CmdViewOutput_Text8X (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_X, VF_TEXT | VF_80COL );
   }
-  Update_t CmdViewOutput_Text81 (int nArgs)
+  auto CmdViewOutput_Text81 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_1, VF_TEXT | VF_80COL );
   }
-  Update_t CmdViewOutput_Text82 (int nArgs)
+  auto CmdViewOutput_Text82 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_2, VF_TEXT | VF_80COL );
   }
 // Lo-Res
-  Update_t CmdViewOutput_GRX (int nArgs)
+  auto CmdViewOutput_GRX (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_X, 0 );
   }
-  Update_t CmdViewOutput_GR1 (int nArgs)
+  auto CmdViewOutput_GR1 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_1, 0 );
   }
-  Update_t CmdViewOutput_GR2 (int nArgs)
+  auto CmdViewOutput_GR2 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_2, 0 );
   }
 // Double Lo-Res
-  Update_t CmdViewOutput_DGRX (int nArgs)
+  auto CmdViewOutput_DGRX (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_X, VF_DHIRES | VF_80COL );
   }
-  Update_t CmdViewOutput_DGR1 (int nArgs)
+  auto CmdViewOutput_DGR1 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_1, VF_DHIRES | VF_80COL );
   }
-  Update_t CmdViewOutput_DGR2 (int nArgs)
+  auto CmdViewOutput_DGR2 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_2, VF_DHIRES | VF_80COL );
   }
 // Hi-Res
-  Update_t CmdViewOutput_HGRX (int nArgs)
+  auto CmdViewOutput_HGRX (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_X, VF_HIRES );
   }
-  Update_t CmdViewOutput_HGR1 (int nArgs)
+  auto CmdViewOutput_HGR1 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_1, VF_HIRES );
   }
-  Update_t CmdViewOutput_HGR2 (int nArgs)
+  auto CmdViewOutput_HGR2 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_2, VF_HIRES );
   }
 // Double Hi-Res
-  Update_t CmdViewOutput_DHGRX (int nArgs)
+  auto CmdViewOutput_DHGRX (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_X, VF_HIRES | VF_DHIRES | VF_80COL );
   }
-  Update_t CmdViewOutput_DHGR1 (int nArgs)
+  auto CmdViewOutput_DHGR1 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_1, VF_HIRES | VF_DHIRES | VF_80COL);
   }
-  Update_t CmdViewOutput_DHGR2 (int nArgs)
+  auto CmdViewOutput_DHGR2 (int nArgs) -> Update_t
   {
   (void)nArgs;
     return _ViewOutput( VIEW_PAGE_2, VF_HIRES | VF_DHIRES | VF_80COL );
@@ -874,7 +881,7 @@ Update_t CmdCursorSetPC( int nArgs) // TODO rename
 // Watches ________________________________________________________________________________________
 
 
-Update_t _ViewOutput( ViewVideoPage_t iPage, int bVideoModeFlags )
+auto _ViewOutput( ViewVideoPage_t iPage, int bVideoModeFlags ) -> Update_t
 {
   switch( iPage )
   {

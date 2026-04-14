@@ -26,12 +26,12 @@ using AY8910 = struct {
   uint32_t step;
 };
 
-void AY8910_InitAll(int nClock, int nSampleRate);
+void AY8910_InitAll(int clock_rate, int sample_rate);
 void AY8910_InitClock(int nClock);
 void AY8910_reset(int chip);
 void AY8910_write_ym(int chip, int addr, int data);
 void _AYWriteReg(int n, int r, int v);
 void AY8910Update(int chip, int16_t **buffer, int length);
-auto AY8910_GetRegsPtr(unsigned int nAyNum) -> uint8_t*;
+auto AY8910_GetRegsPtr(uint32_t nAyNum) -> uint8_t*;
 
 #endif

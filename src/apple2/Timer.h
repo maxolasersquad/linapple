@@ -6,6 +6,6 @@ bool SysClk_InitTimer();
 
 void SysClk_UninitTimer();
 
-void SysClk_StartTimerUsec(unsigned int dwUsecPeriod);
+void SysClk_StartTimerUsec(uint32_t dwUsecPeriod);
 
 void SysClk_StopTimer();

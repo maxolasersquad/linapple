@@ -16,12 +16,12 @@ using namespace std;
 
 // Globals
 extern bool g_bDebuggerEatKey;
-extern unsigned short g_uBreakMemoryAddress;
+extern uint16_t g_uBreakMemoryAddress;
 extern int g_iCommand;
 extern std::vector<Command_t> g_vSortedCommands;
 
 // Benchmarking
-extern unsigned int extbench;
+extern uint32_t extbench;
 extern bool g_bBenchmarking;
 
 // Profile
@@ -54,10 +54,10 @@ void WindowUpdateConsoleDisplayedSize();
 void WindowUpdateSizes();
 int  WindowGetHeight(int iWindow);
 
-char FormatChar4Font(const unsigned char b, bool *pWasHi_, bool *pWasLo_);
+char FormatChar4Font(const uint8_t b, bool *pWasHi_, bool *pWasLo_);
 
 extern int g_nDebugSteps;
-extern unsigned int g_nDebugStepCycles;
+extern uint32_t g_nDebugStepCycles;
 extern int g_nDebugStepStart;
 extern int g_nDebugStepUntil;
 extern int g_nDebugSkipStart;
@@ -110,9 +110,9 @@ class commands_functor_compare
 extern std::string g_sFileNameConfig;
 
 // Cursor
-extern unsigned short g_nDisasmTopAddress;
-extern unsigned short g_nDisasmBotAddress;
-extern unsigned short g_nDisasmCurAddress;
+extern uint16_t g_nDisasmTopAddress;
+extern uint16_t g_nDisasmBotAddress;
+extern uint16_t g_nDisasmCurAddress;
 
 extern bool g_bDisasmCurBad;
 extern int g_nDisasmCurLine; // Aligned to Top or Center
@@ -169,28 +169,28 @@ extern ZeroPagePointers_t g_aZeroPagePointers[MAX_ZEROPAGE_POINTERS]; // TODO: u
 // Prototypes
 
 // Bookmarks
-bool Bookmark_Find(const unsigned short nAddress);
+bool Bookmark_Find(const uint16_t nAddress);
 
 // Breakpoints
-bool GetBreakpointInfo(unsigned short nOffset, bool &bBreakpointActive_, bool &bBreakpointEnable_);
+bool GetBreakpointInfo(uint16_t nOffset, bool &bBreakpointActive_, bool &bBreakpointEnable_);
 
 // Color
-unsigned int DebuggerGetColor(int iColor);
+uint32_t DebuggerGetColor(int iColor);
 
 // Source Level Debugging
-int FindSourceLine(unsigned short nAddress);
+int FindSourceLine(uint16_t nAddress);
 
-const char* FormatAddress(unsigned short nAddress, int nBytes);
+const char* FormatAddress(uint16_t nAddress, int nBytes);
 
 // Symbol Table / Memory
-bool FindAddressFromSymbol(const char* pSymbol, unsigned short *pAddress_ = NULL, int *iTable_ = NULL);
+bool FindAddressFromSymbol(const char* pSymbol, uint16_t *pAddress_ = NULL, int *iTable_ = NULL);
 
-unsigned short GetAddressFromSymbol(const char* symbol); // HACK: returns 0 if symbol not found
-void SymbolUpdate(SymbolTable_Index_e eSymbolTable, const char *pSymbolName, unsigned short nAddrss, bool bRemoveSymbol, bool bUpdateSymbol);
+uint16_t GetAddressFromSymbol(const char* symbol); // HACK: returns 0 if symbol not found
+void SymbolUpdate(SymbolTable_Index_e eSymbolTable, const char *pSymbolName, uint16_t nAddrss, bool bRemoveSymbol, bool bUpdateSymbol);
 
-const char* FindSymbolFromAddress(unsigned short nAdress, int *iTable_ = NULL);
+const char* FindSymbolFromAddress(uint16_t nAdress, int *iTable_ = NULL);
 
-const char* GetSymbol(unsigned short nAddress, int nBytes);
+const char* GetSymbol(uint16_t nAddress, int nBytes);
 
 // DebugVideoMode _____________________________________________________________
 
@@ -225,14 +225,14 @@ public:
     return m_bIsVideoModeValid;
   }
 
-  bool Get(unsigned int* pVideoMode)
+  bool Get(uint32_t* pVideoMode)
   {
     if (pVideoMode)
       *pVideoMode = m_bIsVideoModeValid ? m_uVideoMode : 0;
     return m_bIsVideoModeValid;
   }
 
-  void Set(unsigned int videoMode)
+  void Set(uint32_t videoMode)
   {
     m_bIsVideoModeValid = true;
     m_uVideoMode = videoMode;
@@ -289,7 +289,7 @@ void SetDebugBreakOnInvalid(int iOpcodeType, int nValue);
 int CheckBreakpointsIO();
 int CheckBreakpointsReg();
 void ClearTempBreakpoints();
-bool GetBreakpointInfo(unsigned short nOffset, bool &bBreakpointActive_, bool &bBreakpointEnable_);
+bool GetBreakpointInfo(uint16_t nOffset, bool &bBreakpointActive_, bool &bBreakpointEnable_);
 
 void DebuggerRunScript(const char* sFileName);
 
@@ -323,5 +323,5 @@ void VerifyDebuggerCommandTable();
 
 bool IsDebugSteppingAtFullSpeed(void);
 
-bool DebugGetVideoMode(unsigned int* pVideoMode);
+bool DebugGetVideoMode(uint32_t* pVideoMode);
 bool CanDrawDebugger(void);

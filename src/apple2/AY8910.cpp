@@ -23,24 +23,25 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "AY8910.h"
 #include <cstring>
 #include <cstdint>
+#include <array>
 
 // Clean-room AY-3-8910 implementation
 // Based on GI AY-3-8910 and Yamaha YM2149 datasheets.
 
-static AY8910 ay_chips[MAX_8910];
+static std::array<AY8910, MAX_8910> ay_chips;
 static int ay_clock = 1000000;
 static int ay_sample_rate = 44100;
 
 // Logarithmic volume table for AY-3-8910 (16 levels)
 // Based on -3dB per step as indicated in datasheet Fig 3.
-static const uint16_t vol_table[16] = {
+static const std::array<uint16_t, 16> vol_table = {{
   0, 103, 150, 218, 316, 458, 665, 963,
   1396, 2023, 2933, 4251, 6163, 8934, 12952, 18776
-};
+}};
 
-void AY8910_InitAll(int nClock, int nSampleRate) {
-  ay_clock = nClock;
-  ay_sample_rate = nSampleRate;
+void AY8910_InitAll(int clock_rate, int sample_rate) {
+  ay_clock = clock_rate;
+  ay_sample_rate = sample_rate;
   for (int i = 0; i < MAX_8910; i++) {
     AY8910_reset(i);
   }
@@ -56,7 +57,7 @@ void AY8910_reset(int chip) {
   ay_chips[chip].rng = 1;
 }
 
-auto AY8910_GetRegsPtr(unsigned int nAyNum) -> uint8_t* {
+auto AY8910_GetRegsPtr(uint32_t nAyNum) -> uint8_t* {
   if (nAyNum >= MAX_8910) return nullptr;
   return ay_chips[nAyNum].regs;
 }
@@ -97,7 +98,7 @@ void AY8910Update(int chip, int16_t **buffer, int length) {
 
   for (int i = 0; i < length; i++) {
     p->count_accum += psg_cycles_per_sample;
-    uint32_t psg_cycles = static_cast<uint32_t>(p->count_accum);
+    auto psg_cycles = static_cast<uint32_t>(p->count_accum);
     p->count_accum -= psg_cycles;
 
     if (period_a > 0) {
@@ -177,8 +178,8 @@ void AY8910Update(int chip, int16_t **buffer, int length) {
       chan_c = vol_table[vol];
     }
 
-    buffer[0][i] = (int16_t)chan_a;
-    buffer[1][i] = (int16_t)chan_b;
-    buffer[2][i] = (int16_t)chan_c;
+    buffer[0][i] = static_cast<int16_t>(chan_a);
+    buffer[1][i] = static_cast<int16_t>(chan_b);
+    buffer[2][i] = static_cast<int16_t>(chan_c);
   }
 }

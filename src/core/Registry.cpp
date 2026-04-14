@@ -8,14 +8,14 @@
 
 static auto trim(const std::string& s) -> std::string {
     auto start = s.begin();
-    while (start != s.end() && std::isspace(static_cast<unsigned char>(*start))) {
+    while (start != s.end() && std::isspace(static_cast<uint8_t>(*start))) {
         start++;
     }
     auto end = s.end();
     if (start == end) return "";
     do {
         end--;
-    } while (std::distance(start, end) > 0 && std::isspace(static_cast<unsigned char>(*end)));
+    } while (std::distance(start, end) > 0 && std::isspace(static_cast<uint8_t>(*end)));
     return std::string(start, end + 1);
 }
 

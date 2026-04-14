@@ -69,16 +69,18 @@
 		{ TOKEN_TILDE       , TYPE_OPERATOR, "~"  },
 	};
 //===========================================================================
-int _Args_Insert( int iSrc, int iEnd, int nLen )
+auto _Args_Insert( int iSrc, int iEnd, int nLen ) -> int
 {
 	iSrc += nLen;
 	int iDst = iEnd + nLen;
 
-	if (iDst >= MAX_ARGS)
+	if (iDst >= MAX_ARGS) {
 		return ARG_SYNTAX_ERROR;
+}
 
-	if (iSrc >= MAX_ARGS)
+	if (iSrc >= MAX_ARGS) {
 		return ARG_SYNTAX_ERROR;
+}
 
 	while (nLen--)
 	{
@@ -121,18 +123,19 @@ void ArgsClear ()
 	}
 }
 
-bool ArgsGetValue ( Arg_t *pArg, unsigned short * pAddressValue_, const int nBase )
+auto ArgsGetValue ( Arg_t *pArg, uint16_t * pAddressValue_, const int nBase ) -> bool
 {
 	assert(pArg);
-	if (pArg == NULL)
+	if (pArg == nullptr) {
 		return false;
+}
 
 	char *pSrc = & (pArg->sArg[ 0 ]);
-	char *pEnd = NULL;
+	char *pEnd = nullptr;
 
 	if (pAddressValue_)
 	{
-		*pAddressValue_ = (unsigned short)(strtoul( pSrc, &pEnd, nBase) & _6502_MEM_END);
+		*pAddressValue_ = static_cast<uint16_t>(strtoul( pSrc, &pEnd, nBase) & _6502_MEM_END);
 		return true;
 	}
 
@@ -140,7 +143,7 @@ bool ArgsGetValue ( Arg_t *pArg, unsigned short * pAddressValue_, const int nBas
 }
 
 //===========================================================================
-bool ArgsGetImmediateValue ( Arg_t *pArg, unsigned short * pAddressValue_ )
+auto ArgsGetImmediateValue ( Arg_t *pArg, uint16_t * pAddressValue_ ) -> bool
 {
 	if (pArg && pAddressValue_)
 	{
@@ -156,22 +159,22 @@ bool ArgsGetImmediateValue ( Arg_t *pArg, unsigned short * pAddressValue_ )
 
 // Read console input, process the raw args, turning them into tokens and types.
 //===========================================================================
-int	ArgsGet ( char * pInput )
+auto	ArgsGet ( char * pInput ) -> int
 {
 	const char* pSrc = pInput;
-	const char* pEnd = NULL;
+	const char* pEnd = nullptr;
 	int     nBuf = 0;
 
 	ArgToken_e iTokenSrc = NO_TOKEN;
 	ArgToken_e iTokenEnd = NO_TOKEN;
 	ArgType_e  iType     = TYPE_STRING;
-	int     nLen;
+	int     nLen = 0;
 
 	int     iArg = 0;
 	int     nArg = 0;
 	Arg_t  *pArg = &g_aArgRaw[0]; // &g_aArgs[0];
 
-	g_pConsoleFirstArg = NULL;
+	g_pConsoleFirstArg = nullptr;
 
 	// BP FAC8:FACA // Range=3
 	// BP FAC8,2    // Length=2
@@ -196,8 +199,9 @@ int	ArgsGet ( char * pInput )
 				pEnd = SkipUntilToken( pSrc+1, g_aTokens, NUM_TOKENS, &iTokenEnd );
 			}
 
-			if (iTokenSrc == TOKEN_COMMENT_EOL)
+			if (iTokenSrc == TOKEN_COMMENT_EOL) {
 				break; //pArg->eToken = iTokenSrc;
+}
 
 			if (iTokenSrc == NO_TOKEN)
 			{
@@ -282,7 +286,7 @@ int	ArgsGet ( char * pInput )
 
 
 //===========================================================================
-bool ArgsGetRegisterValue ( Arg_t *pArg, unsigned short * pAddressValue_ )
+auto ArgsGetRegisterValue ( Arg_t *pArg, uint16_t * pAddressValue_ ) -> bool
 {
 	bool bStatus = false;
 
@@ -292,12 +296,14 @@ bool ArgsGetRegisterValue ( Arg_t *pArg, unsigned short * pAddressValue_ )
 		for( int iReg = 0; iReg < (NUM_BREAKPOINT_SOURCES-1); iReg++ )
 		{
 			// Skip Opcode/Instruction/Mnemonic
-			if (iReg == BP_SRC_OPCODE)
+			if (iReg == BP_SRC_OPCODE) {
 				continue;
+}
 
 			// Skip individual flag names
-			if ((iReg >= BP_SRC_FLAG_C) && (iReg <= BP_SRC_FLAG_N))
+			if ((iReg >= BP_SRC_FLAG_C) && (iReg <= BP_SRC_FLAG_N)) {
 				continue;
+}
 
 			// Handle one char names
 			if ((pArg->nArgLen == 1) && (pArg->sArg[0] == g_aBreakpointSource[ iReg ][0]))
@@ -328,25 +334,25 @@ bool ArgsGetRegisterValue ( Arg_t *pArg, unsigned short * pAddressValue_ )
 
 
 //===========================================================================
-void ArgsRawParse ( void )
+void ArgsRawParse ( )
 {
 	const int BASE = 16; // hex
-	char *pSrc  = NULL;
-	char *pEnd  = NULL;
+	char *pSrc  = nullptr;
+	char *pEnd  = nullptr;
 
 	int    iArg = 1;
 	Arg_t *pArg = & g_aArgRaw[ iArg ];
 	int    nArg = g_nArgRaw;
 
-	unsigned short   nAddressArg;
-	unsigned short   nAddressSymbol;
-	unsigned short   nAddressValue;
+	uint16_t   nAddressArg = 0;
+	uint16_t   nAddressSymbol = 0;
+	uint16_t   nAddressValue = 0;
 
 	while (iArg <= nArg)
 	{
 		pSrc  = & (pArg->sArg[ 0 ]);
 
-		nAddressArg = (unsigned short)(strtoul( pSrc, &pEnd, BASE) & _6502_MEM_END);
+		nAddressArg = static_cast<uint16_t>(strtoul( pSrc, &pEnd, BASE) & _6502_MEM_END);
 		nAddressValue = nAddressArg;
 
 		bool bFound = false;
@@ -360,8 +366,9 @@ void ArgsRawParse ( void )
 			}
 		}
 
-		if (! (pArg->bType & TYPE_VALUE)) // already up to date?
+		if (! (pArg->bType & TYPE_VALUE)) { // already up to date?
 			pArg->nValue = nAddressValue;
+}
 
 		pArg->bType |= TYPE_ADDRESS;
 
@@ -381,22 +388,22 @@ void ArgsRawParse ( void )
 		address1+delta     Delta
 		address1-delta     Delta
 //=========================================================================== */
-int ArgsCook ( const int nArgs )
+auto ArgsCook ( const int nArgs ) -> int
 {
 	const int BASE = 16; // hex
-	char *pSrc  = NULL;
-	char *pEnd2 = NULL;
+	char *pSrc  = nullptr;
+	char *pEnd2 = nullptr;
 
 	int    nArg = nArgs;
 	int    iArg = 1;
-	Arg_t *pArg = NULL;
-	Arg_t *pPrev = NULL;
-	Arg_t *pNext = NULL;
+	Arg_t *pArg = nullptr;
+	Arg_t *pPrev = nullptr;
+	Arg_t *pNext = nullptr;
 
-	unsigned short   nAddressArg;
-	unsigned short   nAddressRHS;
-	unsigned short   nAddressSym;
-	unsigned short   nAddressVal;
+	uint16_t   nAddressArg = 0;
+	uint16_t   nAddressRHS = 0;
+	uint16_t   nAddressSym = 0;
+	uint16_t   nAddressVal = 0;
 	int    nParamLen = 0;
 	int    nArgsLeft = 0;
 
@@ -411,7 +418,7 @@ int ArgsCook ( const int nArgs )
 		if (pArg->eToken == TOKEN_DOLLAR) // address
 		{
 // TODO: Need to flag was a DOLLAR token for assembler
-			pNext = NULL;
+			pNext = nullptr;
 
 			nArgsLeft = (nArg - iArg);
 			if (nArgsLeft > 0)
@@ -425,18 +432,20 @@ int ArgsCook ( const int nArgs )
 				// Don't do register lookup
 				pArg->bType |= TYPE_NO_REG;
 			}
-			else
+			else {
 				return ARG_SYNTAX_ERROR;
+}
 		}
 
 		if (pArg->bType & TYPE_OPERATOR) // prev op type == address?
 		{
-			pPrev = NULL; // pLHS
-			pNext = NULL; // pRHS
+			pPrev = nullptr; // pLHS
+			pNext = nullptr; // pRHS
 			nParamLen = 0;
 
-			if (pArg->eToken == TOKEN_HASH) // HASH    # immediate
+			if (pArg->eToken == TOKEN_HASH) { // HASH    # immediate
 				nParamLen = 1;
+}
 
 			nArgsLeft = (nArg - iArg);
 			if (nArgsLeft < nParamLen)
@@ -447,17 +456,18 @@ int ArgsCook ( const int nArgs )
 			pPrev = pArg - 1;
 
 			// Pass wildstar '*' to commands if only arg
-			if ((pArg->eToken == TOKEN_STAR) && (nArg == 1))
+			if ((pArg->eToken == TOKEN_STAR) && (nArg == 1)) {
 				;
-			else
+			} else
 			if (nArgsLeft > 0) // These ops take at least 1 argument
 			{
 				pNext = pArg + 1;
 				pSrc = &pNext->sArg[0];
 
 				nAddressVal = 0;
-				if (ArgsGetValue( pNext, & nAddressRHS ))
+				if (ArgsGetValue( pNext, & nAddressRHS )) {
 					nAddressVal = nAddressRHS;
+}
 
 				bool bFound = FindAddressFromSymbol( pSrc, & nAddressSym );
 				if (bFound)
@@ -562,8 +572,9 @@ int ArgsCook ( const int nArgs )
 					{
 						ArgsGetRegisterValue( pNext, & nAddressRHS );
 					}
-					if (! nAddressRHS)
+					if (! nAddressRHS) {
 						nAddressRHS = 1; // divide by zero bug
+}
 					pPrev->nValue /= nAddressRHS;
 					pPrev->bType |= TYPE_VALUE; // signal already up to date
 					nParamLen = 2;
@@ -649,15 +660,16 @@ int ArgsCook ( const int nArgs )
 							// pArg->bType |= TYPE_INDIRECT;
 							// pArg->nValue  =  nAddressVal;
 							//nAddressVal = pNext->nValue;
-							pArg->nValue  =  * (unsigned short*) (mem + nAddressVal);
+							pArg->nValue  =  * reinterpret_cast<uint16_t*>(mem + nAddressVal);
 							pArg->bType   = TYPE_VALUE | TYPE_ADDRESS | TYPE_NO_REG;
 
 							iArg++; // eat ')'
 							nArg -= 2;
 							nParamLen = 0;
 						}
-						else
+						else {
 							return ARG_SYNTAX_ERROR; // ERROR: unbalanced/unmatched ( )
+}
 					}
 				}
 
@@ -668,8 +680,9 @@ int ArgsCook ( const int nArgs )
 					{
 						nParamLen = 1;
 					}
-					else
+					else {
 						return ARG_SYNTAX_ERROR;
+}
 				}
 
 				if (nParamLen)
@@ -679,12 +692,13 @@ int ArgsCook ( const int nArgs )
 					iArg = 0; // reset args, to handle multiple operators
 				}
 			}
-			else
+			else {
 				return ARG_SYNTAX_ERROR;
+}
 		}
 		else // not an operator, try (1) address, (2) symbol lookup
 		{
-			nAddressArg = (unsigned short)(strtoul( pSrc, &pEnd2, BASE) & _6502_MEM_END);
+			nAddressArg = static_cast<uint16_t>(strtoul( pSrc, &pEnd2, BASE) & _6502_MEM_END);
 
 			if (! (pArg->bType & TYPE_NO_REG))
 			{
@@ -704,8 +718,9 @@ int ArgsCook ( const int nArgs )
 				}
 			}
 
-			if (! (pArg->bType & TYPE_VALUE)) // already up to date?
+			if (! (pArg->bType & TYPE_VALUE)) { // already up to date?
 				pArg->nValue = nAddressVal;
+}
 
 			pArg->bType |= TYPE_ADDRESS;
 		}
@@ -722,14 +737,15 @@ int ArgsCook ( const int nArgs )
 
 
 //===========================================================================
-const char * ParserFindToken( const char *pSrc, const TokenTable_t *aTokens, const int nTokens, ArgToken_e * pToken_ )
+auto ParserFindToken( const char *pSrc, const TokenTable_t *aTokens, const int nTokens, ArgToken_e * pToken_ ) -> const char *
 {
   (void)nTokens;
-	if (! pSrc)
-		return NULL;
+	if (! pSrc) {
+		return nullptr;
+}
 
-	const char        *pName  = NULL;
-	int   iToken;
+	const char        *pName  = nullptr;
+	int   iToken = 0;
 
 	// Look-ahead for <=
 	// Look-ahead for >=
@@ -753,21 +769,22 @@ const char * ParserFindToken( const char *pSrc, const TokenTable_t *aTokens, con
 		{
 			if ( pToken_ )
 			{
-				*pToken_ = (ArgToken_e) iToken;
+				*pToken_ = static_cast<ArgToken_e>(iToken);
 			}
 			return pSrc + 1;
 		}
 		pToken++;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
 //===========================================================================
-const char * FindTokenOrAlphaNumeric ( const char *pSrc, const TokenTable_t *aTokens, const int nTokens, ArgToken_e * pToken_ )
+auto FindTokenOrAlphaNumeric ( const char *pSrc, const TokenTable_t *aTokens, const int nTokens, ArgToken_e * pToken_ ) -> const char *
 {
-	if ( pToken_ )
+	if ( pToken_ ) {
 		*pToken_ = NO_TOKEN;
+}
 
 	const char *pEnd = pSrc;
 
@@ -775,14 +792,16 @@ const char * FindTokenOrAlphaNumeric ( const char *pSrc, const TokenTable_t *aTo
 	{
 		if (isalnum( *pSrc ))
 		{
-			if (pToken_)
+			if (pToken_) {
 				*pToken_ = TOKEN_ALPHANUMERIC;
+}
 		}
 		else
 		{
 			pEnd = ParserFindToken( pSrc, aTokens, nTokens, pToken_ );
-			if (! pEnd)
+			if (! pEnd) {
 				pEnd = pSrc;
+}
 		}
 	}
 	return pEnd;
@@ -795,8 +814,9 @@ void TextConvertTabsToSpaces( char *pDeTabified_, const char* pText, const int n
 	int TAB_SPACING_1 = 16;
 	int TAB_SPACING_2 = 21;
 
-	if (nTabStop)
+	if (nTabStop) {
 		TAB_SPACING = nTabStop;
+}
 
 	const char* pSrc = pText;
 	char*  pDst = pDeTabified_;
@@ -832,8 +852,9 @@ void TextConvertTabsToSpaces( char *pDeTabified_, const char* pText, const int n
 			}
 
 
-			if ((nCur + nGap) >= nDstSize)
+			if ((nCur + nGap) >= nDstSize) {
 				break;
+}
 
 			for( int iSpc = 0; iSpc < nGap; iSpc++ )
 			{
@@ -859,7 +880,7 @@ void TextConvertTabsToSpaces( char *pDeTabified_, const char* pText, const int n
 
 
 // @return Length of new string
-int RemoveWhiteSpaceReverse ( char *pSrc )
+auto RemoveWhiteSpaceReverse ( char *pSrc ) -> int
 {
 	int   nLen = strlen( pSrc );
 	char *pDst = pSrc + nLen;
@@ -879,14 +900,15 @@ int RemoveWhiteSpaceReverse ( char *pSrc )
 }
 
 //===========================================================================
-int FindParam(const char* pLookupName, Match_e eMatch, int & iParam_, int iParamBegin, int iParamEnd )
+auto FindParam(const char* pLookupName, Match_e eMatch, int & iParam_, int iParamBegin, int iParamEnd ) -> int
 {
   int nFound = 0;
   int nLen     = strlen( pLookupName );
   int iParam = 0;
 
-  if (! nLen)
+  if (! nLen) {
     return nFound;
+}
 
 #if ALLOW_INPUT_LOWERCASE
   eMatch = MATCH_FUZZY;
@@ -946,14 +968,15 @@ void _strupr(char* s)
 {
   while (*s)
   {
-    if ((*s >= 'a')&&(*s <= 'z'))
+    if ((*s >= 'a')&&(*s <= 'z')) {
       *s = *s+'A'-'a';
+}
     s++;
   }
 }
 
 //===========================================================================
-int FindCommand( const char* pName, CmdFuncPtr_t & pFunction_, int * iCommand_ )
+auto FindCommand( const char* pName, CmdFuncPtr_t & pFunction_, int * iCommand_ ) -> int
 {
   g_vPotentialCommands.erase( g_vPotentialCommands.begin(), g_vPotentialCommands.end() );
 
@@ -961,8 +984,9 @@ int FindCommand( const char* pName, CmdFuncPtr_t & pFunction_, int * iCommand_ )
   int nLen     = strlen( pName );
   int iCommand = 0;
 
-  if (! nLen)
+  if (! nLen) {
     return nFound;
+}
 
   char sCommand[ CONSOLE_WIDTH ];
   strcpy( sCommand, pName );
@@ -982,8 +1006,9 @@ int FindCommand( const char* pName, CmdFuncPtr_t & pFunction_, int * iCommand_ )
         nFound++;
         g_vPotentialCommands.push_back( g_iCommand );
 
-        if (iCommand_)
+        if (iCommand_) {
           *iCommand_ = iCommand;
+}
 // !strcmp
         if (!strcmp(sCommand, pCommandName)) // exact match?
         {
@@ -1013,7 +1038,7 @@ void DisplayAmbigiousCommands( int nFound )
   char sText[ CONSOLE_WIDTH * 2 ];
   ConsolePrintFormat( sText, "Ambiguous %s%d%s Commands:"
     , CHC_NUM_DEC
-    , (int)g_vPotentialCommands.size()
+    , static_cast<int>(g_vPotentialCommands.size())
     , CHC_DEFAULT
   );
 
@@ -1028,10 +1053,11 @@ void DisplayAmbigiousCommands( int nFound )
     {
       int   nCommand = g_vPotentialCommands[ iCommand ];
       char *pName = g_aCommands[ nCommand ].m_sName;
-      int   nLen = (int)strlen( pName );
+      int   nLen = static_cast<int>(strlen( pName ));
 
-      if ((iWidth + nLen) >= (CONSOLE_WIDTH - 1))
+      if ((iWidth + nLen) >= (CONSOLE_WIDTH - 1)) {
         break;
+}
 
       strcat( sPotentialCommands, pName );
       strcat( sPotentialCommands, " " );
@@ -1042,7 +1068,7 @@ void DisplayAmbigiousCommands( int nFound )
   }
 }
 
-int _Arg_1( int nValue )
+auto _Arg_1( int nValue ) -> int
 {
 	ArgsClear();
 	g_aArgs[1].nValue = nValue;
@@ -1050,7 +1076,7 @@ int _Arg_1( int nValue )
 	return 1;
 }
 
-int _Arg_1( char* pName )
+auto _Arg_1( char* pName ) -> int
 {
 	ArgsClear();
 	Util_SafeStrCpy( g_aArgs[1].sArg, pName, MAX_ARG_LEN );
@@ -1058,7 +1084,7 @@ int _Arg_1( char* pName )
 	return 1;
 }
 
-int _Arg_Shift( int iSrc, int iEnd, int iDst )
+auto _Arg_Shift( int iSrc, int iEnd, int iDst ) -> int
 {
 	int nArgs = iEnd - iSrc;
 	int iArg = 0;
@@ -1072,7 +1098,7 @@ int _Arg_Shift( int iSrc, int iEnd, int iDst )
 	return nArgs;
 }
 
-int ParseInput ( char* pConsoleInput, bool bCook )
+auto ParseInput ( char* pConsoleInput, bool bCook ) -> int
 {
 	(void)bCook;
 	int nArg = 0;
@@ -1083,7 +1109,7 @@ int ParseInput ( char* pConsoleInput, bool bCook )
 	ArgsClear();
 	nArg = ArgsGet( pConsoleInput ); // Get the Raw Args
 
-	int iArg;
+	int iArg = 0;
 	for( iArg = 0; iArg <= nArg; iArg++ )
 	{
 		g_aArgs[ iArg ] = g_aArgRaw[ iArg ];

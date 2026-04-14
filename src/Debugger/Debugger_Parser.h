@@ -61,10 +61,10 @@ inline const char* SkipUntilToken( const char *pSrc, const TokenTable_t *aTokens
 	int _Args_Insert( int iSrc, int iEnd, int nLen );
 	void ArgsClear ();
 
-	bool ArgsGetValue ( Arg_t *pArg, unsigned short * pAddressValue_, const int nBase = 16 );
-	bool ArgsGetImmediateValue ( Arg_t *pArg, unsigned short * pAddressValue_ );
+	bool ArgsGetValue ( Arg_t *pArg, uint16_t * pAddressValue_, const int nBase = 16 );
+	bool ArgsGetImmediateValue ( Arg_t *pArg, uint16_t * pAddressValue_ );
 	int	 ArgsGet ( char * pInput );
-	bool ArgsGetRegisterValue ( Arg_t *pArg, unsigned short * pAddressValue_ );
+	bool ArgsGetRegisterValue ( Arg_t *pArg, uint16_t * pAddressValue_ );
 	void ArgsRawParse ( void );
 	int ArgsCook ( const int nArgs );
 

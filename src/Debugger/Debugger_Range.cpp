@@ -35,13 +35,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 // Util - Range _______________________________________________________________
 
 
-bool Range_CalcEndLen(
+auto Range_CalcEndLen(
   const RangeType_t eRange,
-  const unsigned short & nAddress1,
-  const unsigned short & nAddress2,
-  unsigned short & nAddressEnd_,
-  int & nAddressLen_
-) {
+  const uint16_t & nAddress1,
+  const uint16_t & nAddress2,
+  RangeEndLen_t & tEndLen_
+) -> bool {
 	bool bValid = false;
 
 	if (eRange == RANGE_HAS_LEN)
@@ -51,11 +50,12 @@ bool Range_CalcEndLen(
 		// 0,FFFF [,)
 		// End =  FFFE = Len-1
 		// Len =  FFFF
-		nAddressLen_ = nAddress2;
-		unsigned int nTemp = nAddress1 + nAddressLen_ - 1;
-		if (nTemp > _6502_MEM_END)
+		tEndLen_.nAddressLen = nAddress2;
+		uint32_t nTemp = nAddress1 + tEndLen_.nAddressLen - 1;
+		if (nTemp > _6502_MEM_END) {
 			nTemp = _6502_MEM_END;
-		nAddressEnd_ = nTemp;
+}
+		tEndLen_.nAddressEnd = nTemp;
 		bValid = true;
 	}
 	else
@@ -66,8 +66,8 @@ bool Range_CalcEndLen(
 		// 0:FFFF [,]
 		// End =  FFFF
 		// Len = 10000 = End+1
-		nAddressEnd_ = nAddress2;
-		nAddressLen_ = nAddress2 - nAddress1 + 1;
+		tEndLen_.nAddressEnd = nAddress2;
+		tEndLen_.nAddressLen = nAddress2 - nAddress1 + 1;
 		bValid = true;
 	}
 
@@ -75,11 +75,12 @@ bool Range_CalcEndLen(
 }
 
 
-RangeType_t Range_Get( unsigned short & nAddress1_, unsigned short & nAddress2_, const int iArg )
+auto Range_Get( uint16_t & nAddress1_, uint16_t & nAddress2_, const int iArg ) -> RangeType_t
 {
-	nAddress1_ = (unsigned) g_aArgs[ iArg ].nValue;
-	if (nAddress1_ > _6502_MEM_END)
+	nAddress1_ = static_cast<unsigned>(g_aArgs[ iArg ].nValue);
+	if (nAddress1_ > _6502_MEM_END) {
 		nAddress1_ = _6502_MEM_END;
+}
 
 	nAddress2_ = 0;
 	int nTemp  = 0;
@@ -115,8 +116,9 @@ RangeType_t Range_Get( unsigned short & nAddress1_, unsigned short & nAddress2_,
 			nAddress2_ = nAddress1_;
 			nAddress1_ = nTemp;
 		}
-		else
+		else {
 			nAddress2_ = nTemp;
+}
 	}
 
 	return eRange;

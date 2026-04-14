@@ -155,11 +155,10 @@ void Linapple_CpuTest(const char* szTestFile) {
 
   Linapple_Init();
 
-  FILE* f = fopen(szTestFile, "rb");
+  FilePtr f(fopen(szTestFile, "rb"), fclose);
   if (!f) return;
 
-  fread(mem, 1, 65536, f);
-  fclose(f);
+  fread(mem, 1, 65536, f.get());
 
   regs.pc = 0x0400;
   uint64_t count = 0;
@@ -175,7 +174,7 @@ void Linapple_CpuTest(const char* szTestFile) {
   Linapple_Shutdown();
 }
 
-uint32_t Linapple_GetTicks() {
+auto Linapple_GetTicks() -> uint32_t {
     static auto start_time = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
@@ -198,7 +197,7 @@ void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
   uint64_t endCycle = g_nCumulativeCycles;
 
   if (s_nextSampleCycle < static_cast<double>(startCycle)) {
-    s_nextSampleCycle = (double)startCycle;
+    s_nextSampleCycle = static_cast<double>(startCycle);
   }
 
   int numSamples = 0;

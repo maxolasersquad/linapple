@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "core/Common.h"
 #include <iostream>
 #include <cstring>
+#include <array>
 #include "apple2/Keyboard.h"
 #include "apple2/Structs.h"
 #include "apple2/CPU.h"
@@ -38,7 +39,7 @@ bool g_bAltKey = false;
 bool g_bAltGrKey = false;
 
 static bool g_bCapsLock = true;
-static unsigned int keyboardqueries = 0;
+static uint32_t keyboardqueries = 0;
 
 KeybLanguage g_KeyboardLanguage = English_US;
 bool         g_KeyboardRockerSwitch = false;
@@ -51,12 +52,14 @@ static int g_nNextInIdx = 0;
 static int g_nNextOutIdx = 0;
 static int g_nKeyBufferCnt = 0;
 
-static struct {
-  unsigned char nAppleKey;
+struct KeyBufferEntry_t {
+  uint8_t nAppleKey;
   uint64_t nTimestamp;
-} g_nKeyBuffer[KEY_BUFFER_MAX_SIZE];
+};
 
-static unsigned char g_nLastKey = 0x00;
+static std::array<KeyBufferEntry_t, KEY_BUFFER_MAX_SIZE> g_nKeyBuffer;
+
+static uint8_t g_nLastKey = 0x00;
 static bool g_bAnyKeyDown = false;
 static int g_nKeysDownCount = 0;
 
@@ -79,7 +82,7 @@ void KeybSetAnyKeyDownStatus(bool bDown) {
   g_bAnyKeyDown = (g_nKeysDownCount > 0);
 }
 
-bool KeybGetAnyKeyDownStatus() {
+auto KeybGetAnyKeyDownStatus() -> bool {
   return g_bAnyKeyDown;
 }
 
@@ -106,29 +109,29 @@ void KeybPushAppleKey(uint8_t apple_code) {
   }
 }
 
-bool KeybGetAltStatus() { return g_bAltKey; }
-bool KeybGetCapsStatus() { return g_bCapsLock; }
-bool KeybGetCtrlStatus() { return g_bCtrlKey; }
-bool KeybGetShiftStatus() { return g_bShiftKey; }
+auto KeybGetAltStatus() -> bool { return g_bAltKey; }
+auto KeybGetCapsStatus() -> bool { return g_bCapsLock; }
+auto KeybGetCtrlStatus() -> bool { return g_bCtrlKey; }
+auto KeybGetShiftStatus() -> bool { return g_bShiftKey; }
 
 void KeybUpdateCtrlShiftStatus() {
 }
 
-unsigned char KeybGetKeycode() {
+auto KeybGetKeycode() -> uint8_t {
   // Returns the latest key from the buffer without clearing it
   if (g_nKeyBufferCnt) return g_nKeyBuffer[g_nNextOutIdx].nAppleKey;
   return g_nLastKey;
 }
 
-unsigned int KeybGetNumQueries() {
-  unsigned int result = keyboardqueries;
+auto KeybGetNumQueries() -> uint32_t {
+  uint32_t result = keyboardqueries;
   keyboardqueries = 0;
   return result;
 }
 
-unsigned char KeybReadData(unsigned short, unsigned short, unsigned char, unsigned char, uint32_t) {
+auto KeybReadData(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t {
   keyboardqueries++;
-  unsigned char nKey = g_nKeyBufferCnt ? 0x80 : 0;
+  uint8_t nKey = g_nKeyBufferCnt ? 0x80 : 0;
   if (g_nKeyBufferCnt) {
     nKey |= g_nKeyBuffer[g_nNextOutIdx].nAppleKey;
     g_nLastKey = g_nKeyBuffer[g_nNextOutIdx].nAppleKey;
@@ -139,16 +142,16 @@ unsigned char KeybReadData(unsigned short, unsigned short, unsigned char, unsign
   return nKey;
 }
 
-unsigned char KeybReadFlag(unsigned short, unsigned short, unsigned char, unsigned char, uint32_t) {
+auto KeybReadFlag(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t {
   keyboardqueries++;
-  unsigned char nKey = g_nLastKey;
+  uint8_t nKey = g_nLastKey;
   if (!IS_APPLE2()) {
     if (g_bAnyKeyDown) nKey |= 0x80;
   }
   return nKey;
 }
 
-unsigned char KeybClearFlag(unsigned short, unsigned short, unsigned char, unsigned char, uint32_t) {
+auto KeybClearFlag(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t {
   g_nLastKey &= 0x7F;
   if (g_nKeyBufferCnt) {
     g_nKeyBufferCnt--;
@@ -169,13 +172,13 @@ void KeybSetCapsLock(bool bState) {
   }
 }
 
-unsigned int KeybGetSnapshot(SS_IO_Keyboard *pSS) {
+auto KeybGetSnapshot(SS_IO_Keyboard *pSS) -> uint32_t {
   pSS->keyboardqueries = keyboardqueries;
   pSS->nLastKey = g_nLastKey;
   return 0;
 }
 
-unsigned int KeybSetSnapshot(SS_IO_Keyboard *pSS) {
+auto KeybSetSnapshot(SS_IO_Keyboard *pSS) -> uint32_t {
   keyboardqueries = pSS->keyboardqueries;
   g_nLastKey = pSS->nLastKey;
   return 0;

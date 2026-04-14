@@ -76,11 +76,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //   . ORB  = 0x3F (STOP)
 //
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <cassert>
 
 #include "core/Common.h"
 #include "apple2/Structs.h"
@@ -92,54 +93,97 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "core/Log.h"
 #include "apple2/Video.h"
 
-#define SY6522_DEVICE_A 0
-#define SY6522_DEVICE_B 1
+enum {
+SY6522_DEVICE_A = 0,
+SY6522_DEVICE_B = 1
+};
 
-#define SLOT4 4
-#define SLOT5 5
+enum {
+SLOT4 = 4,
+SLOT5 = 5
+};
 
-#define NUM_MB 2
-#define NUM_DEVS_PER_MB 2
+enum {
+NUM_MB = 2,
+NUM_DEVS_PER_MB = 2
+};
 #define NUM_AY8910 (NUM_MB*NUM_DEVS_PER_MB)
 #define NUM_SY6522 NUM_AY8910
-#define NUM_VOICES_PER_AY8910 3
+enum {
+NUM_VOICES_PER_AY8910 = 3
+};
 #define NUM_VOICES (NUM_AY8910*NUM_VOICES_PER_AY8910)
 
 // Chip offsets from card base.
-#define SY6522A_Offset  0x00
-#define SY6522B_Offset  0x80
-#define SSI263_Offset  0x40
+enum {
+SY6522A_Offset =  0x00,
+SY6522B_Offset =  0x80,
+SSI263_Offset =  0x40
+};
 
-#define Phasor_SY6522A_CS    4
-#define Phasor_SY6522B_CS    7
+enum {
+Phasor_SY6522A_CS =    4,
+Phasor_SY6522B_CS =    7
+};
 #define Phasor_SY6522A_Offset  (1<<Phasor_SY6522A_CS)
 #define Phasor_SY6522B_Offset  (1<<Phasor_SY6522B_CS)
 
-typedef struct {
+using SY6522_AY8910 = struct {
   SY6522 sy6522;
-  unsigned char nAY8910Number;
-  unsigned char nAYCurrentRegister;
-  unsigned char nTimerStatus;
+  uint8_t nAY8910Number;
+  uint8_t nAYCurrentRegister;
+  uint8_t nTimerStatus;
   SSI263A SpeechChip;
-} SY6522_AY8910;
+};
 
 // IFR & IER:
-#define IxR_PERIPHERAL  (1<<1)
-#define IxR_VOTRAX    (1<<4)  // TO DO: Get proper name from 6522 datasheet!
-#define IxR_TIMER2    (1<<5)
-#define IxR_TIMER1    (1<<6)
+enum {
+IxR_PERIPHERAL =  (1<<1),
+IxR_VOTRAX =    (1<<4),  // TO DO: Get proper name from 6522 datasheet!
+IxR_TIMER2 =    (1<<5),
+IxR_TIMER1 =    (1<<6)
+};
 
 // ACR:
-#define RUNMODE    (1<<6)  // 0 = 1-Shot Mode, 1 = Free Running Mode
-#define RM_ONESHOT    (0<<6)
-#define RM_FREERUNNING  (1<<6)
+enum {
+RUNMODE =    (1<<6),  // 0 = 1-Shot Mode, 1 = Free Running Mode
+RM_ONESHOT =    (0<<6),
+RM_FREERUNNING =  (1<<6)
+};
 
 // SSI263A registers:
-#define SSI_DURPHON  0x00
-#define SSI_INFLECT  0x01
-#define SSI_RATEINF  0x02
-#define SSI_CTTRAMP  0x03
-#define SSI_FILFREQ  0x04
+enum {
+SSI_DURPHON =  0x00,
+SSI_INFLECT =  0x01,
+SSI_RATEINF =  0x02,
+SSI_CTTRAMP =  0x03,
+SSI_FILFREQ =  0x04
+};
+
+enum VIA6522_Reg_e
+{
+  VIA_REG_ORB              = 0x00,
+  VIA_REG_ORA              = 0x01,
+  VIA_REG_DDRB             = 0x02,
+  VIA_REG_DDRA             = 0x03,
+  VIA_REG_T1L_C            = 0x04,
+  VIA_REG_T1H_C            = 0x05,
+  VIA_REG_T1L_L            = 0x06,
+  VIA_REG_T1H_L            = 0x07,
+  VIA_REG_T2L_C            = 0x08,
+  VIA_REG_T2H_C            = 0x09,
+  VIA_REG_SR               = 0x0A,
+  VIA_REG_ACR              = 0x0B,
+  VIA_REG_PCR              = 0x0C,
+  VIA_REG_IFR              = 0x0D,
+  VIA_REG_IER              = 0x0E,
+  VIA_REG_ORA_NO_HANDSHAKE = 0x0F
+};
+
+const uint8_t VIA_IFR_IRQ_FLAG = 0x80;
+const uint8_t VIA_IFR_BIT_MASK = 0x7F;
+
+const uint16_t TIMER_LOW_BYTE_MAX = 0xFF;
 
 // Support 2 MB's, each with 2x SY6522/AY8910 pairs.
 static SY6522_AY8910 g_MB[NUM_AY8910];
@@ -149,7 +193,12 @@ static uint32_t g_n6522TimerPeriod = 0;
 static uint16_t g_nMBTimerDevice = 0;  // SY6522 device# which is generating timer IRQ
 static uint64_t g_uLastCumulativeCycles = 0;
 
-static short *ppAYVoiceBuffer[NUM_VOICES] = {0};
+static std::unique_ptr<short[], void(*)(void*)> ppAYVoiceBuffer[NUM_VOICES] = {
+  {nullptr, free}, {nullptr, free}, {nullptr, free},
+  {nullptr, free}, {nullptr, free}, {nullptr, free},
+  {nullptr, free}, {nullptr, free}, {nullptr, free},
+  {nullptr, free}, {nullptr, free}, {nullptr, free}
+};
 
 static uint64_t g_nMB_InActiveCycleCount = 0;
 static bool g_bMB_RegAccessedFlag = false;
@@ -158,14 +207,14 @@ static bool g_bMBAvailable = false;
 
 static eSOUNDCARDTYPE g_SoundcardType = SC_MOCKINGBOARD;  // Mockingboard enable (dialog var)
 static bool g_bPhasorEnable = false;
-static unsigned char g_nPhasorMode = 0;  // 0=Mockingboard emulation, 1=Phasor native
+static uint8_t g_nPhasorMode = 0;  // 0=Mockingboard emulation, 1=Phasor native
 
-static const unsigned short g_nMB_NumChannels = 2;
+static const uint16_t g_nMB_NumChannels = 2;
 
-static const unsigned int g_dwDSBufferSize = 16 * 1024 * sizeof(short) * g_nMB_NumChannels;
+static const uint32_t g_dwDSBufferSize = static_cast<size_t>(16 * 1024) * sizeof(short) * g_nMB_NumChannels;
 
-static const short nWaveDataMin = (short) 0xF000;
-static const short nWaveDataMax = (short) 0x0FFF;
+static const short nWaveDataMin = static_cast<short>(0xF000);
+static const short nWaveDataMax = static_cast<short>(0x0FFF);
 
 static short g_nMixBuffer[g_dwDSBufferSize / sizeof(short)];
 
@@ -177,7 +226,7 @@ static const double g_f6522TimerPeriod_NoIRQ = CLOCK_6502 / 60.0;    // Constant
 
 // External global vars:
 bool g_bMBTimerIrqActive = false;
-unsigned int g_uTimer1IrqCount = 0;  // DEBUG
+uint32_t g_uTimer1IrqCount = 0;  // DEBUG
 
 // Forward refs:
 
@@ -191,7 +240,7 @@ static void StartTimer(SY6522_AY8910 *pMB) {
 
   uint16_t nPeriod = pMB->sy6522.TIMER1_LATCH.w;
 
-  if (nPeriod <= 0xff) { // Timer1L value has been written (but TIMER1H hasn't)
+  if (nPeriod <= TIMER_LOW_BYTE_MAX) { // Timer1L value has been written (but TIMER1H hasn't)
     return;
   }
 
@@ -218,7 +267,7 @@ static void ResetSY6522(SY6522_AY8910 *pMB) {
   pMB->nAYCurrentRegister = 0;
 }
 
-static void AY8910_Write(unsigned char nDevice, unsigned char nReg, unsigned char nValue, unsigned char nAYDevice) {
+static void AY8910_Write(uint8_t nDevice, uint8_t nReg, uint8_t nValue, uint8_t nAYDevice) {
   (void) nReg;
   SY6522_AY8910 *pMB = &g_MB[nDevice];
 
@@ -248,8 +297,9 @@ static void AY8910_Write(unsigned char nDevice, unsigned char nReg, unsigned cha
         break;
 
       case AY_LATCH:    // 7: LATCH ADDRESS
-        if (pMB->sy6522.ORA <= 0x0F)
+        if (pMB->sy6522.ORA <= 0x0F) {
           pMB->nAYCurrentRegister = pMB->sy6522.ORA & 0x0F;
+}
         // else Pro-Mockingboard (clone from HK)
         break;
     }
@@ -257,17 +307,17 @@ static void AY8910_Write(unsigned char nDevice, unsigned char nReg, unsigned cha
 }
 
 static void UpdateIFR(SY6522_AY8910 *pMB) {
-  pMB->sy6522.IFR &= 0x7F;
+  pMB->sy6522.IFR &= VIA_IFR_BIT_MASK;
 
-  if (pMB->sy6522.IFR & pMB->sy6522.IER & 0x7F) {
-    pMB->sy6522.IFR |= 0x80;
+  if (pMB->sy6522.IFR & pMB->sy6522.IER & VIA_IFR_BIT_MASK) {
+    pMB->sy6522.IFR |= VIA_IFR_IRQ_FLAG;
   }
 
   // Now update the IRQ signal from all 6522s
   // . OR-sum of all active TIMER1, TIMER2 & SPEECH sources (from all 6522s)
-  unsigned int bIRQ = 0;
-  for (unsigned int i = 0; i < NUM_SY6522; i++) {
-    bIRQ |= g_MB[i].sy6522.IFR & 0x80;
+  uint32_t bIRQ = 0;
+  for (auto & i : g_MB) {
+    bIRQ |= i.sy6522.IFR & VIA_IFR_IRQ_FLAG;
   }
 
   // NB. Mockingboard generates IRQ on both 6522s:
@@ -283,14 +333,14 @@ static void UpdateIFR(SY6522_AY8910 *pMB) {
   }
 }
 
-static void SY6522_Write(unsigned char nDevice, unsigned char nReg, unsigned char nValue) {
+static void SY6522_Write(uint8_t nDevice, uint8_t nReg, uint8_t nValue) {
   g_bMB_RegAccessedFlag = true;
   g_bMB_Active = true;
 
   SY6522_AY8910 *pMB = &g_MB[nDevice];
 
   switch (nReg) {
-    case 0x00:  // ORB
+    case VIA_REG_ORB:  // ORB
     {
       nValue &= pMB->sy6522.DDRB;
       pMB->sy6522.ORB = nValue;
@@ -298,31 +348,33 @@ static void SY6522_Write(unsigned char nDevice, unsigned char nReg, unsigned cha
       if (g_bPhasorEnable) {
         int nAY_CS = (g_nPhasorMode & 1) ? (~(nValue >> 3) & 3) : 1;
 
-        if (nAY_CS & 1)
+        if (nAY_CS & 1) {
           AY8910_Write(nDevice, nReg, nValue, 0);
+}
 
-        if (nAY_CS & 2)
+        if (nAY_CS & 2) {
           AY8910_Write(nDevice, nReg, nValue, 1);
+}
       } else {
         AY8910_Write(nDevice, nReg, nValue, 0);
       }
 
       break;
     }
-    case 0x01:  // ORA
+    case VIA_REG_ORA:  // ORA
       pMB->sy6522.ORA = nValue & pMB->sy6522.DDRA;
       break;
-    case 0x02:  // DDRB
+    case VIA_REG_DDRB:  // DDRB
       pMB->sy6522.DDRB = nValue;
       break;
-    case 0x03:  // DDRA
+    case VIA_REG_DDRA:  // DDRA
       pMB->sy6522.DDRA = nValue;
       break;
-    case 0x04:  // TIMER1L_COUNTER
-    case 0x06:  // TIMER1L_LATCH
+    case VIA_REG_T1L_C:  // TIMER1L_COUNTER
+    case VIA_REG_T1L_L:  // TIMER1L_LATCH
       pMB->sy6522.TIMER1_LATCH.l = nValue;
       break;
-    case 0x05:  // TIMER1H_COUNTER
+    case VIA_REG_T1H_C:  // TIMER1H_COUNTER
       /* Initiates timer1 & clears time-out of timer1 */
 
       // Clear Timer Interrupt Flag.
@@ -334,16 +386,16 @@ static void SY6522_Write(unsigned char nDevice, unsigned char nReg, unsigned cha
 
       StartTimer(pMB);
       break;
-    case 0x07:  // TIMER1H_LATCH
+    case VIA_REG_T1H_L:  // TIMER1H_LATCH
       // Clear Timer1 Interrupt Flag.
       pMB->sy6522.TIMER1_LATCH.h = nValue;
       pMB->sy6522.IFR &= ~IxR_TIMER1;
       UpdateIFR(pMB);
       break;
-    case 0x08:  // TIMER2L
+    case VIA_REG_T2L_C:  // TIMER2L
       pMB->sy6522.TIMER2_LATCH.l = nValue;
       break;
-    case 0x09:  // TIMER2H
+    case VIA_REG_T2H_C:  // TIMER2H
       // Clear Timer2 Interrupt Flag.
       pMB->sy6522.IFR &= ~IxR_TIMER2;
       UpdateIFR(pMB);
@@ -351,35 +403,37 @@ static void SY6522_Write(unsigned char nDevice, unsigned char nReg, unsigned cha
       pMB->sy6522.TIMER2_LATCH.h = nValue;
       pMB->sy6522.TIMER2_COUNTER.w = pMB->sy6522.TIMER2_LATCH.w;
       break;
-    case 0x0a:  // SERIAL_SHIFT
+    case VIA_REG_SR:  // SERIAL_SHIFT
       break;
-    case 0x0b:  // ACR
+    case VIA_REG_ACR:  // ACR
       pMB->sy6522.ACR = nValue;
       break;
-    case 0x0c:  // PCR -  Used for Speech chip only
+    case VIA_REG_PCR:  // PCR -  Used for Speech chip only
       pMB->sy6522.PCR = nValue;
       break;
-    case 0x0d:  // IFR
+    case VIA_REG_IFR:  // IFR
       // - Clear those bits which are set in the lower 7 bits.
       // - Can't clear bit 7 directly.
-      nValue |= 0x80;  // Set high bit
-      nValue ^= 0x7F;  // Make mask
+      nValue |= VIA_IFR_IRQ_FLAG;  // Set high bit
+      nValue ^= VIA_IFR_BIT_MASK;  // Make mask
       pMB->sy6522.IFR &= nValue;
       UpdateIFR(pMB);
       break;
-    case 0x0e:  // IER
-      if (!(nValue & 0x80)) {
+    case VIA_REG_IER:  // IER
+      if (!(nValue & VIA_IFR_IRQ_FLAG)) {
         // Clear those bits which are set in the lower 7 bits.
-        nValue ^= 0x7F;
+        nValue ^= VIA_IFR_BIT_MASK;
         pMB->sy6522.IER &= nValue;
         UpdateIFR(pMB);
 
         // Check if timer has been disabled.
-        if (pMB->sy6522.IER & IxR_TIMER1)
+        if (pMB->sy6522.IER & IxR_TIMER1) {
           break;
+}
 
-        if (pMB->nTimerStatus == 0)
+        if (pMB->nTimerStatus == 0) {
           break;
+}
 
         pMB->nTimerStatus = 0;
 
@@ -387,74 +441,77 @@ static void SY6522_Write(unsigned char nDevice, unsigned char nReg, unsigned cha
         StopTimer(pMB);
       } else {
         // Set those bits which are set in the lower 7 bits.
-        nValue &= 0x7F;
+        nValue &= VIA_IFR_BIT_MASK;
         pMB->sy6522.IER |= nValue;
         UpdateIFR(pMB);
         StartTimer(pMB);
       }
       break;
-    case 0x0f:  // ORA_NO_HS
+    case VIA_REG_ORA_NO_HANDSHAKE:
+      pMB->sy6522.ORA = nValue & pMB->sy6522.DDRA;
+      break;
+    default:
       break;
   }
 }
 
-static unsigned char SY6522_Read(unsigned char nDevice, unsigned char nReg) {
+static auto SY6522_Read(uint8_t nDevice, uint8_t nReg) -> uint8_t {
   g_bMB_RegAccessedFlag = true;
   g_bMB_Active = true;
 
   SY6522_AY8910 *pMB = &g_MB[nDevice];
-  unsigned char nValue = 0x00;
+  uint8_t nValue = 0x00;
 
   switch (nReg) {
-    case 0x00:  // ORB
+    case VIA_REG_ORB:  // ORB
       nValue = pMB->sy6522.ORB;
       break;
-    case 0x01:  // ORA
+    case VIA_REG_ORA:  // ORA
       nValue = pMB->sy6522.ORA;
       break;
-    case 0x02:  // DDRB
+    case VIA_REG_DDRB:  // DDRB
       nValue = pMB->sy6522.DDRB;
       break;
-    case 0x03:  // DDRA
+    case VIA_REG_DDRA:  // DDRA
       nValue = pMB->sy6522.DDRA;
       break;
-    case 0x04:  // TIMER1L_COUNTER
+    case VIA_REG_T1L_C:  // TIMER1L_COUNTER
       nValue = pMB->sy6522.TIMER1_COUNTER.l;
       pMB->sy6522.IFR &= ~IxR_TIMER1;    // Also clears Timer1 Interrupt Flag
       UpdateIFR(pMB);
       break;
-    case 0x05:  // TIMER1H_COUNTER
+    case VIA_REG_T1H_C:  // TIMER1H_COUNTER
       nValue = pMB->sy6522.TIMER1_COUNTER.h;
       break;
-    case 0x06:  // TIMER1L_LATCH
+    case VIA_REG_T1L_L:  // TIMER1L_LATCH
       nValue = pMB->sy6522.TIMER1_LATCH.l;
       break;
-    case 0x07:  // TIMER1H_LATCH
+    case VIA_REG_T1H_L:  // TIMER1H_LATCH
       nValue = pMB->sy6522.TIMER1_LATCH.h;
       break;
-    case 0x08:  // TIMER2L
+    case VIA_REG_T2L_C:  // TIMER2L
       nValue = pMB->sy6522.TIMER2_COUNTER.l;
       pMB->sy6522.IFR &= ~IxR_TIMER2;    // Also clears Timer2 Interrupt Flag
       UpdateIFR(pMB);
       break;
-    case 0x09:  // TIMER2H
+    case VIA_REG_T2H_C:  // TIMER2H
       nValue = pMB->sy6522.TIMER2_COUNTER.h;
       break;
-    case 0x0a:  // SERIAL_SHIFT
+    case VIA_REG_SR:  // SERIAL_SHIFT
       break;
-    case 0x0b:  // ACR
+    case VIA_REG_ACR:  // ACR
       nValue = pMB->sy6522.ACR;
       break;
-    case 0x0c:  // PCR
+    case VIA_REG_PCR:  // PCR
       nValue = pMB->sy6522.PCR;
       break;
-    case 0x0d:  // IFR
+    case VIA_REG_IFR:  // IFR
       nValue = pMB->sy6522.IFR;
       break;
-    case 0x0e:  // IER
-      nValue = 0x80;
+    case VIA_REG_IER:  // IER
+      nValue = VIA_IFR_IRQ_FLAG;
       break;
-    case 0x0f:  // ORA_NO_HS
+    case VIA_REG_ORA_NO_HANDSHAKE:
       nValue = pMB->sy6522.ORA;
       break;
   }
@@ -463,27 +520,27 @@ static unsigned char SY6522_Read(unsigned char nDevice, unsigned char nReg) {
 }
 
 // Duration/Phonome
-const unsigned char DURATION_MODE_MASK = 0xC0;
-const unsigned char PHONEME_MASK = 0x3F;
+const uint8_t DURATION_MODE_MASK = 0xC0;
+const uint8_t PHONEME_MASK = 0x3F;
 
-const unsigned char MODE_PHONEME_TRANSITIONED_INFLECTION = 0xC0;  // IRQ active
-const unsigned char MODE_PHONEME_IMMEDIATE_INFLECTION = 0x80;  // IRQ active
-const unsigned char MODE_FRAME_IMMEDIATE_INFLECTION = 0x40;    // IRQ active
-const unsigned char MODE_IRQ_DISABLED = 0x00;
+const uint8_t MODE_PHONEME_TRANSITIONED_INFLECTION = 0xC0;  // IRQ active
+const uint8_t MODE_PHONEME_IMMEDIATE_INFLECTION = 0x80;  // IRQ active
+const uint8_t MODE_FRAME_IMMEDIATE_INFLECTION = 0x40;    // IRQ active
+const uint8_t MODE_IRQ_DISABLED = 0x00;
 
 // Rate/Inflection
-const unsigned char RATE_MASK = 0xF0;
-const unsigned char INFLECTION_MASK_H = 0x08;  // I11
-const unsigned char INFLECTION_MASK_L = 0x07;  // I2..I0
+const uint8_t RATE_MASK = 0xF0;
+const uint8_t INFLECTION_MASK_H = 0x08;  // I11
+const uint8_t INFLECTION_MASK_L = 0x07;  // I2..I0
 
 // Ctrl/Art/Amp
-const unsigned char CONTROL_MASK = 0x80;
+const uint8_t CONTROL_MASK = 0x80;
 
 void MB_Update() {
   if (!g_bMB_RegAccessedFlag) {
     if (!g_nMB_InActiveCycleCount) {
       g_nMB_InActiveCycleCount = g_nCumulativeCycles;
-    } else if (g_nCumulativeCycles - g_nMB_InActiveCycleCount > (uint64_t)g_fCurrentCLK6502 / 10) {
+    } else if (g_nCumulativeCycles - g_nMB_InActiveCycleCount > static_cast<uint64_t>(g_fCurrentCLK6502) / 10) {
       // After 0.1 sec of Apple time, assume MB is not active
       g_bMB_Active = false;
     }
@@ -496,11 +553,11 @@ void MB_Update() {
   #ifdef MOCKINGBOARD
   static int nNumSamplesError = 0;
 
-  int nNumSamples;
+  int nNumSamples = 0;
   double n6522TimerPeriod = MB_GetFramePeriod();
 
   double nIrqFreq = g_fCurrentCLK6502 / n6522TimerPeriod - 0.5;      // GPH: Round DOWN instead of up
-  int nNumSamplesPerPeriod = (int) ((double)SAMPLE_RATE / nIrqFreq);    // Eg. For 60Hz this is 735
+  int nNumSamplesPerPeriod = static_cast<int>(static_cast<double>(SAMPLE_RATE) / nIrqFreq);    // Eg. For 60Hz this is 735
   nNumSamples = nNumSamplesPerPeriod + nNumSamplesError;          // Apply correction
   if(nNumSamples <= 0) {
     nNumSamples = 0;
@@ -511,7 +568,11 @@ void MB_Update() {
 
   if(nNumSamples) {
     for(int nChip=0; nChip<NUM_AY8910; nChip++) {
-      AY8910Update(nChip, &ppAYVoiceBuffer[nChip*NUM_VOICES_PER_AY8910], nNumSamples);
+      short* voice_ptrs[NUM_VOICES_PER_AY8910];
+      for(int j=0; j<NUM_VOICES_PER_AY8910; j++) {
+        voice_ptrs[j] = ppAYVoiceBuffer[static_cast<ptrdiff_t>(nChip*NUM_VOICES_PER_AY8910+j)].get();
+      }
+      AY8910Update(nChip, voice_ptrs, nNumSamples);
     }
   }
 
@@ -527,14 +588,14 @@ void MB_Update() {
     // L = Address.b7=0, R = Address.b7=1
     int nDataL = 0, nDataR = 0;
 
-    for(unsigned int j=0; j<NUM_VOICES_PER_AY8910; j++) {
+    for(uint32_t j=0; j<NUM_VOICES_PER_AY8910; j++) {
       // Slot4
-      nDataL += (int) ((double)ppAYVoiceBuffer[0*NUM_VOICES_PER_AY8910+j][i] * fAttenuation);
-      nDataR += (int) ((double)ppAYVoiceBuffer[1*NUM_VOICES_PER_AY8910+j][i] * fAttenuation);
+      nDataL += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[0*NUM_VOICES_PER_AY8910+static_cast<ptrdiff_t>(j)].get()[i]) * fAttenuation);
+      nDataR += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[1*NUM_VOICES_PER_AY8910+static_cast<ptrdiff_t>(j)].get()[i]) * fAttenuation);
 
       // Slot5
-      nDataL += (int) ((double)ppAYVoiceBuffer[2*NUM_VOICES_PER_AY8910+j][i] * fAttenuation);
-      nDataR += (int) ((double)ppAYVoiceBuffer[3*NUM_VOICES_PER_AY8910+j][i] * fAttenuation);
+      nDataL += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[2*NUM_VOICES_PER_AY8910+static_cast<ptrdiff_t>(j)].get()[i]) * fAttenuation);
+      nDataR += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[3*NUM_VOICES_PER_AY8910+static_cast<ptrdiff_t>(j)].get()[i]) * fAttenuation);
     }
 
     // Cap the superpositioned output
@@ -550,8 +611,8 @@ void MB_Update() {
       nDataR = nWaveDataMax;
     }
 
-    g_nMixBuffer[i*g_nMB_NumChannels+0] = (short)nDataL;  // L
-    g_nMixBuffer[i*g_nMB_NumChannels+1] = (short)nDataR;  // R
+    g_nMixBuffer[i*g_nMB_NumChannels+0] = static_cast<short>(nDataL);  // L
+    g_nMixBuffer[i*g_nMB_NumChannels+1] = static_cast<short>(nDataR);  // R
   }
 
 
@@ -566,9 +627,9 @@ void MB_Update() {
   #endif  // if defined MOCKINGBOARD
 }
 
-static unsigned char PhasorIO(unsigned short PC, unsigned short nAddr, unsigned char bWrite, unsigned char nValue, uint32_t nCyclesLeft);
-static unsigned char MB_Read(unsigned short PC, unsigned short nAddr, unsigned char bWrite, unsigned char nValue, uint32_t nCyclesLeft);
-static unsigned char MB_Write(unsigned short PC, unsigned short nAddr, unsigned char bWrite, unsigned char nValue, uint32_t nCyclesLeft);
+static auto PhasorIO(uint16_t PC, uint16_t nAddr, uint8_t bWrite, uint8_t nValue, uint32_t nCyclesLeft) -> uint8_t;
+static auto MB_Read(uint16_t PC, uint16_t nAddr, uint8_t bWrite, uint8_t nValue, uint32_t nCyclesLeft) -> uint8_t;
+static auto MB_Write(uint16_t PC, uint16_t nAddr, uint8_t bWrite, uint8_t nValue, uint32_t nCyclesLeft) -> uint8_t;
 
 void MB_Initialize() {
   if (g_bDisableDirectSound) {
@@ -576,12 +637,12 @@ void MB_Initialize() {
   } else {
     memset(&g_MB, 0, sizeof(g_MB));
 
-    int i;
+    int i = 0;
     for (i = 0; i < NUM_VOICES; i++) {
-      ppAYVoiceBuffer[i] = (short*)malloc(SAMPLE_RATE * sizeof(short));  // Buffer can hold a max of 1 seconds worth of samples
+      ppAYVoiceBuffer[i].reset( static_cast<short*>(malloc(SAMPLE_RATE * sizeof(short))));  // Buffer can hold a max of 1 seconds worth of samples
     }
 
-    AY8910_InitAll((int) g_fCurrentCLK6502, SAMPLE_RATE);
+    AY8910_InitAll(static_cast<int>(g_fCurrentCLK6502), SAMPLE_RATE);
 
     for (i = 0; i < NUM_AY8910; i++) {
       g_MB[i].nAY8910Number = i;
@@ -594,23 +655,24 @@ void MB_Initialize() {
   g_bMB_Active = (g_SoundcardType != SC_NONE);
 
   if (g_Slot4 == CT_Mockingboard) {
-    const unsigned int uSlot4 = 4;
-    RegisterIoHandler(uSlot4, PhasorIO, PhasorIO, MB_Read, MB_Write, NULL, NULL);
+    const uint32_t uSlot4 = 4;
+    RegisterIoHandler(uSlot4, PhasorIO, PhasorIO, MB_Read, MB_Write, nullptr, nullptr);
   }
 
-  const unsigned int uSlot5 = 5;
-  RegisterIoHandler(uSlot5, PhasorIO, PhasorIO, MB_Read, MB_Write, NULL, NULL);
+  const uint32_t uSlot5 = 5;
+  RegisterIoHandler(uSlot5, PhasorIO, PhasorIO, MB_Read, MB_Write, nullptr, nullptr);
 
 }
 
 // NB. Called when /g_fCurrentCLK6502/ changes
 void MB_Reinitialize() {
-  AY8910_InitClock((int) g_fCurrentCLK6502);
+  AY8910_InitClock(static_cast<int>(g_fCurrentCLK6502));
 }
 
 void MB_Destroy() {
-  for (int i = 0; i < NUM_VOICES; i++)
-    free(ppAYVoiceBuffer[i]);
+  for (auto & i : ppAYVoiceBuffer) {
+    i.reset();
+}
 }
 
 void MB_Reset() {
@@ -627,7 +689,7 @@ void MB_Reset() {
   MB_Reinitialize();  // Reset CLK for AY8910s
 }
 
-static unsigned char MB_Read(unsigned short PC, unsigned short nAddr, unsigned char bWrite, unsigned char nValue, uint32_t nCyclesLeft) {
+static auto MB_Read(uint16_t PC, uint16_t nAddr, uint8_t bWrite, uint8_t nValue, uint32_t nCyclesLeft) -> uint8_t {
   (void) PC; (void) bWrite; (void) nValue;
   MB_UpdateCycles(nCyclesLeft);
 
@@ -639,16 +701,16 @@ static unsigned char MB_Read(unsigned short PC, unsigned short nAddr, unsigned c
     return 0;
   }
 
-  unsigned char nMB = ((nAddr >> 8) & 0xf) - SLOT4;
-  unsigned char nOffset = nAddr & 0xff;
+  uint8_t nMB = ((nAddr >> 8) & ADDR_NIBBLE_MASK) - SLOT4;
+  uint8_t nOffset = nAddr & 0xff;
 
   if (g_bPhasorEnable) {
     if (nMB != 0) { // Slot4 only
       return 0;
     }
 
-    unsigned char nRes = 0;
-    int CS;
+    uint8_t nRes = 0;
+    int CS = 0;
 
     if (g_nPhasorMode & 1) {
       CS = ((nAddr & 0x80) >> 6) | ((nAddr & 0x10) >> 4);  // 0, 1, 2 or 3
@@ -658,26 +720,26 @@ static unsigned char MB_Read(unsigned short PC, unsigned short nAddr, unsigned c
     }
 
     if (CS & 1) {
-      nRes |= SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & 0xf);
+      nRes |= SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & ADDR_NIBBLE_MASK);
     }
 
     if (CS & 2) {
-      nRes |= SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & 0xf);
+      nRes |= SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & ADDR_NIBBLE_MASK);
     }
 
     return nRes;
   }
 
   if (nOffset <= (SY6522A_Offset + 0x0F)) {
-    return SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & 0xf);
+    return SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & ADDR_NIBBLE_MASK);
   } else if ((nOffset >= SY6522B_Offset) && (nOffset <= (SY6522B_Offset + 0x0F))) {
-    return SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & 0xf);
+    return SY6522_Read(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & ADDR_NIBBLE_MASK);
   } else {
     return 0;
   }
 }
 
-static unsigned char MB_Write(unsigned short PC, unsigned short nAddr, unsigned char bWrite, unsigned char nValue, uint32_t nCyclesLeft) {
+static auto MB_Write(uint16_t PC, uint16_t nAddr, uint8_t bWrite, uint8_t nValue, uint32_t nCyclesLeft) -> uint8_t {
   (void) PC; (void) bWrite;
   MB_UpdateCycles(nCyclesLeft);
 
@@ -689,15 +751,15 @@ static unsigned char MB_Write(unsigned short PC, unsigned short nAddr, unsigned 
     return 0;
   }
 
-  unsigned char nMB = ((nAddr >> 8) & 0xf) - SLOT4;
-  unsigned char nOffset = nAddr & 0xff;
+  uint8_t nMB = ((nAddr >> 8) & ADDR_NIBBLE_MASK) - SLOT4;
+  uint8_t nOffset = nAddr & 0xff;
 
   if (g_bPhasorEnable) {
     if (nMB != 0) { // Slot4 only
       return 0;
     }
 
-    int CS;
+    int CS = 0;
 
     if (g_nPhasorMode & 1) {
       CS = ((nAddr & 0x80) >> 6) | ((nAddr & 0x10) >> 4);  // 0, 1, 2 or 3
@@ -706,24 +768,24 @@ static unsigned char MB_Write(unsigned short PC, unsigned short nAddr, unsigned 
     }
 
     if (CS & 1) {
-      SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & 0xf, nValue);
+      SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & ADDR_NIBBLE_MASK, nValue);
     }
     if (CS & 2) {
-      SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & 0xf, nValue);
+      SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & ADDR_NIBBLE_MASK, nValue);
     }
 
     return 0;
   }
 
   if (nOffset <= (SY6522A_Offset + 0x0F)) {
-    SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & 0xf, nValue);
+    SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_A, nAddr & ADDR_NIBBLE_MASK, nValue);
   } else if ((nOffset >= SY6522B_Offset) && (nOffset <= (SY6522B_Offset + 0x0F))) {
-    SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & 0xf, nValue);
+    SY6522_Write(nMB * NUM_DEVS_PER_MB + SY6522_DEVICE_B, nAddr & ADDR_NIBBLE_MASK, nValue);
   }
   return 0;
 }
 
-static unsigned char PhasorIO(unsigned short PC, unsigned short nAddr, unsigned char bWrite, unsigned char nValue, uint32_t nCyclesLeft) {
+static auto PhasorIO(uint16_t PC, uint16_t nAddr, uint8_t bWrite, uint8_t nValue, uint32_t nCyclesLeft) -> uint8_t {
   (void) PC; (void) bWrite; (void) nValue;
   if (!g_bPhasorEnable) {
     return MemReadFloatingBus(nCyclesLeft);
@@ -733,7 +795,7 @@ static unsigned char PhasorIO(unsigned short PC, unsigned short nAddr, unsigned 
   }
   double fCLK = (nAddr & 4) ? CLOCK_6502 * 2 : CLOCK_6502;
 
-  AY8910_InitClock((int) fCLK);
+  AY8910_InitClock(static_cast<int>(fCLK));
 
   return MemReadFloatingBus(nCyclesLeft);
 }
@@ -767,7 +829,7 @@ void MB_UpdateCycles(uint32_t uExecutedCycles) {
   uCycles = g_nCumulativeCycles - g_uLastCumulativeCycles;
   g_uLastCumulativeCycles = g_nCumulativeCycles;
   assert(uCycles < 0x10000);
-  uint16_t nClocks = (uint16_t) uCycles;
+  auto nClocks = static_cast<uint16_t>(uCycles);
 
   for (int i = 0; i < NUM_SY6522; i++) {
     SY6522_AY8910 *pMB = &g_MB[i];
@@ -796,13 +858,14 @@ void MB_UpdateCycles(uint32_t uExecutedCycles) {
         StartTimer(pMB);
       }
 
-      if (!g_bFullSpeed)
+      if (!g_bFullSpeed) {
         MB_Update();
+}
     }
   }
 }
 
-eSOUNDCARDTYPE MB_GetSoundcardType() {
+auto MB_GetSoundcardType() -> eSOUNDCARDTYPE {
   return g_SoundcardType;
 }
 
@@ -820,25 +883,25 @@ void MB_SetSoundcardType(eSOUNDCARDTYPE NewSoundcardType) {
   g_bPhasorEnable = (g_SoundcardType == SC_PHASOR);
 }
 
-double MB_GetFramePeriod() {
-  return (g_bMBTimerIrqActive || (g_MB[0].sy6522.IFR & IxR_TIMER1)) ? (double) g_n6522TimerPeriod
+auto MB_GetFramePeriod() -> double {
+  return (g_bMBTimerIrqActive || (g_MB[0].sy6522.IFR & IxR_TIMER1)) ? static_cast<double>(g_n6522TimerPeriod)
                                                                     : g_f6522TimerPeriod_NoIRQ;
 }
 
-bool MB_IsActive() {
+auto MB_IsActive() -> bool {
   // Ignore /g_bMBTimerIrqActive/ as timer's irq handler will access 6522 regs affecting /g_bMB_Active/
   return g_bMB_Active;
 }
 
-unsigned int MB_GetVolume() {
+auto MB_GetVolume() -> uint32_t {
   return 0;
 }
 
-void MB_SetVolume(unsigned int dwVolume, unsigned int dwVolumeMax) {
+void MB_SetVolume(uint32_t dwVolume, uint32_t dwVolumeMax) {
   (void) dwVolume; (void) dwVolumeMax;
 }
 
-unsigned int MB_GetSnapshot(SS_CARD_MOCKINGBOARD *pSS, unsigned int dwSlot)
+auto MB_GetSnapshot(SS_CARD_MOCKINGBOARD *pSS, uint32_t dwSlot) -> uint32_t
 {
   pSS->Hdr.UnitHdr.dwLength = sizeof(SS_CARD_DISK2);
   pSS->Hdr.UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
@@ -846,15 +909,15 @@ unsigned int MB_GetSnapshot(SS_CARD_MOCKINGBOARD *pSS, unsigned int dwSlot)
   pSS->Hdr.dwSlot = dwSlot;
   pSS->Hdr.dwType = CT_Mockingboard;
 
-  unsigned int nMbCardNum = dwSlot - SLOT4;
-  unsigned int nDeviceNum = nMbCardNum * 2;
+  uint32_t nMbCardNum = dwSlot - SLOT4;
+  uint32_t nDeviceNum = nMbCardNum * 2;
   SY6522_AY8910 *pMB = &g_MB[nDeviceNum];
 
-  for (unsigned int i = 0; i < MB_UNITS_PER_CARD; i++) {
-    memcpy(&pSS->Unit[i].RegsSY6522, &pMB->sy6522, sizeof(SY6522));
-    memcpy(&pSS->Unit[i].RegsAY8910, AY8910_GetRegsPtr(nDeviceNum), 16);
-    memcpy(&pSS->Unit[i].RegsSSI263, &pMB->SpeechChip, sizeof(SSI263A));
-    pSS->Unit[i].nAYCurrentRegister = pMB->nAYCurrentRegister;
+  for (auto & i : pSS->Unit) {
+    memcpy(&i.RegsSY6522, &pMB->sy6522, sizeof(SY6522));
+    memcpy(&i.RegsAY8910, AY8910_GetRegsPtr(nDeviceNum), 16);
+    memcpy(&i.RegsSSI263, &pMB->SpeechChip, sizeof(SSI263A));
+    i.nAYCurrentRegister = pMB->nAYCurrentRegister;
 
     nDeviceNum++;
     pMB++;
@@ -863,20 +926,20 @@ unsigned int MB_GetSnapshot(SS_CARD_MOCKINGBOARD *pSS, unsigned int dwSlot)
   return 0;
 }
 
-unsigned int MB_SetSnapshot(SS_CARD_MOCKINGBOARD *pSS, unsigned int) {
+auto MB_SetSnapshot(SS_CARD_MOCKINGBOARD *pSS, uint32_t) -> uint32_t {
   if (pSS->Hdr.UnitHdr.dwVersion != MAKE_VERSION(1, 0, 0, 0)) {
     return -1;
   }
 
-  unsigned int nMbCardNum = pSS->Hdr.dwSlot - SLOT4;
-  unsigned int nDeviceNum = nMbCardNum * 2;
+  uint32_t nMbCardNum = pSS->Hdr.dwSlot - SLOT4;
+  uint32_t nDeviceNum = nMbCardNum * 2;
   SY6522_AY8910 *pMB = &g_MB[nDeviceNum];
 
-  for (unsigned int i = 0; i < MB_UNITS_PER_CARD; i++) {
-    memcpy(&pMB->sy6522, &pSS->Unit[i].RegsSY6522, sizeof(SY6522));
-    memcpy(AY8910_GetRegsPtr(nDeviceNum), &pSS->Unit[i].RegsAY8910, 16);
-    memcpy(&pMB->SpeechChip, &pSS->Unit[i].RegsSSI263, sizeof(SSI263A));
-    pMB->nAYCurrentRegister = pSS->Unit[i].nAYCurrentRegister;
+  for (auto & i : pSS->Unit) {
+    memcpy(&pMB->sy6522, &i.RegsSY6522, sizeof(SY6522));
+    memcpy(AY8910_GetRegsPtr(nDeviceNum), &i.RegsAY8910, 16);
+    memcpy(&pMB->SpeechChip, &i.RegsSSI263, sizeof(SSI263A));
+    pMB->nAYCurrentRegister = i.nAYCurrentRegister;
 
     StartTimer(pMB);  // Attempt to start timer
 

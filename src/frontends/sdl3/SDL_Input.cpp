@@ -22,7 +22,7 @@ extern bool usingcursor;
 extern int x, y;
 
 void SDL_HandleEvent(SDL_Event *e) {
-  int x_local, y_local;
+  int x_local = 0, y_local = 0;
 
   switch (e->type) {
     case SDL_EVENT_QUIT:
@@ -72,17 +72,17 @@ void SDL_HandleEvent(SDL_Event *e) {
           if (g_state.dwSpeed > SPEED_MAX) {
             g_state.dwSpeed = SPEED_MAX;
           }
-          printf("Now speed=%d\n", (int) g_state.dwSpeed);
+          printf("Now speed=%d\n", static_cast<int>(g_state.dwSpeed));
           SetCurrentCLK6502();
         } else if (mysym == SDLK_KP_MINUS) {
           if (g_state.dwSpeed > SPEED_MIN) {
             g_state.dwSpeed = g_state.dwSpeed - 1;
           }
-          printf("Now speed=%d\n", (int) g_state.dwSpeed);
+          printf("Now speed=%d\n", static_cast<int>(g_state.dwSpeed));
           SetCurrentCLK6502();
         } else if (mysym == SDLK_KP_MULTIPLY) {
           g_state.dwSpeed = 10;
-          printf("Now speed=%d\n", (int) g_state.dwSpeed);
+          printf("Now speed=%d\n", static_cast<int>(g_state.dwSpeed));
           SetCurrentCLK6502();
         } else if (mysym == SDLK_CAPSLOCK) {
           Linapple_SetCapsLockState((mymod & SDL_KMOD_CAPS) != 0);
@@ -142,7 +142,7 @@ void SDL_HandleEvent(SDL_Event *e) {
         KeybSetAnyKeyDownStatus(false);
       }
 
-      if ((mysym >= SDLK_F1) && (mysym <= SDLK_F12) && ((SDL_Keycode)buttondown == mysym - SDLK_F1)) {
+      if ((mysym >= SDLK_F1) && (mysym <= SDLK_F12) && (static_cast<SDL_Keycode>(buttondown) == mysym - SDLK_F1)) {
         buttondown = -1;
         ProcessButtonClick(mysym - SDLK_F1, mymod);
       } else if (Frontend_HandleKeyEvent(mysym, false)) {

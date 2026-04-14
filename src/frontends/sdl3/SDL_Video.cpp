@@ -9,7 +9,7 @@ extern VideoSurface *g_hDebugScreen;
 extern std::recursive_mutex g_video_draw_mutex;
 extern SDL_Surface* screen;
 
-void StretchBltMemToFrameDC(void)
+void StretchBltMemToFrameDC()
 {
 	g_video_draw_mutex.lock();
     // In our new architecture, we just set frame ready and let the main loop draw it.
@@ -19,7 +19,7 @@ void StretchBltMemToFrameDC(void)
 
 auto SDLSurfaceToVideoSurface(SDL_Surface* s) -> VideoSurface {
     VideoSurface vs{};
-    vs.pixels = (uint8_t*)s->pixels;
+    vs.pixels = static_cast<uint8_t*>(s->pixels);
     vs.w = s->w;
     vs.h = s->h;
     vs.pitch = s->pitch;

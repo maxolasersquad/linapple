@@ -249,14 +249,14 @@ target_link_libraries(test-integration PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIE
 add_test(NAME test-integration COMMAND test-integration)
 
 # Test SSC
-add_executable(test-ssc tests/test_ssc.cpp src/apple2/SerialComms.cpp src/core/Common.cpp src/core/Log.cpp)
+add_executable(test-ssc tests/test_ssc.cpp src/apple2/SerialComms.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
 target_include_directories(test-ssc PRIVATE src src/core src/apple2 ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
 target_link_libraries(test-ssc PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
 add_test(NAME test-ssc COMMAND test-ssc)
 
 # Test Keyboard
 if(FRONTEND STREQUAL "sdl3")
-    add_executable(test-keyboard tests/full_keyboard_test.cpp src/core/Common.cpp src/core/Log.cpp)
+    add_executable(test-keyboard tests/full_keyboard_test.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
     target_include_directories(test-keyboard PRIVATE src src/core ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
     target_link_libraries(test-keyboard PRIVATE SDL3::SDL3 ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
     add_test(NAME test-keyboard COMMAND test-keyboard)

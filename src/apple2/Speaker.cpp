@@ -43,7 +43,7 @@ static uint64_t g_nSpkrQuietCycleCount = 0;
 static bool g_bSpkrRecentlyActive = false;
 static bool g_bSpkrToggleFlag = false;
 
-unsigned int soundtype = SOUND_WAVE;
+uint32_t soundtype = SOUND_WAVE;
 
 void SpkrDestroy() {}
 
@@ -71,11 +71,11 @@ static void Spkr_SetActive(bool bActive) {
   g_bSpkrRecentlyActive = bActive;
 }
 
-bool Spkr_IsActive() {
+auto Spkr_IsActive() -> bool {
   return g_bSpkrRecentlyActive;
 }
 
-unsigned char SpkrToggle(unsigned short, unsigned short, unsigned char, unsigned char, uint32_t nCyclesLeft) {
+auto SpkrToggle(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t nCyclesLeft) -> uint8_t {
   g_bSpkrToggleFlag = true;
 
   if (!g_bFullSpeed) {
@@ -92,12 +92,12 @@ unsigned char SpkrToggle(unsigned short, unsigned short, unsigned char, unsigned
   return MemReadFloatingBus(nCyclesLeft);
 }
 
-void SpkrUpdate(unsigned int totalcycles) {
+void SpkrUpdate(uint32_t totalcycles) {
   (void)totalcycles;
   if (!g_bSpkrToggleFlag) {
     if (!g_nSpkrQuietCycleCount) {
       g_nSpkrQuietCycleCount = g_nCumulativeCycles;
-    } else if (g_nCumulativeCycles - g_nSpkrQuietCycleCount > (uint64_t)g_fCurrentCLK6502 / 5) {
+    } else if (g_nCumulativeCycles - g_nSpkrQuietCycleCount > static_cast<uint64_t>(g_fCurrentCLK6502) / 5) {
       // After 0.2 sec of Apple time, deactivate spkr voice
       Spkr_SetActive(false);
     }
@@ -108,7 +108,7 @@ void SpkrUpdate(unsigned int totalcycles) {
   g_nSpkrLastCycle = g_nCumulativeCycles;
 }
 
-int SpkrGetEvents(SpkrEvent *events, int max_events) {
+auto SpkrGetEvents(SpkrEvent *events, int max_events) -> int {
   int count = (g_nNumSpkrEvents < max_events) ? g_nNumSpkrEvents : max_events;
   if (count > 0) {
     memcpy(events, g_spkrEvents, count * sizeof(SpkrEvent));
@@ -117,20 +117,20 @@ int SpkrGetEvents(SpkrEvent *events, int max_events) {
   return count;
 }
 
-uint64_t SpkrGetLastCycle() {
+auto SpkrGetLastCycle() -> uint64_t {
   return g_nSpkrLastCycle;
 }
 
-bool SpkrGetCurrentState() {
+auto SpkrGetCurrentState() -> bool {
   return g_bSpkrState;
 }
 
-unsigned int SpkrGetSnapshot(SS_IO_Speaker *pSS) {
+auto SpkrGetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
   pSS->g_nSpkrLastCycle = g_nSpkrLastCycle;
   return 0;
 }
 
-unsigned int SpkrSetSnapshot(SS_IO_Speaker *pSS) {
+auto SpkrSetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
   g_nSpkrLastCycle = pSS->g_nSpkrLastCycle;
   return 0;
 }

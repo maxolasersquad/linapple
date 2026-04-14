@@ -4,25 +4,22 @@
 #include "frontends/sdl3/PrinterFrontend.h"
 #include "core/Common_Globals.h"
 
-static unsigned int inactivity = 0;
-static unsigned int g_PrinterIdleLimit = 10;
-static FILE *file = NULL;
+static uint32_t inactivity = 0;
+static uint32_t g_PrinterIdleLimit = 10;
+static FilePtr file(nullptr, fclose);
 bool g_bPrinterAppend = true;
 
 static auto CheckPrint() -> bool
 {
   inactivity = 0;
-  if (file == nullptr) {
-    file = fopen(g_state.sParallelPrinterFile, (g_bPrinterAppend) ? "ab" : "wb");
+  if (!file) {
+    file.reset(fopen(g_state.sParallelPrinterFile, (g_bPrinterAppend) ? "ab" : "wb"));
   }
   return (file != nullptr);
 }
 
 static void ClosePrint() {
-  if (file != nullptr) {
-    fclose(file);
-    file = nullptr;
-  }
+  file.reset();
   inactivity = 0;
 }
 
@@ -38,8 +35,8 @@ void PrinterFrontend_Reset() {
   ClosePrint();
 }
 
-void PrinterFrontend_Update(unsigned int totalcycles) {
-  if (file == nullptr) {
+void PrinterFrontend_Update(uint32_t totalcycles) {
+  if (!file) {
     return;
   }
   if ((inactivity += totalcycles) > (Printer_GetIdleLimit() * 1000 * 1000))
@@ -53,18 +50,18 @@ void PrinterFrontend_SendChar(uint8_t value) {
   if (!CheckPrint()) {
     return;
   }
-  char c = value & 0x7F;
-  fwrite(&c, 1, 1, file);
+  char c = static_cast<char>(value & 0x7F);
+  fwrite(&c, 1, 1, file.get());
 }
 
 void PrinterFrontend_CheckStatus() {
   CheckPrint();
 }
 
-auto Printer_GetIdleLimit() -> unsigned int {
+auto Printer_GetIdleLimit() -> uint32_t {
   return g_PrinterIdleLimit;
 }
 
-void Printer_SetIdleLimit(unsigned int Duration) {
+void Printer_SetIdleLimit(uint32_t Duration) {
   g_PrinterIdleLimit = Duration;
 }

@@ -31,24 +31,23 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 const int EOL_NULL = 0;
 
-bool MemoryTextFile_t::Read( const std::string & pFileName )
+auto MemoryTextFile_t::Read( const std::string & pFileName ) -> bool
 {
 	bool bStatus = false;
-	FILE *hFile = fopen( pFileName.c_str(), "rb" );
+	FilePtr hFile(fopen( pFileName.c_str(), "rb" ), fclose);
 
 	if (hFile)
 	{
-		fseek( hFile, 0, SEEK_END );
-		long nSize = ftell( hFile );
-		fseek( hFile, 0, SEEK_SET );
+		fseek( hFile.get(), 0, SEEK_END );
+		long nSize = ftell( hFile.get() );
+		fseek( hFile.get(), 0, SEEK_SET );
 
-		m_vBuffer.reserve( nSize + 1 );
+		m_vBuffer.reserve( static_cast<size_t>(nSize) + 1 );
     // NOTE: Can NOT m_vBuffer.clear(); MUST insert() _before_ using at()
-		m_vBuffer.insert( m_vBuffer.begin(), nSize+1, 0 );
+		m_vBuffer.insert( m_vBuffer.begin(), static_cast<size_t>(nSize)+1, 0 );
 
 		char *pBuffer = & m_vBuffer.at(0);
-		bStatus=(fread((void*)pBuffer, nSize, 1, hFile)>0);
-		fclose(hFile);
+		bStatus=(fread(reinterpret_cast<void*>(pBuffer), static_cast<size_t>(nSize), 1, hFile.get())>0);
 
 		m_bDirty = true;
 		GetLinePointers();
@@ -75,20 +74,22 @@ void MemoryTextFile_t::GetLine( const int iLine, char *pLine, const int nMaxLine
 // cr/new lines are converted into null, string terminators
 void MemoryTextFile_t::GetLinePointers()
 {
-	if (! m_bDirty)
+	if (! m_bDirty) {
 		return;
+}
 
 	m_vLines.erase( m_vLines.begin(), m_vLines.end() );
 	char *pBegin = & m_vBuffer[ 0 ];
 	char *pLast  = & m_vBuffer[ m_vBuffer.size()-1 ];
 
-	char *pEnd = NULL;
-	char *pStartNextLine;
+	char *pEnd = nullptr;
+	char *pStartNextLine = nullptr;
 
 	while (pBegin <= pLast)
 	{
-		if ( *pBegin )	// Only keep non-empty lines
+		if ( *pBegin ) {	// Only keep non-empty lines
 			m_vLines.push_back( pBegin );
+}
 
 		pEnd = const_cast<char*>( SkipUntilEOL( pBegin ));
 
@@ -120,13 +121,14 @@ void MemoryTextFile_t::PushLine( char *pLine )
 	char *pSrc = pLine;
 	while (pSrc && *pSrc)
 	{
-		if (*pSrc == CHAR_CR)
+		if (*pSrc == CHAR_CR) {
 			m_vBuffer.push_back( EOL_NULL );
-		else
-		if (*pSrc == CHAR_LF)
+		} else
+		if (*pSrc == CHAR_LF) {
 			m_vBuffer.push_back( EOL_NULL );
-		else
+		} else {
 			m_vBuffer.push_back( *pSrc );
+}
 		pSrc++;
 	}
 	m_vBuffer.push_back( EOL_NULL );

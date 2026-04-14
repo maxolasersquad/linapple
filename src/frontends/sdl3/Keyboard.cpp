@@ -1,3 +1,4 @@
+#include <array>
 #include "core/Common.h"
 #include "apple2/Keyboard.h"
 #include "frontends/sdl3/Frontend.h"
@@ -5,7 +6,8 @@
 #include "apple2/Structs.h"
 #include "core/LinAppleCore.h"
 
-uint8_t Frontend_TranslateKey(SDL_Keycode key, SDL_Keymod mod) {
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): key and mod are semantically distinct
+auto Frontend_TranslateKey(SDL_Keycode key, SDL_Keymod mod) -> uint8_t {
   bool bShift = (mod & SDL_KMOD_SHIFT) != 0;
   bool bCtrl = (mod & SDL_KMOD_CTRL) != 0;
   bool bCaps = KeybGetCapsStatus();
@@ -22,8 +24,8 @@ uint8_t Frontend_TranslateKey(SDL_Keycode key, SDL_Keymod mod) {
     }
   } else if (key >= '0' && key <= '9') {
     if (bShift) {
-      static const uint8_t shift_nums[] = { ')','!','@','#','$','%','^','&','*','(' };
-      apple_code = shift_nums[key - '0'];
+      static const std::array<uint8_t, 10> shift_nums = {{')', '!', '@', '#', '$', '%', '^', '&', '*', '('}};
+      apple_code = shift_nums[static_cast<size_t>(key - '0')];
     } else {
       apple_code = key;
     }
@@ -60,33 +62,34 @@ uint8_t Frontend_TranslateKey(SDL_Keycode key, SDL_Keymod mod) {
   return apple_code;
 }
 
-LinAppleKey Frontend_ToCoreKey(int key, unsigned int mod) {
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): key and mod are semantically distinct
+auto Frontend_ToCoreKey(int key, uint32_t mod) -> LinAppleKey {
   bool bShift = (mod & SDL_KMOD_SHIFT) != 0;
   bool bCtrl = (mod & SDL_KMOD_CTRL) != 0;
 
   if (key < 128 && key >= 32) {
-      if (bCtrl && key >= 'a' && key <= 'z') return (LinAppleKey)(key - 'a' + 1);
+      if (bCtrl && key >= 'a' && key <= 'z') return static_cast<LinAppleKey>(key - 'a' + 1);
       if (bShift) {
-          if (key >= 'a' && key <= 'z') return (LinAppleKey)(key - 'a' + 'A');
+          if (key >= 'a' && key <= 'z') return static_cast<LinAppleKey>(key - 'a' + 'A');
           if (key >= '0' && key <= '9') {
-              static const uint8_t shift_nums[] = { ')','!','@','#','$','%','^','&','*','(' };
-              return (LinAppleKey)shift_nums[key - '0'];
+            static const std::array<uint8_t, 10> shift_nums = {{')', '!', '@', '#', '$', '%', '^', '&', '*', '('}};
+            return static_cast<LinAppleKey>(shift_nums[static_cast<size_t>(key - '0')]);
           }
           switch(key) {
-              case SDLK_GRAVE: return (LinAppleKey)'~';
-              case SDLK_MINUS: return (LinAppleKey)'_';
-              case SDLK_EQUALS: return (LinAppleKey)'+';
-              case SDLK_LEFTBRACKET: return (LinAppleKey)'{';
-              case SDLK_RIGHTBRACKET: return (LinAppleKey)'}';
-              case SDLK_BACKSLASH: return (LinAppleKey)'|';
-              case SDLK_SEMICOLON: return (LinAppleKey)':';
-              case SDLK_APOSTROPHE: return (LinAppleKey)'"';
-              case SDLK_COMMA: return (LinAppleKey)'<';
-              case SDLK_PERIOD: return (LinAppleKey)'>';
-              case SDLK_SLASH: return (LinAppleKey)'?';
+              case SDLK_GRAVE: return static_cast<LinAppleKey>('~');
+              case SDLK_MINUS: return static_cast<LinAppleKey>('_');
+              case SDLK_EQUALS: return static_cast<LinAppleKey>('+');
+              case SDLK_LEFTBRACKET: return static_cast<LinAppleKey>('{');
+              case SDLK_RIGHTBRACKET: return static_cast<LinAppleKey>('}');
+              case SDLK_BACKSLASH: return static_cast<LinAppleKey>('|');
+              case SDLK_SEMICOLON: return static_cast<LinAppleKey>(':');
+              case SDLK_APOSTROPHE: return static_cast<LinAppleKey>('"');
+              case SDLK_COMMA: return static_cast<LinAppleKey>('<');
+              case SDLK_PERIOD: return static_cast<LinAppleKey>('>');
+              case SDLK_SLASH: return static_cast<LinAppleKey>('?');
           }
       }
-      return (LinAppleKey)key;
+      return static_cast<LinAppleKey>(key);
   }
 
   switch (key) {
@@ -132,7 +135,7 @@ LinAppleKey Frontend_ToCoreKey(int key, unsigned int mod) {
   }
 }
 
-bool Frontend_HandleKeyEvent(SDL_Keycode key, bool bDown) {
+auto Frontend_HandleKeyEvent(SDL_Keycode key, bool bDown) -> bool {
   switch (key) {
     case SDLK_LALT:
     case SDLK_LGUI:

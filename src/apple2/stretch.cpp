@@ -1,6 +1,7 @@
 #include "core/Common.h"
 #include "Video.h"
 #include "apple2/stretch.h"
+#include <cstddef>
 #include <cstring>
 #include <pthread.h>
 #include <cstddef>
@@ -45,7 +46,7 @@ static void copy_row_or2(uint16_t *src, int src_w, uint16_t *dst, int dst_w) { C
 static void copy_row_or4(uint32_t *src, int src_w, uint32_t *dst, int dst_w) { CopyRowOr(src, src_w, dst, dst_w); }
 
 static uint32_t g_palette_lut[256];
-static VideoColor* g_last_palette = NULL;
+static VideoColor* g_last_palette = nullptr;
 
 static void UpdatePaletteLUT(VideoColor* palette) {
     if (!palette) return;
@@ -102,8 +103,8 @@ static void copy_row_or1to4(uint8_t *src, int src_w, uint32_t *dst, int dst_w, V
 }
 
 static void copy_row3(uint8_t *src, int src_w, uint8_t *dst, int dst_w) {
-  int i;
-  int pos, inc;
+  int i = 0;
+  int pos = 0, inc = 0;
   uint8_t pixel[3] = {0, 0, 0};
 
   pos = 0x10000;
@@ -122,14 +123,14 @@ static void copy_row3(uint8_t *src, int src_w, uint8_t *dst, int dst_w) {
   }
 }
 
-int VideoSoftStretch(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, VideoRect *dstrect) {
-  int pos, inc;
-  int dst_maxrow;
-  int src_row, dst_row;
-  uint8_t *srcp = NULL;
-  uint8_t *dstp;
-  VideoRect full_src;
-  VideoRect full_dst;
+auto VideoSoftStretch(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, VideoRect *dstrect) -> int {
+  int pos = 0, inc = 0;
+  int dst_maxrow = 0;
+  int src_row = 0, dst_row = 0;
+  uint8_t *srcp = nullptr;
+  uint8_t *dstp = nullptr;
+  VideoRect full_src{};
+  VideoRect full_dst{};
   if (!src || !dst) return -1;
   if (!src->pixels || !dst->pixels) {
       return -1;
@@ -158,27 +159,27 @@ int VideoSoftStretch(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, V
   dst_row = dstrect->y;
 
   for (dst_maxrow = dst_row + dstrect->h; dst_row < dst_maxrow; ++dst_row) {
-    dstp = (uint8_t *) dst->pixels + (dst_row * dst->pitch) + (dstrect->x * dbpp);
+    dstp = dst->pixels + (dst_row * dst->pitch) + (static_cast<ptrdiff_t>(dstrect->x * dbpp));
     while (pos >= 0x10000L) {
-      srcp = (uint8_t *) src->pixels + (src_row * src->pitch) + (srcrect->x * sbpp);
+      srcp = src->pixels + (src_row * src->pitch) + (static_cast<ptrdiff_t>(srcrect->x * sbpp));
       ++src_row;
       pos -= 0x10000L;
     }
     if (sbpp == 1 && dbpp == 4) {
-        copy_row1to4(srcp, srcrect->w, (uint32_t *)dstp, dstrect->w, src->palette);
+        copy_row1to4(srcp, srcrect->w, reinterpret_cast<uint32_t *>(dstp), dstrect->w, src->palette);
     } else {
         switch (dbpp) {
           case 1:
             copy_row1(srcp, srcrect->w, dstp, dstrect->w);
             break;
           case 2:
-            copy_row2((uint16_t *) srcp, srcrect->w, (uint16_t *) dstp, dstrect->w);
+            copy_row2(reinterpret_cast<uint16_t *>(srcp), srcrect->w, reinterpret_cast<uint16_t *>(dstp), dstrect->w);
             break;
           case 3:
             copy_row3(srcp, srcrect->w, dstp, dstrect->w);
             break;
           case 4:
-            copy_row4((uint32_t *) srcp, srcrect->w, (uint32_t *) dstp, dstrect->w);
+            copy_row4(reinterpret_cast<uint32_t *>(srcp), srcrect->w, reinterpret_cast<uint32_t *>(dstp), dstrect->w);
             break;
         }
     }
@@ -189,8 +190,8 @@ int VideoSoftStretch(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, V
 }
 
 static void copy8mono(uint8_t *src, int src_w, uint8_t *dst, int dst_w, uint8_t fgbrush, uint8_t bgbrush) {
-  int i;
-  int pos, inc;
+  int i = 0;
+  int pos = 0, inc = 0;
   uint8_t pixel = 0;
   pos = 0x10000;
   inc = (src_w << 16) / dst_w;
@@ -209,8 +210,8 @@ static void copy8mono(uint8_t *src, int src_w, uint8_t *dst, int dst_w, uint8_t 
 }
 
 static void copy8mono4(uint8_t *src, int src_w, uint32_t *dst, int dst_w, uint32_t fgbrush, uint32_t bgbrush) {
-  int i;
-  int pos, inc;
+  int i = 0;
+  int pos = 0, inc = 0;
   uint8_t pixel = 0;
   pos = 0x10000;
   inc = (src_w << 16) / dst_w;
@@ -228,15 +229,15 @@ static void copy8mono4(uint8_t *src, int src_w, uint32_t *dst, int dst_w, uint32
   }
 }
 
-int VideoSoftStretchMono8(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, VideoRect *dstrect, uint32_t fgbrush, uint32_t bgbrush)
+auto VideoSoftStretchMono8(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, VideoRect *dstrect, uint32_t fgbrush, uint32_t bgbrush) -> int
 {
-  int pos, inc;
-  int dst_maxrow;
-  int src_row, dst_row;
-  uint8_t *srcp = NULL;
-  uint8_t *dstp;
-  VideoRect full_src;
-  VideoRect full_dst;
+  int pos = 0, inc = 0;
+  int dst_maxrow = 0;
+  int src_row = 0, dst_row = 0;
+  uint8_t *srcp = nullptr;
+  uint8_t *dstp = nullptr;
+  VideoRect full_src{};
+  VideoRect full_dst{};
   if (!src || !dst) return -1;
   if (!src->pixels || !dst->pixels) {
       return -1;
@@ -265,18 +266,18 @@ int VideoSoftStretchMono8(VideoSurface *src, VideoRect *srcrect, VideoSurface *d
   dst_row = dstrect->y;
 
   for (dst_maxrow = dst_row + dstrect->h; dst_row < dst_maxrow; ++dst_row) {
-    dstp = (uint8_t *) dst->pixels + (dst_row * dst->pitch) + (dstrect->x * dbpp);
+    dstp = dst->pixels + (dst_row * dst->pitch) + (static_cast<ptrdiff_t>(dstrect->x * dbpp));
     while (pos >= 0x10000L) {
-      srcp = (uint8_t *) src->pixels + (src_row * src->pitch) + (srcrect->x * sbpp);
+      srcp = src->pixels + (src_row * src->pitch) + (static_cast<ptrdiff_t>(srcrect->x * sbpp));
       ++src_row;
       pos -= 0x10000L;
     }
     if (sbpp == 1 && dbpp == 4) {
-        copy8mono4(srcp, srcrect->w, (uint32_t *)dstp, dstrect->w, fgbrush, bgbrush);
+        copy8mono4(srcp, srcrect->w, reinterpret_cast<uint32_t *>(dstp), dstrect->w, fgbrush, bgbrush);
     } else {
         switch (dbpp) {
           case 1:
-            copy8mono(srcp, srcrect->w, dstp, dstrect->w, (uint8_t)fgbrush, (uint8_t)bgbrush);
+            copy8mono(srcp, srcrect->w, dstp, dstrect->w, static_cast<uint8_t>(fgbrush), static_cast<uint8_t>(bgbrush));
             break;
           default:
             break;
@@ -288,14 +289,14 @@ int VideoSoftStretchMono8(VideoSurface *src, VideoRect *srcrect, VideoSurface *d
   return (0);
 }
 
-int VideoSoftStretchOr(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, VideoRect *dstrect) {
-  int pos, inc;
-  int dst_maxrow;
-  int src_row, dst_row;
-  uint8_t *srcp = NULL;
-  uint8_t *dstp;
-  VideoRect full_src;
-  VideoRect full_dst;
+auto VideoSoftStretchOr(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst, VideoRect *dstrect) -> int {
+  int pos = 0, inc = 0;
+  int dst_maxrow = 0;
+  int src_row = 0, dst_row = 0;
+  uint8_t *srcp = nullptr;
+  uint8_t *dstp = nullptr;
+  VideoRect full_src{};
+  VideoRect full_dst{};
   if (!src || !dst) return -1;
   if (!src->pixels || !dst->pixels) {
       return -1;
@@ -324,27 +325,27 @@ int VideoSoftStretchOr(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst,
   dst_row = dstrect->y;
 
   for (dst_maxrow = dst_row + dstrect->h; dst_row < dst_maxrow; ++dst_row) {
-    dstp = (uint8_t *) dst->pixels + (dst_row * dst->pitch) + (dstrect->x * dbpp);
+    dstp = dst->pixels + (dst_row * dst->pitch) + (static_cast<ptrdiff_t>(dstrect->x * dbpp));
     while (pos >= 0x10000L) {
-      srcp = (uint8_t *) src->pixels + (src_row * src->pitch) + (srcrect->x * sbpp);
+      srcp = src->pixels + (src_row * src->pitch) + (static_cast<ptrdiff_t>(srcrect->x * sbpp));
       ++src_row;
       pos -= 0x10000L;
     }
     if (sbpp == 1 && dbpp == 4) {
-        copy_row_or1to4(srcp, srcrect->w, (uint32_t *)dstp, dstrect->w, src->palette);
+        copy_row_or1to4(srcp, srcrect->w, reinterpret_cast<uint32_t *>(dstp), dstrect->w, src->palette);
     } else {
         switch (dbpp) {
           case 1:
             copy_row_or1(srcp, srcrect->w, dstp, dstrect->w);
             break;
           case 2:
-            copy_row_or2((uint16_t *) srcp, srcrect->w, (uint16_t *) dstp, dstrect->w);
+            copy_row_or2(reinterpret_cast<uint16_t *>(srcp), srcrect->w, reinterpret_cast<uint16_t *>(dstp), dstrect->w);
             break;
           case 3:
             copy_row3(srcp, srcrect->w, dstp, dstrect->w);
             break;
           case 4:
-            copy_row_or4((uint32_t *) srcp, srcrect->w, (uint32_t *) dstp, dstrect->w);
+            copy_row_or4(reinterpret_cast<uint32_t *>(srcp), srcrect->w, reinterpret_cast<uint32_t *>(dstp), dstrect->w);
             break;
         }
     }
@@ -354,33 +355,33 @@ int VideoSoftStretchOr(VideoSurface *src, VideoRect *srcrect, VideoSurface *dst,
   return (0);
 }
 
-VideoSurface *font_sfc = NULL;
+VideoSurface *font_sfc = nullptr;
 
-bool fonts_initialization(void) {
+auto fonts_initialization() -> bool {
     // This will be handled by the frontend loading assets and passing them to core
     // Or core will load them using its own non-SDL loader.
     // For now, I'll let Video.cpp handle it.
     return true;
 }
 
-void fonts_termination(void) {
+void fonts_termination() {
   if (font_sfc) {
     free(font_sfc->pixels);
     free(font_sfc);
-    font_sfc = NULL;
+    font_sfc = nullptr;
   }
 }
 
 void font_print(int x, int y, const char *text, VideoSurface *surface, double kx, double ky)
 {
-  int i, c;
-  VideoRect s, d;
+  int i = 0, c = 0;
+  VideoRect s{}, d{};
 
   if (!font_sfc) return;
 
   for (i = 0; text[i] != 0 && x < surface->w; i++) {
-    int row;
-    c = (unsigned char)(text[i]);
+    int row = 0;
+    c = static_cast<uint8_t>(text[i]);
 
     if (c > 127) {
       c = '?';
@@ -393,26 +394,26 @@ void font_print(int x, int y, const char *text, VideoSurface *surface, double kx
     s.h = FONT_SIZE_Y;
     s.w = FONT_SIZE_X;
 
-    d.x = (int)(x + i * FONT_SIZE_X * kx);
+    d.x = static_cast<int>(x + i * FONT_SIZE_X * kx);
     d.y = y;
-    d.w = (int)(s.w * kx);
-    d.h = (int)(s.h * ky);
+    d.w = static_cast<int>(s.w * kx);
+    d.h = static_cast<int>(s.h * ky);
     VideoSoftStretchOr(font_sfc, &s, surface, &d);
   }
 }
 
 void font_print_right(int x, int y, const char *text, VideoSurface *surface, double kx, double ky)
 {
-  int i, c;
-  VideoRect s, d;
+  int i = 0, c = 0;
+  VideoRect s{}, d{};
 
   if (!font_sfc) return;
 
-  x -= (int)(strlen(text) * FONT_SIZE_X * kx);
+  x -= static_cast<int>(strlen(text) * FONT_SIZE_X * kx);
 
   for (i = 0; text[i] != 0 && x < surface->w; i++) {
-    int row;
-    c = (unsigned char)(text[i]);
+    int row = 0;
+    c = static_cast<uint8_t>(text[i]);
     if (c > 127) {
       c = '?';
     }
@@ -423,29 +424,29 @@ void font_print_right(int x, int y, const char *text, VideoSurface *surface, dou
     s.h = FONT_SIZE_Y;
     s.w = FONT_SIZE_X;
 
-    d.x = (int)(x + i * FONT_SIZE_X * kx);
+    d.x = static_cast<int>(x + i * FONT_SIZE_X * kx);
     d.y = y;
-    d.w = (int)(s.w * kx);
-    d.h = (int)(s.h * ky);
+    d.w = static_cast<int>(s.w * kx);
+    d.h = static_cast<int>(s.h * ky);
     VideoSoftStretchOr(font_sfc, &s, surface, &d);
   }
 }
 
 void font_print_centered(int x, int y, const char *text, VideoSurface *surface, double kx, double ky)
 {
-  int i, c;
-  VideoRect s, d;
+  int i = 0, c = 0;
+  VideoRect s{}, d{};
 
   if (!font_sfc) return;
 
-  x -= (int)(strlen(text) * FONT_SIZE_X * kx / 2);
+  x -= static_cast<int>(strlen(text) * FONT_SIZE_X * kx / 2);
   if (x < 0) {
     x = 0;
   }
 
   for (i = 0; text[i] != 0 && ((x * kx) < surface->w); i++) {
-    int row;
-    c = (unsigned char)(text[i]);
+    int row = 0;
+    c = static_cast<uint8_t>(text[i]);
     if (c > 127) {
       c = '?';
     }
@@ -456,10 +457,10 @@ void font_print_centered(int x, int y, const char *text, VideoSurface *surface, 
     s.h = FONT_SIZE_Y;
     s.w = FONT_SIZE_X;
 
-    d.x = (int)(x + i * FONT_SIZE_X * kx);
+    d.x = static_cast<int>(x + i * FONT_SIZE_X * kx);
     d.y = y;
-    d.w = (int)(s.w * kx);
-    d.h = (int)(s.h * ky);
+    d.w = static_cast<int>(s.w * kx);
+    d.h = static_cast<int>(s.h * ky);
     VideoSoftStretchOr(font_sfc, &s, surface, &d);
   }
 }
@@ -467,8 +468,8 @@ void font_print_centered(int x, int y, const char *text, VideoSurface *surface, 
 void surface_fader(VideoSurface *surface, float r_factor, float g_factor, float b_factor, float a_factor, VideoRect *r) {
   (void)a_factor;
   (void)r;
-  int i;
-  VideoColor *colors;
+  int i = 0;
+  VideoColor *colors = nullptr;
 
   if (surface->bpp != 1) {
     return;
@@ -476,9 +477,9 @@ void surface_fader(VideoSurface *surface, float r_factor, float g_factor, float 
 
   colors = surface->palette;
   for (i = 0; i < 256; i++) {
-    colors[i].r = (uint8_t)(colors[i].r * r_factor);
-    colors[i].g = (uint8_t)(colors[i].g * g_factor);
-    colors[i].b = (uint8_t)(colors[i].b * b_factor);
+    colors[i].r = static_cast<uint8_t>(colors[i].r * r_factor);
+    colors[i].g = static_cast<uint8_t>(colors[i].g * g_factor);
+    colors[i].b = static_cast<uint8_t>(colors[i].b * b_factor);
   }
 }
 
@@ -487,23 +488,23 @@ void putpixel(VideoSurface *surface, int x, int y, uint32_t pixel) {
     return;
   }
 
-  uint8_t *p = (uint8_t *) surface->pixels + y * surface->pitch + x * surface->bpp;
+  uint8_t *p = surface->pixels + y * surface->pitch + static_cast<ptrdiff_t>(x * surface->bpp);
 
   switch (surface->bpp) {
     case 1:
-      *p = (uint8_t)pixel;
+      *p = static_cast<uint8_t>(pixel);
       break;
     case 2:
-      *(uint16_t *) p = (uint16_t)pixel;
+      *reinterpret_cast<uint16_t *>(p) = static_cast<uint16_t>(pixel);
       break;
     case 4:
-      *(uint32_t *) p = pixel;
+      *reinterpret_cast<uint32_t *>(p) = pixel;
       break;
   }
 }
 
 void rectangle(VideoSurface *surface, int x, int y, int w, int h, uint32_t pixel) {
-  int i;
+  int i = 0;
 
   for (i = 0; i < w; i++) {
     putpixel(surface, x + i, y, pixel);

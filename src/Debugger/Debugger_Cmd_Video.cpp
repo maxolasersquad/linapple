@@ -7,10 +7,11 @@
 #include "Debugger_Help.h"
 #include <cstring>
 #include <cstddef>
+#include <array>
 
 extern VideoScannerDisplayInfo g_videoScannerDisplayInfo;
 
-Update_t CmdVideoScannerInfo(int nArgs)
+auto CmdVideoScannerInfo(int nArgs) -> Update_t
 {
   if (nArgs != 1)
   {
@@ -18,16 +19,17 @@ Update_t CmdVideoScannerInfo(int nArgs)
   }
   else
   {
-    if (strcmp(g_aArgs[1].sArg, "dec") == 0)
+    if (strcmp(g_aArgs[1].sArg, "dec") == 0) {
       g_videoScannerDisplayInfo.isDecimal = true;
-    else if (strcmp(g_aArgs[1].sArg, "hex") == 0)
+    } else if (strcmp(g_aArgs[1].sArg, "hex") == 0) {
       g_videoScannerDisplayInfo.isDecimal = false;
-    else if (strcmp(g_aArgs[1].sArg, "real") == 0)
+    } else if (strcmp(g_aArgs[1].sArg, "real") == 0) {
       g_videoScannerDisplayInfo.isHorzReal = true;
-    else if (strcmp(g_aArgs[1].sArg, "apple") == 0)
+    } else if (strcmp(g_aArgs[1].sArg, "apple") == 0) {
       g_videoScannerDisplayInfo.isHorzReal = false;
-    else
+    } else {
       return Help_Arg_1(CMD_VIDEO_SCANNER_INFO);
+}
   }
 
   char sText[CONSOLE_WIDTH];
@@ -37,7 +39,7 @@ Update_t CmdVideoScannerInfo(int nArgs)
   return UPDATE_ALL;
 }
 
-Update_t CmdCyclesInfo(int nArgs)
+auto CmdCyclesInfo(int nArgs) -> Update_t
 {
   if (nArgs != 1)
   {
@@ -45,12 +47,13 @@ Update_t CmdCyclesInfo(int nArgs)
   }
   else
   {
-    if (strcmp(g_aArgs[1].sArg, "abs") == 0)
+    if (strcmp(g_aArgs[1].sArg, "abs") == 0) {
       g_videoScannerDisplayInfo.isAbsCycle = true;
-    else if (strcmp(g_aArgs[1].sArg, "rel") == 0)
+    } else if (strcmp(g_aArgs[1].sArg, "rel") == 0) {
       g_videoScannerDisplayInfo.isAbsCycle = false;
-    else
+    } else {
       return Help_Arg_1(CMD_CYCLES_INFO);
+}
   }
 
   char sText[CONSOLE_WIDTH];

@@ -24,23 +24,27 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cstring>
 #include <cstdint>
 
-#define CRA_IRQ1    0x80
-#define CRA_IRQ2    0x40
-#define CRA_CA2_OUT 0x20
-#define CRA_CA2_SEL 0x10
-#define CRA_CA2_LVL 0x08
-#define CRA_DDR_SEL 0x04
-#define CRA_CA1_SEL 0x02
-#define CRA_CA1_EN  0x01
+enum {
+  CRA_IRQ1 =    0x80,
+  CRA_IRQ2 =    0x40,
+  CRA_CA2_OUT = 0x20,
+  CRA_CA2_SEL = 0x10,
+  CRA_CA2_LVL = 0x08,
+  CRA_DDR_SEL = 0x04,
+  CRA_CA1_SEL = 0x02,
+  CRA_CA1_EN =  0x01
+};
 
-#define CRB_IRQ1    0x80
-#define CRB_IRQ2    0x40
-#define CRB_CB2_OUT 0x20
-#define CRB_CB2_SEL 0x10
-#define CRB_CB2_LVL 0x08
-#define CRB_DDR_SEL 0x04
-#define CRB_CB1_SEL 0x02
-#define CRB_CB1_EN  0x01
+enum {
+  CRB_IRQ1 =    0x80,
+  CRB_IRQ2 =    0x40,
+  CRB_CB2_OUT = 0x20,
+  CRB_CB2_SEL = 0x10,
+  CRB_CB2_LVL = 0x08,
+  CRB_DDR_SEL = 0x04,
+  CRB_CB1_SEL = 0x02,
+  CRB_CB1_EN =  0x01
+};
 
 #define PIA_CALL(h, val) if (h.func) h.func(h.objTo, val)
 

@@ -46,41 +46,36 @@ bool g_bSaveStateOnExit = false;
 
 static char g_szSaveStateFilename[MAX_PATH] = {0};
 
-char *Snapshot_GetFilename() {
+auto Snapshot_GetFilename() -> char * {
   return g_szSaveStateFilename;
 }
 
 void Snapshot_SetFilename(const char *pszFilename) {
-  if (*pszFilename)
-    strcpy(g_szSaveStateFilename, (const char *) pszFilename);
-  else
+  if (*pszFilename) {
+    strcpy(g_szSaveStateFilename, pszFilename);
+  } else {
     strcpy(g_szSaveStateFilename, DEFAULT_SNAPSHOT_NAME);
+}
 }
 
 void Snapshot_LoadState() {
   char szMessage[32 + MAX_PATH];
 
-  APPLEWIN_SNAPSHOT *pSS = (APPLEWIN_SNAPSHOT * )
-  new char[sizeof(APPLEWIN_SNAPSHOT)];
+  std::unique_ptr<APPLEWIN_SNAPSHOT> pSS(new APPLEWIN_SNAPSHOT());
 
   try {
-    if (pSS == NULL)
-      throw (0);
+    memset(pSS.get(), 0, sizeof(APPLEWIN_SNAPSHOT));
+    FilePtr hFile(fopen(g_szSaveStateFilename, "rb"), fclose);
 
-    memset(pSS, 0, sizeof(APPLEWIN_SNAPSHOT));
-    FILE* hFile = fopen(g_szSaveStateFilename, "rb");
-
-    if (hFile == NULL) {
+    if (!hFile) {
       strcpy(szMessage, "File not found: ");
       strcpy(szMessage + strlen(szMessage), g_szSaveStateFilename);
       throw (0);
     }
 
-    unsigned int dwBytesRead;
-    dwBytesRead = fread(pSS, 1, sizeof(APPLEWIN_SNAPSHOT), hFile);
+    uint32_t dwBytesRead = 0;
+    dwBytesRead = static_cast<uint32_t>(fread(pSS.get(), 1, sizeof(APPLEWIN_SNAPSHOT), hFile.get()));
     bool bRes = (dwBytesRead == sizeof(APPLEWIN_SNAPSHOT));
-
-    fclose(hFile);
 
     if (!bRes || (dwBytesRead != sizeof(APPLEWIN_SNAPSHOT))) {
       // File size wrong: probably because of version mismatch or corrupt file
@@ -88,7 +83,7 @@ void Snapshot_LoadState() {
       throw (0);
     }
 
-    if (pSS->Hdr.dwTag != (unsigned int) AW_SS_TAG) {
+    if (pSS->Hdr.dwTag != static_cast<uint32_t>AW_SS_TAG) {
       strcpy(szMessage, "File corrupt");
       throw (0);
     }
@@ -132,18 +127,12 @@ void Snapshot_LoadState() {
   } catch (int) {
     fprintf(stderr, "%s\n", szMessage); // instead of wndzoooe messagebox let's use powerful stderr
   }
-
-  delete[] pSS;
 }
 
 void Snapshot_SaveState() {
-  APPLEWIN_SNAPSHOT *pSS = (APPLEWIN_SNAPSHOT * )
-  new char[sizeof(APPLEWIN_SNAPSHOT)];
-  if (pSS == NULL) {
-    return;
-  }
+  std::unique_ptr<APPLEWIN_SNAPSHOT> pSS(new APPLEWIN_SNAPSHOT());
 
-  memset(pSS, 0, sizeof(APPLEWIN_SNAPSHOT));
+  memset(pSS.get(), 0, sizeof(APPLEWIN_SNAPSHOT));
 
   pSS->Hdr.dwTag = AW_SS_TAG;
   pSS->Hdr.dwVersion = MAKE_VERSION(1, 0, 0, 1);
@@ -188,21 +177,19 @@ void Snapshot_SaveState() {
   // Slot6: Disk][
   DiskGetSnapshot(&pSS->Disk2, 6);
 
-  FILE* hFile = fopen(g_szSaveStateFilename, "wb");
+  FilePtr hFile(fopen(g_szSaveStateFilename, "wb"), fclose);
 
-  if (hFile != NULL) {
-    fwrite(pSS, 1, sizeof(APPLEWIN_SNAPSHOT), hFile);
-    fclose(hFile);
+  if (hFile) {
+    fwrite(pSS.get(), 1, sizeof(APPLEWIN_SNAPSHOT), hFile.get());
   }
-
-  delete[] pSS;
 }
 
 void Snapshot_Startup() {
   static bool bDone = false;
 
-  if (!g_bSaveStateOnExit || bDone)
+  if (!g_bSaveStateOnExit || bDone) {
     return;
+}
 
   Snapshot_LoadState();
 

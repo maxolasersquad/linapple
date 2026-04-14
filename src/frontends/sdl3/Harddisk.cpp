@@ -95,7 +95,7 @@ void HD_Select(int nDrive)
 
   std::string filename;      // given filename
   std::string fullPath;  // full path for it
-  bool isDirectory;      // if given filename is a directory?
+  bool isDirectory = false;      // if given filename is a directory?
 
   fileIndex = backdx;
   isDirectory = true;

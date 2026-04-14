@@ -3,7 +3,7 @@
 #include "Debugger_Commands.h"
 #include <cstddef>
 
-Update_t CmdDisk ( int nArgs)
+auto CmdDisk ( int nArgs) -> Update_t
 {
   (void)nArgs;
   // TODO

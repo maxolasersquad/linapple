@@ -38,7 +38,7 @@ extern bool g_bProfiling;
 
 // Externs for globals defined elsewhere
 extern int g_nDisasmDisplayLines;
-extern unsigned short g_nDisasmCurAddress;
+extern uint16_t g_nDisasmCurAddress;
 extern int g_nDisasmCurLine;
 extern FontConfig_t g_aFontConfig[ NUM_FONTS ];
 extern int g_iFontSpacing;
@@ -49,29 +49,33 @@ extern int g_iColorScheme;
 
 // Local prototypes
 void WindowUpdateSizes();
-int GetConsoleTopPixels(int nConsoleDisplayLines);
+auto GetConsoleTopPixels(int nConsoleDisplayLines) -> int;
 void CpuSetupBenchmark();
 void ProfileReset();
 void ProfileFormat( bool bExport, int iFormat );
-char* ProfileLinePeek( int iLine );
-bool ProfileSave();
+auto ProfileLinePeek( int iLine ) -> char*;
+auto ProfileSave() -> bool;
 
 // Implementation
 
 //===========================================================================
-Update_t CmdConfigColorMono (int nArgs)
+auto CmdConfigColorMono (int nArgs) -> Update_t
 {
   int iScheme = 0;
 
-  if (g_iCommand == CMD_CONFIG_COLOR)
+  if (g_iCommand == CMD_CONFIG_COLOR) {
     iScheme = SCHEME_COLOR;
-  if (g_iCommand == CMD_CONFIG_MONOCHROME)
+}
+  if (g_iCommand == CMD_CONFIG_MONOCHROME) {
     iScheme = SCHEME_MONO;
-  if (g_iCommand == CMD_CONFIG_BW)
+}
+  if (g_iCommand == CMD_CONFIG_BW) {
     iScheme = SCHEME_BW;
+}
 
-  if ((iScheme < 0) || (iScheme > NUM_COLOR_SCHEMES)) // sanity check
+  if ((iScheme < 0) || (iScheme > NUM_COLOR_SCHEMES)) { // sanity check
     iScheme = SCHEME_COLOR;
+}
 
   if (! nArgs)
   {
@@ -81,14 +85,16 @@ Update_t CmdConfigColorMono (int nArgs)
   }
 
 //  if ((nArgs != 1) && (nArgs != 4))
-  if (nArgs > 4)
+  if (nArgs > 4) {
     return HelpLastCommand();
+}
 
   int iColor = g_aArgs[ 1 ].nValue;
-  if ((iColor < 0) || iColor >= NUM_DEBUG_COLORS)
+  if ((iColor < 0) || iColor >= NUM_DEBUG_COLORS) {
     return HelpLastCommand();
+}
 
-  int iParam;
+  int iParam = 0;
   int nFound = FindParam( g_aArgs[ 1 ].sArg, MATCH_EXACT, iParam, _PARAM_GENERAL_BEGIN, _PARAM_GENERAL_END );
 
   if (nFound)
@@ -106,8 +112,9 @@ Update_t CmdConfigColorMono (int nArgs)
     if (iParam == PARAM_LOAD)
     {
     }
-    else
+    else {
       return HelpLastCommand();
+}
   }
   else
   {
@@ -122,30 +129,33 @@ Update_t CmdConfigColorMono (int nArgs)
       int R = g_aArgs[2].nValue & 0xFF;
       int G = g_aArgs[3].nValue & 0xFF;
       int B = g_aArgs[4].nValue & 0xFF;
-      unsigned int nColor = RGB(R,G,B);
+      uint32_t nColor = RGB(R,G,B);
 
       DebuggerSetColor( iScheme, iColor, nColor );
     }
-    else
+    else {
       return HelpLastCommand();
+}
   }
 
   return UPDATE_ALL;
 }
 
-Update_t CmdConfigHColor (int nArgs)
+auto CmdConfigHColor (int nArgs) -> Update_t
 {
-  if ((nArgs != 1) && (nArgs != 4))
+  if ((nArgs != 1) && (nArgs != 4)) {
     return Help_Arg_1( g_iCommand );
+}
 
   int iColor = g_aArgs[ 1 ].nValue;
-  if ((iColor < 0) || iColor >= NUM_DEBUG_COLORS)
+  if ((iColor < 0) || iColor >= NUM_DEBUG_COLORS) {
     return Help_Arg_1( g_iCommand );
+}
 
   if (nArgs == 1)
   {  // Dump Color
 // TODO/FIXME: must export AW_Video.cpp: static LPBITMAPINFO  framebufferinfo;
-//    unsigned int nColor = g_aColors[ iScheme ][ iColor ];
+//    uint32_t nColor = g_aColors[ iScheme ][ iColor ];
 //    _ColorPrint( iColor, nColor );
     return ConsoleUpdate();
   }
@@ -156,7 +166,7 @@ Update_t CmdConfigHColor (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdConfigLoad (int nArgs)
+auto CmdConfigLoad (int nArgs) -> Update_t
 {
   // TODO: CmdConfigRun( gaFileNameConfig )
 
@@ -173,18 +183,19 @@ Update_t CmdConfigLoad (int nArgs)
 
 
 //===========================================================================
-bool ConfigSave_BufferToDisk ( const char *pFileName, ConfigSave_t eConfigSave )
+auto ConfigSave_BufferToDisk ( const char *pFileName, ConfigSave_t eConfigSave ) -> bool
 {
   bool bStatus = false;
 
   const char sModeCreate[] = "w+t";
   const char sModeAppend[] = "a+t";
-  const char *pMode = NULL;
-  if (eConfigSave == CONFIG_SAVE_FILE_CREATE)
+  const char *pMode = nullptr;
+  if (eConfigSave == CONFIG_SAVE_FILE_CREATE) {
     pMode = sModeCreate;
-  else
-  if (eConfigSave == CONFIG_SAVE_FILE_APPEND)
+  } else
+  if (eConfigSave == CONFIG_SAVE_FILE_APPEND) {
     pMode = sModeAppend;
+}
 
   std::string sFileName = g_state.sCurrentDir;
   sFileName += pFileName; // TODO: g_sDebugDir
@@ -193,9 +204,9 @@ bool ConfigSave_BufferToDisk ( const char *pFileName, ConfigSave_t eConfigSave )
 
   if (hFile)
   {
-    char *pText;
+    char *pText = nullptr;
     int   nLine = g_ConfigState.GetNumLines();
-    int   iLine;
+    int   iLine = 0;
 
     for( iLine = 0; iLine < nLine; iLine++ )
     {
@@ -239,7 +250,7 @@ void ConfigSave_PrepareHeader ( const Parameters_e eCategory, const Commands_e e
 
 // Save Debugger Settings
 //===========================================================================
-Update_t CmdConfigSave (int nArgs)
+auto CmdConfigSave (int nArgs) -> Update_t
 {
   (void)nArgs;
   const std::string sFilename = g_state.sProgramDir + g_sFileNameConfig;
@@ -271,7 +282,7 @@ Update_t CmdConfigSave (int nArgs)
 
 // Config - Disasm ________________________________________________________________________________
 
-Update_t CmdConfigDisasm( int nArgs )
+auto CmdConfigDisasm( int nArgs ) -> Update_t
 {
   int iParam = 0;
   char sText[ CONSOLE_WIDTH ];
@@ -286,15 +297,16 @@ Update_t CmdConfigDisasm( int nArgs )
   }
   else
   {
-    if (nArgs > 2)
+    if (nArgs > 2) {
       return Help_Arg_1( CMD_CONFIG_DISASM );
+}
   }
 
   for (int iArg = 1; iArg <= nArgs; iArg++ )
   {
-    if (bDisplayCurrentSettings)
+    if (bDisplayCurrentSettings) {
       iParam = _PARAM_CONFIG_BEGIN + iArg - 1;
-    else
+    } else
     if (FindParam( g_aArgs[iArg].sArg, MATCH_FUZZY, iParam ))
     {
     }
@@ -306,10 +318,12 @@ Update_t CmdConfigDisasm( int nArgs )
           {
             iArg++;
             g_iConfigDisasmBranchType = g_aArgs[ iArg ].nValue;
-            if (g_iConfigDisasmBranchType < 0)
+            if (g_iConfigDisasmBranchType < 0) {
               g_iConfigDisasmBranchType = 0;
-            if (g_iConfigDisasmBranchType >= NUM_DISASM_BRANCH_TYPES)
+}
+            if (g_iConfigDisasmBranchType >= NUM_DISASM_BRANCH_TYPES) {
               g_iConfigDisasmBranchType = NUM_DISASM_BRANCH_TYPES - 1;
+}
 
           }
           else // show current setting
@@ -404,10 +418,12 @@ Update_t CmdConfigDisasm( int nArgs )
           {
             iArg++;
             g_iConfigDisasmTargets = g_aArgs[ iArg ].nValue;
-            if (g_iConfigDisasmTargets < 0)
+            if (g_iConfigDisasmTargets < 0) {
               g_iConfigDisasmTargets = 0;
-            if (g_iConfigDisasmTargets >= NUM_DISASM_TARGET_TYPES)
+}
+            if (g_iConfigDisasmTargets >= NUM_DISASM_TARGET_TYPES) {
               g_iConfigDisasmTargets = NUM_DISASM_TARGET_TYPES - 1;
+}
           }
           else // show current setting
           {
@@ -428,7 +444,7 @@ Update_t CmdConfigDisasm( int nArgs )
 
 
 //===========================================================================
-Update_t CmdConfigFontLoad( int nArgs )
+auto CmdConfigFontLoad( int nArgs ) -> Update_t
 {
   (void)nArgs;
   return UPDATE_CONSOLE_DISPLAY;
@@ -436,7 +452,7 @@ Update_t CmdConfigFontLoad( int nArgs )
 
 
 //===========================================================================
-Update_t CmdConfigFontSave( int nArgs )
+auto CmdConfigFontSave( int nArgs ) -> Update_t
 {
   (void)nArgs;
   return UPDATE_CONSOLE_DISPLAY;
@@ -444,15 +460,17 @@ Update_t CmdConfigFontSave( int nArgs )
 
 
 //===========================================================================
-Update_t CmdConfigFontMode( int nArgs )
+auto CmdConfigFontMode( int nArgs ) -> Update_t
 {
-  if (nArgs != 2)
+  if (nArgs != 2) {
     return Help_Arg_1( CMD_CONFIG_FONT );
+}
 
   int nMode = g_aArgs[ 2 ].nValue;
 
-  if ((nMode < 0) || (nMode >= NUM_FONT_SPACING))
+  if ((nMode < 0) || (nMode >= NUM_FONT_SPACING)) {
     return Help_Arg_1( CMD_CONFIG_FONT );
+}
 
   g_iFontSpacing = nMode;
   _UpdateWindowFontHeights( g_aFontConfig[ FONT_DISASM_DEFAULT ]._nFontHeight );
@@ -462,13 +480,13 @@ Update_t CmdConfigFontMode( int nArgs )
 
 
 //===========================================================================
-Update_t CmdConfigFont (int nArgs)
+auto CmdConfigFont (int nArgs) -> Update_t
 {
-  int iArg;
+  int iArg = 0;
 
-  if (! nArgs)
+  if (! nArgs) {
     return CmdConfigGetFont( nArgs );
-  else
+  } else
   if (nArgs <= 2) // nArgs
   {
     iArg = 1;
@@ -486,8 +504,8 @@ Update_t CmdConfigFont (int nArgs)
       return UPDATE_CONSOLE_DISPLAY;
     }
 
-    int iFound;
-    int nFound;
+    int iFound = 0;
+    int nFound = 0;
 
     nFound = FindParam( g_aArgs[iArg].sArg, MATCH_EXACT, iFound, _PARAM_GENERAL_BEGIN, _PARAM_GENERAL_END );
     if (nFound)
@@ -510,8 +528,9 @@ Update_t CmdConfigFont (int nArgs)
     nFound = FindParam( g_aArgs[iArg].sArg, MATCH_EXACT, iFound, _PARAM_FONT_BEGIN, _PARAM_FONT_END );
     if (nFound)
     {
-      if (iFound == PARAM_FONT_MODE)
+      if (iFound == PARAM_FONT_MODE) {
         return CmdConfigFontMode( nArgs );
+}
     }
 
     return CmdConfigSetFont( nArgs );
@@ -521,7 +540,7 @@ Update_t CmdConfigFont (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdConfigSetFont (int nArgs)
+auto CmdConfigSetFont (int nArgs) -> Update_t
 {
   (void)nArgs;
 #if OLD_FONT
@@ -587,18 +606,18 @@ Update_t CmdConfigSetFont (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdConfigGetFont (int nArgs)
+auto CmdConfigGetFont (int nArgs) -> Update_t
 {
   if (! nArgs)
   {
-    for (int iFont = 0; iFont < NUM_FONTS; iFont++ )
+    for (auto & iFont : g_aFontConfig)
     {
       char sText[ CONSOLE_WIDTH ] = "";
       ConsoleBufferPushFormat( sText, "  Font: %-20s  A:%2d  M:%2d",
 //        g_sFontNameCustom, g_nFontWidthAvg, g_nFontWidthMax );
-        g_aFontConfig[ iFont ]._sFontName,
-        g_aFontConfig[ iFont ]._nFontWidthAvg,
-        g_aFontConfig[ iFont ]._nFontWidthMax );
+        iFont._sFontName,
+        iFont._nFontWidthAvg,
+        iFont._nFontWidthMax );
     }
     return ConsoleUpdate();
   }

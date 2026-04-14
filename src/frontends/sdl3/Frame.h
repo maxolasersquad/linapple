@@ -38,7 +38,7 @@ void FrameReleaseVideoDC();
 
 void DrawAppleContent();
 void DrawFrameWindow();
-void Frame_OnResize(int w, int h);
+void Frame_OnResize(int width, int height);
 void Frame_OnFocus(bool gained);
 void Frame_OnExpose();
 

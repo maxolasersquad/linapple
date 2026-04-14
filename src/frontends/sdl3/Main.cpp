@@ -1,6 +1,7 @@
 #include "core/Common.h"
 #include <SDL3/SDL.h>
 #include <getopt.h>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 
@@ -17,18 +18,19 @@
 
 // SDL Audio Stream for Frontend
 bool g_bDSAvailable = false;
-SDL_AudioStream *g_audioStream = NULL;
+SDL_AudioStream *g_audioStream = nullptr;
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): SDL3 callback signature
 static void SDLCALL sdl3AudioCallback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
   (void)userdata;
   (void)total_amount;
   if (additional_amount <= 0) return;
 
-  int16_t *temp_buf = static_cast<int16_t *>(SDL_malloc(additional_amount));
+  auto *temp_buf = static_cast<int16_t *>(SDL_malloc(additional_amount));
   if (!temp_buf) return;
 
   int num_samples = additional_amount / (sizeof(int16_t) * 2); // stereo
-  SoundCore_GetSamples(temp_buf, num_samples * 2);
+  SoundCore_GetSamples(temp_buf, static_cast<size_t>(num_samples * 2));
 
   SDL_PutAudioStreamData(stream, temp_buf, additional_amount);
   SDL_free(temp_buf);
@@ -42,7 +44,7 @@ auto DSInit() -> bool {
   desired.channels = 2;
   desired.format = SDL_AUDIO_S16;
 
-  g_audioStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired, sdl3AudioCallback, NULL);
+  g_audioStream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired, sdl3AudioCallback, nullptr);
   if (g_audioStream == nullptr) {
     printf("Unable to open SDL audio: %s\n", SDL_GetError());
     return false;
@@ -53,7 +55,7 @@ auto DSInit() -> bool {
 
   // Register frontend callback to core
   Linapple_SetAudioCallback([](const int16_t* samples, size_t num_samples) -> void {
-      DSUploadBuffer((short*)samples, (unsigned)num_samples);
+      DSUploadBuffer(const_cast<short*>(samples), static_cast<unsigned>(num_samples));
   });
 
   return true;
@@ -115,7 +117,7 @@ void EnterMessageLoop() {
 
     uint64_t now = SDL_GetTicks();
     if (now < next_game_tick) {
-        SDL_Delay((uint32_t)(next_game_tick - now));
+        SDL_Delay(static_cast<uint32_t>(next_game_tick - now));
     } else {
         // If we are way behind, reset next_game_tick to avoid massive catch-up loop
         if (now > next_game_tick + 1000) {
@@ -140,7 +142,7 @@ static void PrintHelp() {
   printf("  -h, --help           Display this help\n");
 }
 
-int main(int argc, char* argv[]) {
+auto main(int argc, char* argv[]) -> int {
   int opt = 0;
   const char* szImageName_drive1 = nullptr;
   const char* szImageName_drive2 = nullptr;

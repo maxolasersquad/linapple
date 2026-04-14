@@ -7,16 +7,12 @@
 #include "Debugger_Assembler.h"
 #include "Debug.h"
 extern void FrameRefreshStatus(int);
-#include "Debugger_Console.h"
 #include "Debugger_Parser.h"
 #include "Debugger_Help.h"
 #include "Debugger_Display.h"
-#include "Debugger_Color.h"
-#include "core/Log.h"
-#include "Video.h"
-#include "apple2/CPU.h"
-#include "core/Util_Text.h"
-#include "apple2/Keyboard.h"
+#include "Debugger_Console.h"
+#include <cstring>
+#include <cstdio>
 
 // Globals originally from Debug.cpp
 bool g_bBenchmarking = false;
@@ -30,182 +26,128 @@ const std::string g_FileNameProfile = "Profile.txt";
 int   g_nProfileLine = 0;
 char  g_aProfileLine[ NUM_PROFILE_LINES ][ CONSOLE_WIDTH ];
 
-unsigned int extbench = 0;
+uint32_t extbench = 0;
 
 // Externs
-extern unsigned short g_nDisasmCurAddress;
-extern uint64_t g_nCumulativeCycles;
+extern uint16_t g_nDisasmCurAddress;
+extern uint16_t g_nDisasmTopAddress;
+extern uint16_t g_nDisasmBotAddress;
+extern int g_nDisasmCurLine;
+extern bool g_bDisasmCurBad;
 
-// Implementation
+// Implementation ___________________________________________________________
 
-//===========================================================================
-Update_t CmdBenchmark (int nArgs)
+auto CmdBenchmarkStart (int nArgs) -> Update_t
 {
   (void)nArgs;
-  if (g_bBenchmarking)
-    CmdBenchmarkStart(0);
-  else
-    CmdBenchmarkStop(0);
-
-  return UPDATE_ALL; // TODO/FIXME Verify
-}
-
-Update_t CmdBenchmarkStart (int nArgs)
-{
-  (void)nArgs;
-  CpuSetupBenchmark();
-  g_nDisasmCurAddress = regs.pc;
-  DisasmCalcTopBotAddress();
   g_bBenchmarking = true;
-  return UPDATE_ALL; // 1;
+  extbench = 0;
+  return UPDATE_CONSOLE_DISPLAY;
 }
 
-Update_t CmdBenchmarkStop (int nArgs)
-{
-  (void)nArgs;
-  g_bBenchmarking = false;
-  DebugEnd();
-
-  FrameRefreshStatus(DRAW_TITLE);
-  VideoRedrawScreen();
-  unsigned int currtime = Linapple_GetTicks();
-  while ((extbench = Linapple_GetTicks()) != currtime)
-    ; // intentional busy-waiting
-  KeybQueueKeypress(' ');
-
-  return UPDATE_ALL; // 0;
-}
-
-Update_t CmdProfile (int nArgs)
+auto CmdBenchmark (int nArgs) -> Update_t
 {
   if (! nArgs)
   {
-    sprintf( g_aArgs[ 1 ].sArg, "%s", g_aParameters[ PARAM_RESET ].m_sName );
-    nArgs = 1;
+    g_bBenchmarking = false;
+  }
+  else
+  {
+    g_bBenchmarking = true;
+    extbench = 0;
   }
 
-  if (nArgs == 1)
+  return UPDATE_CONSOLE_DISPLAY;
+}
+
+auto CmdProfileList (int nArgs) -> Update_t;
+
+auto CmdProfile (int nArgs) -> Update_t
+{
+  if (! nArgs)
   {
-    int iParam;
-    int nFound = FindParam( g_aArgs[ 1 ].sArg, MATCH_EXACT, iParam, _PARAM_GENERAL_BEGIN, _PARAM_GENERAL_END );
+    return CmdProfileList( 0 );
+  }
 
-    if (! nFound)
-      goto _Help;
+  int iArg = 1;
+  int iParam = 0;
+  bool bFound = FindParam( g_aArgs[ iArg ].sArg, MATCH_EXACT, iParam, _PARAM_PROFILE_BEGIN, _PARAM_PROFILE_END ) > 0;
 
-    if (iParam == PARAM_RESET)
+  if (bFound)
+  {
+    if (iParam == PARAM_PROFILE_RESET)
     {
       ProfileReset();
-      g_bProfiling = true;
-      ConsoleBufferPush( " Resetting profile data."  );
+    }
+    else
+    if (iParam == PARAM_PROFILE_SAVE)
+    {
+      if (ProfileSave())
+      {
+        char sText[ CONSOLE_WIDTH ];
+        ConsoleBufferPushFormat ( sText, " Saved: %s", g_FileNameProfile.c_str() );
+      }
+    }
+    else
+    if (iParam == PARAM_PROFILE_LIST)
+    {
+      return CmdProfileList( 0 );
     }
     else
     {
-      if ((iParam != PARAM_SAVE) && (iParam != PARAM_LIST))
-        goto _Help;
-
-      bool bExport = true;
-      if (iParam == PARAM_LIST)
-        bExport = false;
-
-      ProfileFormat( bExport, bExport ? PROFILE_FORMAT_TAB : PROFILE_FORMAT_SPACE );
-
-      // Dump to console
-      if (iParam == PARAM_LIST)
-      {
-        char *pText;
-        char  sText[ CONSOLE_WIDTH ];
-
-        int   nLine = g_nProfileLine;
-        int   iLine;
-
-        for( iLine = 0; iLine < nLine; iLine++ )
-        {
-          pText = ProfileLinePeek( iLine );
-          if (pText)
-          {
-            TextConvertTabsToSpaces( sText, pText, CONSOLE_WIDTH, 4 );
-            ConsolePrint( sText );
-          }
-        }
-      }
-
-      if (iParam == PARAM_SAVE)
-      {
-        if (ProfileSave())
-        {
-          char sText[ CONSOLE_WIDTH ];
-          ConsoleBufferPushFormat ( sText, " Saved: %s", g_FileNameProfile.c_str() );
-        }
-        else
-          ConsoleBufferPush( " ERROR: Couldn't save file. (In use?" );
-      }
+      g_bProfiling = (iParam == PARAM_PROFILE_ON);
+      g_nProfileBeginCycles = g_nCumulativeCycles;
     }
   }
   else
-    goto _Help;
+  {
+    return Help_Arg_1( CMD_PROFILE );
+  }
 
-  return ConsoleUpdate(); // UPDATE_CONSOLE_DISPLAY;
-
-_Help:
-  return Help_Arg_1( CMD_PROFILE );
+  return UPDATE_CONSOLE_DISPLAY;
 }
 
-char * ProfileLinePeek ( int iLine )
+auto ProfileLinePeek ( int iLine ) -> char *
 {
-  char *pText = NULL;
+  char *pText = nullptr;
 
-  if (iLine < 0)
+  if (iLine < 0) {
     iLine = 0;
+}
 
-  if (iLine <= g_nProfileLine)
+  if (iLine <= g_nProfileLine) {
     pText = & g_aProfileLine[ iLine ][ 0 ];
+}
 
   return pText;
 }
 
-char * ProfileLinePush ()
+void ProfileReset()
 {
-  if (g_nProfileLine < NUM_PROFILE_LINES)
+  int iOpcode = 0;
+  for( iOpcode = 0; iOpcode < NUM_OPCODES; iOpcode++ )
   {
-    g_nProfileLine++;
+    g_aProfileOpcodes[ iOpcode ].m_iOpcode = iOpcode;
+    g_aProfileOpcodes[ iOpcode ].m_nCount = 0;
   }
 
-  return ProfileLinePeek( g_nProfileLine  );
-}
+  int iOpmode = 0;
+  for( iOpmode = 0; iOpmode < NUM_OPMODES; iOpmode++ )
+  {
+    g_aProfileOpmodes[ iOpmode ].m_iOpmode = iOpmode;
+    g_aProfileOpmodes[ iOpmode ].m_nCount = 0;
+  }
 
-void ProfileLineReset()
-{
   g_nProfileLine = 0;
+  g_nProfileBeginCycles = g_nCumulativeCycles;
 }
 
-#define DELIM "%s"
-void ProfileFormat( bool bExport, int eFormatMode )
+void ProfileFormat( bool bSeperateColumns, int eFormatMode )
 {
-  char sSeperator7[ 32 ] = "\t";
-  char sSeperator2[ 32 ] = "\t";
-  char sSeperator1[ 32 ] = "\t";
-  char sOpcode [ 8 ]; // 2 chars for opcode in hex, plus quotes on either side
-  char sAddress[MAX_OPMODE_NAME+2];
-
-  if (eFormatMode == PROFILE_FORMAT_COMMA)
-  {
-    sSeperator7[0] = ',';
-    sSeperator2[0] = ',';
-    sSeperator1[0] = ',';
-  }
-  else
-  if (eFormatMode == PROFILE_FORMAT_SPACE)
-  {
-    sprintf( sSeperator7, "       " ); // 7
-    sprintf( sSeperator2, "  "      ); // 2
-    sprintf( sSeperator1, " "       ); // 1
-  }
-
-  ProfileLineReset();
-  char *pText = ProfileLinePeek( 0 );
-
-  int iOpcode;
-  int iOpmode;
+  (void)bSeperateColumns;
+  (void)eFormatMode;
+  int iOpcode = 0;
+  int iOpmode = 0;
 
   bool bOpcodeGood = true;
   bool bOpmodeGood = true;
@@ -217,231 +159,96 @@ void ProfileFormat( bool bExport, int eFormatMode )
   std::sort( vProfileOpcode.begin(), vProfileOpcode.end(), ProfileOpcode_t() );
   std::sort( vProfileOpmode.begin(), vProfileOpmode.end(), ProfileOpmode_t() );
 
-  Profile_t nOpcodeTotal = 0;
-  Profile_t nOpmodeTotal = 0;
+  g_nProfileLine = 0;
+  char *pText = & g_aProfileLine[ 0 ][ 0 ];
 
-  for (iOpcode = 0; iOpcode < NUM_OPCODES; ++iOpcode )
+  uint64_t nTotalCycles = g_nCumulativeCycles - g_nProfileBeginCycles;
+  sprintf( pText, "Cycles: %llu\n", static_cast<unsigned long long>(nTotalCycles) );
+  g_nProfileLine++;
+
+  while (bOpcodeGood || bOpmodeGood)
   {
-    nOpcodeTotal += vProfileOpcode[ iOpcode ].m_nCount;
-  }
+    pText = & g_aProfileLine[ g_nProfileLine ][ 0 ];
+    pText[ 0 ] = 0;
 
-  for (iOpmode = 0; iOpmode < NUM_OPMODES; ++iOpmode )
-  {
-    nOpmodeTotal += vProfileOpmode[ iOpmode ].m_nCount;
-  }
-
-  if (nOpcodeTotal < 1.)
-  {
-    nOpcodeTotal = 1;
-    bOpcodeGood = false;
-  }
-
-  const char *pColorOperator = "";
-  const char *pColorNumber   = "";
-  const char *pColorOpcode   = "";
-  const char *pColorMnemonic = "";
-  const char *pColorOpmode   = "";
-  const char *pColorTotal    = "";
-  if (! bExport)
-  {
-    pColorOperator = CHC_ARG_SEP; // grey
-    pColorNumber   = CHC_NUM_DEC; // cyan
-    pColorOpcode   = CHC_NUM_HEX; // yellow
-    pColorMnemonic = CHC_COMMAND; // green
-    pColorOpmode   = CHC_USAGE  ; // yellow
-    pColorTotal    = CHC_DEFAULT; // white
-  }
-
-// Opcode
-  if (bExport) // Export = SeperateColumns
-    sprintf( pText
-      , "\"Percent\"" DELIM "\"Count\"" DELIM "\"Opcode\"" DELIM "\"Mnemonic\"" DELIM "\"Addressing Mode\"\n"
-      , sSeperator7, sSeperator2, sSeperator1, sSeperator1 );
-  else
-    sprintf( pText
-      , "Percent" DELIM "Count" DELIM "Mnemonic" DELIM "Addressing Mode\n"
-      , sSeperator7, sSeperator2, sSeperator1 );
-
-  pText = ProfileLinePush();
-
-  for (iOpcode = 0; iOpcode < NUM_OPCODES; ++iOpcode )
-  {
-    ProfileOpcode_t tProfileOpcode = vProfileOpcode.at( iOpcode );
-
-    Profile_t nCount  = tProfileOpcode.m_nCount;
-
-    // Don't spam with empty data if dumping to the console
-    if ((! nCount) && (! bExport))
-      continue;
-
-    int       nOpcode_val = tProfileOpcode.m_iOpcode;
-    int       nOpmode_idx = g_aOpcodes[ nOpcode_val ].nAddressMode;
-    double    nPercent = (100. * nCount) / nOpcodeTotal;
-
-    if (bExport)
+    if (iOpcode < NUM_OPCODES)
     {
-      sprintf( sOpcode, "\"%02X\"", nOpcode_val );
-      sprintf( sAddress, "\"%s\"", g_aOpmodes[ nOpmode_idx ].m_sName );
-    }
-    else // not qouted if dumping to console
-    {
-      sprintf( sOpcode, "%02X", nOpcode_val );
-      strcpy( sAddress, g_aOpmodes[ nOpmode_idx ].m_sName );
+      if (vProfileOpcode.at( static_cast<size_t>(iOpcode) ).m_nCount > 0)
+      {
+        sprintf( pText, "%s: %llu",
+          g_aOpcodes65C02[ vProfileOpcode.at( static_cast<size_t>(iOpcode) ).m_iOpcode ].sMnemonic,
+          static_cast<unsigned long long>(vProfileOpcode.at( static_cast<size_t>(iOpcode) ).m_nCount)
+        );
+      }
+      else
+      {
+        bOpcodeGood = false;
+      }
     }
 
-    // BUG: Yeah 100% is off by 1 char. Profiling only one opcode isn't worth fixing this visual alignment bug.
-    sprintf( pText,
-      "%s%7.4f%s%%" DELIM "%s%9u" DELIM "%s%s" DELIM "%s%s" DELIM "%s%s\n"
-      , pColorNumber
-      , nPercent
-      , pColorOperator
-      , sSeperator2
-      , pColorNumber
-      , static_cast<unsigned int>(nCount), sSeperator2
-      , pColorOpcode
-      , sOpcode, sSeperator2
-      , pColorMnemonic
-      , g_aOpcodes[ nOpcode_val ].sMnemonic, sSeperator2
-      , pColorOpmode
-      , sAddress
-    );
-    pText = ProfileLinePush();
-  }
-
-  if (! bOpcodeGood)
-    nOpcodeTotal = 0;
-
-  sprintf( pText
-    , "Total:  " DELIM "%s%9u\n"
-    , sSeperator2
-    , pColorTotal
-    , static_cast<unsigned int>(nOpcodeTotal) );
-  pText = ProfileLinePush();
-
-  sprintf( pText, "\n" );
-  pText = ProfileLinePush();
-
-// Opmode
-  if (bExport)
-    sprintf( pText
-      , "\"Percent\"" DELIM "\"Count\"" DELIM DELIM DELIM "\"Addressing Mode\"\n"
-      , sSeperator7, sSeperator2, sSeperator2, sSeperator2 );
-  else
-  {
-    sprintf( pText
-      , "Percent" DELIM "Count" DELIM "Addressing Mode\n"
-      , sSeperator7, sSeperator2 );
-  }
-  pText = ProfileLinePush();
-
-  if (nOpmodeTotal < 1)
-  {
-    nOpmodeTotal = 1.;
-    bOpmodeGood = false;
-  }
-
-  for (iOpmode = 0; iOpmode < NUM_OPMODES; ++iOpmode )
-  {
-    ProfileOpmode_t tProfileOpmode = vProfileOpmode.at( iOpmode );
-    Profile_t nCount  = tProfileOpmode.m_nCount;
-
-    // Don't spam with empty data if dumping to the console
-    if ((! nCount) && (! bExport))
-      continue;
-
-    int       nOpmode_idx  = tProfileOpmode.m_iOpmode;
-    double    nPercent = (100. * nCount) / nOpmodeTotal;
-
-    if (bExport)
+    if (iOpmode < NUM_OPMODES)
     {
-      sprintf( sAddress, "%.*s%.*s\"%.*s\"", int(strlen(sSeperator1)), sSeperator1, int(strlen(sSeperator1)), sSeperator1, int(strlen(g_aOpmodes[ nOpmode_idx ].m_sName)), g_aOpmodes[ nOpmode_idx ].m_sName );
-    }
-    else // not qouted if dumping to console
-    {
-      strcpy( sAddress, g_aOpmodes[ nOpmode_idx ].m_sName );
+      if (vProfileOpmode.at( static_cast<size_t>(iOpmode) ).m_nCount > 0)
+      {
+        char sOpmode[ CONSOLE_WIDTH ];
+        sprintf( sOpmode, "  %s: %llu",
+          g_aOpmodes[ static_cast<size_t>(vProfileOpmode.at( static_cast<size_t>(iOpmode) ).m_iOpmode) ].m_sName,
+          static_cast<unsigned long long>(vProfileOpmode.at( static_cast<size_t>(iOpmode) ).m_nCount)
+        );
+        strcat( pText, sOpmode );
+      }
+      else
+      {
+        bOpmodeGood = false;
+      }
     }
 
-    sprintf( pText
-      , "%s%7.4f%s%%" DELIM "%s%9u" DELIM "%s%s\n"
-      , pColorNumber
-      , nPercent
-      , pColorOperator
-      , sSeperator2
-      , pColorNumber
-      , static_cast<unsigned int>(nCount), sSeperator2
-      , pColorOpmode
-      , sAddress
-    );
-    pText = ProfileLinePush();
-  }
+    if (pText[ 0 ])
+    {
+      strcat( pText, "\n" );
+      g_nProfileLine++;
+    }
 
-  if (! bOpmodeGood)
-    nOpmodeTotal = 0;
+    iOpcode++;
+    iOpmode++;
 
-  sprintf( pText
-    , "Total:  " DELIM "%s%9u\n"
-    , sSeperator2
-    , pColorTotal
-    , static_cast<unsigned int>(nOpmodeTotal) );
-  pText = ProfileLinePush();
-
-  sprintf( pText, "===================\n" );
-  pText = ProfileLinePush();
-
-  unsigned int cycles = static_cast<unsigned int>(g_nCumulativeCycles - g_nProfileBeginCycles);
-  sprintf( pText
-    , "Cycles: " DELIM "%s%9u\n"
-    , sSeperator2
-    , pColorNumber
-    , cycles );
-  pText = ProfileLinePush();
+    if (g_nProfileLine >= (NUM_PROFILE_LINES - 1)) {
+      break;
 }
-#undef DELIM
+  }
+}
 
-void ProfileReset()
+auto CmdProfileList (int nArgs) -> Update_t
 {
-  int iOpcode;
-  int iOpmode;
+  (void)nArgs;
+  ProfileFormat( true, 0 );
 
-  for (iOpcode = 0; iOpcode < NUM_OPCODES; iOpcode++ )
-  {
-    g_aProfileOpcodes[ iOpcode ].m_iOpcode = iOpcode;
-    g_aProfileOpcodes[ iOpcode ].m_nCount = 0;
-  }
-
-  for (iOpmode = 0; iOpmode < NUM_OPMODES; iOpmode++ )
-  {
-    g_aProfileOpmodes[ iOpmode ].m_iOpmode = iOpmode;
-    g_aProfileOpmodes[ iOpmode ].m_nCount = 0;
-  }
-
-  g_nProfileBeginCycles = g_nCumulativeCycles;
+  int nLines = MIN( g_nProfileLine, g_nConsoleDisplayLines - 1 );
+  return ConsoleBufferTryUnpause( nLines );
 }
 
-bool ProfileSave()
+auto ProfileSave () -> bool
 {
   bool bStatus = false;
+  FilePtr hFile(fopen( g_FileNameProfile.c_str(), "w" ), fclose);
 
-  const std::string sFilename = g_state.sProgramDir + g_FileNameProfile; // TODO: Allow user to decide?
-
-  FILE *hFile = fopen( sFilename.c_str(), "wt" );
-
-  if (hFile)
+  if ( hFile )
   {
-    char *pText;
+    ProfileFormat( true, 0 );
+
+    char *pText = nullptr;
     int   nLine = g_nProfileLine;
-    int   iLine;
+    int   iLine = 0;
 
     for( iLine = 0; iLine < nLine; iLine++ )
     {
       pText = ProfileLinePeek( iLine );
       if ( pText )
       {
-        fputs( pText, hFile );
+        fputs( pText, hFile.get() );
       }
     }
 
-    fclose( hFile );
     bStatus = true;
   }
 

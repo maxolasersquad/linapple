@@ -1,7 +1,12 @@
 #include <cstdint>
 #include <string>
+#include <memory>
+#include <cstdio>
 
 #pragma once
+
+// RAII wrapper for FILE*
+using FilePtr = std::unique_ptr<FILE, int (*)(FILE*)>;
 
 // Forward declarations for configuration
 auto ConfigLoadInt(const char* section, const char* key, uint32_t* value) -> bool;
@@ -21,9 +26,9 @@ const double CLOCK_6502 =
 // The effective Z-80 clock rate is 2.041MHz
 const double CLK_Z80 = (CLOCK_6502 * 2);
 
-const unsigned int uCyclesPerLine = 65;  // 25 cycles of HBL & 40 cycles of HBL
-const unsigned int uVisibleLinesPerFrame = 64 * 3;  // 192
-const unsigned int uLinesPerFrame =
+const uint32_t uCyclesPerLine = 65;  // 25 cycles of HBL & 40 cycles of HBL
+const uint32_t uVisibleLinesPerFrame = 64 * 3;  // 192
+const uint32_t uLinesPerFrame =
     262;  // 64 in each third of the screen & 70 in VBL
 
 constexpr int NUM_SLOTS = 8;
@@ -73,11 +78,11 @@ using SystemState_t = struct SystemState_tag {
   AppMode_e mode;
   bool restart;
   bool fullscreen;
-  unsigned int dwSpeed;
-  unsigned int ScreenWidth;
-  unsigned int ScreenHeight;
+  uint32_t dwSpeed;
+  uint32_t ScreenWidth;
+  uint32_t ScreenHeight;
   bool bResetTiming;
-  unsigned int needsprecision;
+  uint32_t needsprecision;
   char sProgramDir[MAX_PATH];
   char sCurrentDir[MAX_PATH];
   char sHDDDir[MAX_PATH];
@@ -89,7 +94,7 @@ using SystemState_t = struct SystemState_tag {
   char sFTPUserPass[512];
   char sDebuggerScript[MAX_PATH];
   bool bVideoScannerNTSC;
-  unsigned int dwClksPerFrame;
+  uint32_t dwClksPerFrame;
 };
 
 extern SystemState_t g_state;
@@ -209,9 +214,9 @@ enum eSOUNDCARDTYPE {
   SC_PHASOR
 };  // Apple soundcard type
 
-using iofunction = unsigned char (*)(unsigned short nPC, unsigned short nAddr,
-                                    unsigned char nWriteFlag,
-                                    unsigned char nWriteValue,
+using iofunction = uint8_t (*)(uint16_t nPC, uint16_t nAddr,
+                                    uint8_t nWriteFlag,
+                                    uint8_t nWriteValue,
                                     uint32_t nCyclesLeft);
 
 typedef struct _IMAGE__ {

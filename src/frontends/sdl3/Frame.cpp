@@ -27,8 +27,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <array>
 
 #include "core/Common.h"
 #include "frontends/sdl3/Frame.h"
@@ -58,9 +60,9 @@ auto SDLSurfaceToVideoSurface(SDL_Surface* s) -> VideoSurface;
 
 SDL_Surface* apple_icon;
 SDL_Surface* screen;
-SDL_Window* g_window = NULL;
-SDL_Renderer* g_renderer = NULL;
-SDL_Texture* g_texture = NULL;
+SDL_Window* g_window = nullptr;
+SDL_Renderer* g_renderer = nullptr;
+SDL_Texture* g_texture = nullptr;
 SDL_Rect origRect;
 SDL_Rect newRect;
 
@@ -71,14 +73,18 @@ SDL_Rect newRect;
 #define VIEWPORTCY 384
 #endif
 #define BUTTONX (VIEWPORTCX + (VIEWPORTX << 1))
-#define BUTTONY 0
-#define BUTTONCX 45
-#define BUTTONCY 45
+enum {
+BUTTONY = 0,
+BUTTONCX = 45,
+BUTTONCY = 45
+};
 #define FSVIEWPORTX (640 - BUTTONCX - VIEWPORTX - VIEWPORTCX)
 #define FSVIEWPORTY ((480 - VIEWPORTCY) >> 1)
 #define FSBUTTONX (640 - BUTTONCX)
 #define FSBUTTONY (((480 - VIEWPORTCY) >> 1) - 1)
-#define BUTTONS 8
+enum {
+BUTTONS = 8
+};
 
 static bool g_bAppActive = false;
 
@@ -90,6 +96,7 @@ bool usingcursor = false;
 
 void DrawStatusArea(int drawflags);
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): button and mod are semantically distinct
 void ProcessButtonClick(int button, int mod);
 
 void ResetMachineState();
@@ -134,18 +141,18 @@ void DrawFrameWindow() {
     if (g_state.mode != MODE_DEBUG) {
       VideoSurface vs_screen = SDLSurfaceToVideoSurface(screen);
       VideoSurface vs_output{};
-      vs_output.pixels = (uint8_t*)output;
+      vs_output.pixels = reinterpret_cast<uint8_t*>(output);
       vs_output.w = 560;
       vs_output.h = 384;
       vs_output.pitch = 560 * 4;
       vs_output.bpp = 4;
 
       if (!g_WindowResized) {
-        VideoSoftStretch(&vs_output, (VideoRect*)&r, &vs_screen,
-                         (VideoRect*)&r);
+        VideoSoftStretch(&vs_output, reinterpret_cast<VideoRect*>(&r), &vs_screen,
+                         reinterpret_cast<VideoRect*>(&r));
       } else {
-        VideoSoftStretch(&vs_output, (VideoRect*)&origRect, &vs_screen,
-                         (VideoRect*)&newRect);
+        VideoSoftStretch(&vs_output, reinterpret_cast<VideoRect*>(&origRect), &vs_screen,
+                         reinterpret_cast<VideoRect*>(&newRect));
       }
     } else {
       // Debugger draws directly to g_hDebugScreen (INDEX8)
@@ -154,11 +161,11 @@ void DrawFrameWindow() {
       if (g_hDebugScreen) {
         VideoSurface vs_screen = SDLSurfaceToVideoSurface(screen);
         if (!g_WindowResized) {
-          VideoSoftStretch(g_hDebugScreen, (VideoRect*)&r, &vs_screen,
-                           (VideoRect*)&r);
+          VideoSoftStretch(g_hDebugScreen, reinterpret_cast<VideoRect*>(&r), &vs_screen,
+                           reinterpret_cast<VideoRect*>(&r));
         } else {
-          VideoSoftStretch(g_hDebugScreen, (VideoRect*)&origRect, &vs_screen,
-                           (VideoRect*)&newRect);
+          VideoSoftStretch(g_hDebugScreen, reinterpret_cast<VideoRect*>(&origRect), &vs_screen,
+                           reinterpret_cast<VideoRect*>(&newRect));
         }
       }
     }
@@ -172,14 +179,14 @@ void DrawFrameWindow() {
 }
 
 void DrawStatusArea(int drawflags) {
-  if (font_sfc == NULL) {
+  if (font_sfc == nullptr) {
     if (!fonts_initialization()) {
       fprintf(stderr, "Font file was not loaded.\n");
       return;
     }
   }
 
-  VideoRect srect;
+  VideoRect srect{};
   uint8_t mybluez = DARK_BLUE;
 
   if (drawflags & DRAW_BACKGROUND) {
@@ -188,16 +195,16 @@ void DrawStatusArea(int drawflags) {
   if (drawflags & DRAW_LEDS) {
     srect.x = 4;
     srect.y = 22;
-    srect.w = STATUS_PANEL_W - 8;
-    srect.h = STATUS_PANEL_H - 25;
+    srect.w = static_cast<int16_t>(STATUS_PANEL_W - 8);
+    srect.h = static_cast<int16_t>(STATUS_PANEL_H - 25);
 
     // Fill background of status surface
     for (int y = srect.y; y < srect.y + srect.h; ++y) {
-      memset(g_hStatusSurface->pixels + y * g_hStatusSurface->pitch + srect.x,
-             mybluez, srect.w);
+      memset(g_hStatusSurface->pixels + static_cast<ptrdiff_t>(y * g_hStatusSurface->pitch) + srect.x,
+             mybluez, static_cast<size_t>(srect.w));
     }
 
-    char leds[2] = "\x64";
+    std::array<char, 2> leds = {{"\x64"}};
 #define LEDS 1
     int iDrive1Status = DISK_STATUS_OFF;
     int iDrive2Status = DISK_STATUS_OFF;
@@ -206,14 +213,14 @@ void DrawStatusArea(int drawflags) {
     DiskGetLightStatus(&iDrive1Status, &iDrive2Status);
     iHDDStatus = HD_GetStatus();
 
-    leds[0] = LEDS + iDrive1Status;
-    font_print(8, 23, leds, g_hStatusSurface, 4, 2.7);
+    leds[0] = static_cast<char>(LEDS + iDrive1Status);
+    font_print(8, 23, leds.data(), g_hStatusSurface, 4.0f, 2.7f);
 
-    leds[0] = LEDS + iDrive2Status;
-    font_print(40, 23, leds, g_hStatusSurface, 4, 2.7);
+    leds[0] = static_cast<char>(LEDS + iDrive2Status);
+    font_print(40, 23, leds.data(), g_hStatusSurface, 4.0f, 2.7f);
 
-    leds[0] = LEDS + iHDDStatus;
-    font_print(71, 23, leds, g_hStatusSurface, 4, 2.7);
+    leds[0] = static_cast<char>(LEDS + iHDDStatus);
+    font_print(71, 23, leds.data(), g_hStatusSurface, 4.0f, 2.7f);
 
     if (iDrive1Status | iDrive2Status | iHDDStatus) {
       g_iStatusCycle = SHOW_CYCLES;
@@ -251,9 +258,9 @@ void FrameShowHelpScreen(int sx, int sy) {
       " Scroll Lock - Toggle full speed",
       "  Numpad +/-/* - Increase/Decrease/Normal speed"};
 
-  VideoSurface* tempSurface = NULL;
+  VideoSurface* tempSurface = nullptr;
 
-  if (font_sfc == NULL) {
+  if (font_sfc == nullptr) {
     if (!fonts_initialization()) {
       fprintf(stderr, "Font file was not loaded.\n");
       return;
@@ -269,7 +276,7 @@ void FrameShowHelpScreen(int sx, int sy) {
     tempSurface = g_origscreen;
   }
 
-  if (tempSurface == NULL) {
+  if (tempSurface == nullptr) {
     // Wrap screen as fallback
     static VideoSurface vs_screen;
     vs_screen = SDLSurfaceToVideoSurface(screen);
@@ -280,62 +287,63 @@ void FrameShowHelpScreen(int sx, int sy) {
       VideoCreateSurface(tempSurface->w, tempSurface->h, tempSurface->bpp);
   VideoSurface vs_actual_screen = SDLSurfaceToVideoSurface(screen);
 
-  surface_fader(my_screen_vs, 0.2F, 0.2F, 0.2F, -1, 0);
-  VideoSoftStretch(tempSurface, NULL, my_screen_vs, NULL);
-  VideoSoftStretch(my_screen_vs, NULL, &vs_actual_screen, NULL);
+  surface_fader(my_screen_vs, 0.2F, 0.2F, 0.2F, -1, nullptr);
+  VideoSoftStretch(tempSurface, nullptr, my_screen_vs, nullptr);
+  VideoSoftStretch(my_screen_vs, nullptr, &vs_actual_screen, nullptr);
 
-  double facx = static_cast<double>(g_state.ScreenWidth) /
-                static_cast<double>(SCREEN_WIDTH);
-  double facy = static_cast<double>(g_state.ScreenHeight) /
-                static_cast<double>(SCREEN_HEIGHT);
+  const float facx_f = static_cast<float>(g_state.ScreenWidth) / static_cast<float>(SCREEN_WIDTH);
+  const float facy_f = static_cast<float>(g_state.ScreenHeight) / static_cast<float>(SCREEN_HEIGHT);
+  const double facy = static_cast<double>(facy_f);
 
-  font_print_centered(sx / 2, static_cast<int>(5 * facy),
+  font_print_centered(sx / 2, static_cast<int>(5.0 * facy),
                       const_cast<char*>(HelpStrings[0]), &vs_actual_screen,
-                      1.5 * facx, 1.3 * facy);
-  font_print_centered(sx / 2, static_cast<int>(20 * facy),
+                      1.5f * facx_f, 1.3f * facy_f);
+  font_print_centered(sx / 2, static_cast<int>(20.0 * facy),
                       const_cast<char*>(HelpStrings[1]), &vs_actual_screen,
-                      1.3 * facx, 1.2 * facy);
-  font_print_centered(sx / 2, static_cast<int>(30 * facy),
+                      1.3f * facx_f, 1.2f * facy_f);
+  font_print_centered(sx / 2, static_cast<int>(30.0 * facy),
                       const_cast<char*>(HelpStrings[2]), &vs_actual_screen,
-                      1.2 * facx, 1.0 * facy);
+                      1.2f * facx_f, 1.0f * facy_f);
 
-  int Help_TopX = int(45 * facy);
+  int Help_TopX = static_cast<int>(45.0 * facy);
   for (int i = 3; i < MAX_LINES; i++) {
-    if (HelpStrings[i])
-      font_print(4, Help_TopX + (i - 3) * 15 * facy, (char*)HelpStrings[i],
-                 &vs_actual_screen, 1.5 * facx, 1.5 * facy);
+    if (HelpStrings[i]) {
+      font_print(4, static_cast<int>(static_cast<double>(Help_TopX) + static_cast<double>(i - 3) * 15.0 * facy), const_cast<char*>(HelpStrings[i]),
+                 &vs_actual_screen, 1.5f * facx_f, 1.5f * facy_f);
+}
   }
 
-  rectangle(&vs_actual_screen, 0, Help_TopX - 5, g_state.ScreenWidth - 1,
-            int(335 * facy), 0xFFFFFF);
-  rectangle(&vs_actual_screen, 1, Help_TopX - 4, g_state.ScreenWidth,
-            int(335 * facy), 0xFFFFFF);
-  rectangle(&vs_actual_screen, 1, 1, g_state.ScreenWidth - 2, (Help_TopX - 8),
+  rectangle(&vs_actual_screen, 0, Help_TopX - 5, static_cast<int>(g_state.ScreenWidth - 1),
+            static_cast<int>(335.0 * facy), 0xFFFFFF);
+  rectangle(&vs_actual_screen, 1, Help_TopX - 4, static_cast<int>(g_state.ScreenWidth),
+            static_cast<int>(335.0 * facy), 0xFFFFFF);
+  rectangle(&vs_actual_screen, 1, 1, static_cast<int>(g_state.ScreenWidth - 2), (Help_TopX - 8),
             0xFFFF00);
 
   // Logo bit
   VideoSurface vs_icon{};
   vs_icon.pixels =
       static_cast<uint8_t*>((static_cast<SDL_Surface*>(assets->icon))->pixels);
-  vs_icon.w = (static_cast<SDL_Surface*>(assets->icon))->w;
-  vs_icon.h = (static_cast<SDL_Surface*>(assets->icon))->h;
-  vs_icon.pitch = (static_cast<SDL_Surface*>(assets->icon))->pitch;
+  vs_icon.w = static_cast<uint16_t>((static_cast<SDL_Surface*>(assets->icon))->w);
+  vs_icon.h = static_cast<uint16_t>((static_cast<SDL_Surface*>(assets->icon))->h);
+  vs_icon.pitch = static_cast<uint16_t>((static_cast<SDL_Surface*>(assets->icon))->pitch);
   vs_icon.bpp = 4;  // Assuming RGB32
 
   VideoRect logo{}, scrr{};
   logo.x = logo.y = 0;
   logo.w = vs_icon.w;
   logo.h = vs_icon.h;
-  scrr.x = static_cast<int>(460 * facx);
-  scrr.y = static_cast<int>(270 * facy);
-  scrr.w = scrr.h = static_cast<int>(100 * facy);
+  scrr.x = static_cast<int16_t>(460.0f * facx_f);
+  scrr.y = static_cast<int16_t>(270.0f * facy_f);
+  scrr.w = static_cast<int16_t>(100.0f * facy_f);
+  scrr.h = static_cast<int16_t>(100.0f * facy_f);
   VideoSoftStretchOr(&vs_icon, &logo, &vs_actual_screen, &scrr);
 
   if (g_texture && screen) {
     SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
-    SDL_UpdateTexture(g_texture, NULL, screen->pixels, screen->pitch);
+    SDL_UpdateTexture(g_texture, nullptr, screen->pixels, screen->pitch);
     SDL_RenderClear(g_renderer);
-    SDL_RenderTexture(g_renderer, g_texture, NULL, NULL);
+    SDL_RenderTexture(g_renderer, g_texture, nullptr, nullptr);
     SDL_RenderPresent(g_renderer);
   }
   SDL_Delay(1000);
@@ -353,14 +361,15 @@ void FrameShowHelpScreen(int sx, int sy) {
   DrawFrameWindow();
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): num and mod are semantically distinct
 void FrameQuickState(int num, int mod) {
   // quick load or save state with number num, if Shift is pressed, state is
   // being saved, otherwise - being loaded
-  char fpath[MAX_PATH];
-  snprintf(fpath, MAX_PATH, "%.*s/SaveState%d.aws",
+  std::array<char, MAX_PATH> fpath;
+  snprintf(fpath.data(), fpath.size(), "%.*s/SaveState%d.aws",
            static_cast<int>(strlen(g_state.sSaveStateDir)),
            g_state.sSaveStateDir, num);
-  Snapshot_SetFilename(fpath);
+  Snapshot_SetFilename(fpath.data());
   if (mod & SDL_KMOD_SHIFT) {
     Snapshot_SaveState();
   } else {
@@ -368,7 +377,7 @@ void FrameQuickState(int num, int mod) {
   }
 }
 
-bool IsModifierKey(SDL_Keycode sym) {
+auto IsModifierKey(SDL_Keycode sym) -> bool {
   switch (sym) {
     case SDLK_LSHIFT:
     case SDLK_RSHIFT:
@@ -385,10 +394,10 @@ bool IsModifierKey(SDL_Keycode sym) {
   }
 }
 
-void Frame_OnResize(int w, int h) {
+void Frame_OnResize(int width, int height) {
   g_video_draw_mutex.lock();
-  g_state.ScreenWidth = w;
-  g_state.ScreenHeight = (h / 96) * 96;
+  g_state.ScreenWidth = width;
+  g_state.ScreenHeight = (height / 96) * 96;
   if (g_state.ScreenHeight < 192) {
     g_state.ScreenHeight = 192;
   }
@@ -402,7 +411,7 @@ void Frame_OnResize(int w, int h) {
                                 SDL_TEXTUREACCESS_STREAMING,
                                 g_state.ScreenWidth, g_state.ScreenHeight);
 
-  if (screen == NULL || g_texture == NULL) {
+  if (screen == nullptr || g_texture == nullptr) {
     g_video_draw_mutex.unlock();
     SDL_Quit();
     return;
@@ -411,10 +420,10 @@ void Frame_OnResize(int w, int h) {
                       (g_state.ScreenHeight != SCREEN_HEIGHT);
     if (g_WindowResized) {
       origRect.x = origRect.y = newRect.x = newRect.y = 0;
-      origRect.w = SCREEN_WIDTH;
-      origRect.h = SCREEN_HEIGHT;
-      newRect.w = g_state.ScreenWidth;
-      newRect.h = g_state.ScreenHeight;
+      origRect.w = static_cast<int16_t>(SCREEN_WIDTH);
+      origRect.h = static_cast<int16_t>(SCREEN_HEIGHT);
+      newRect.w = static_cast<int16_t>(g_state.ScreenWidth);
+      newRect.h = static_cast<int16_t>(g_state.ScreenHeight);
       if ((g_state.mode != MODE_LOGO) && (g_state.mode != MODE_DEBUG)) {
         VideoRedrawScreen();
       }
@@ -487,26 +496,27 @@ auto PSP_SaveStateSelectImage(bool saveit) -> bool {
   return true;
 }
 
-void FrameSaveBMP(void) {
+void FrameSaveBMP() {
   // Save current screen as a .bmp file in current directory
-  struct stat bufp;
+  struct stat bufp{};
   static int i = 1;
-  char bmpName[20];
+  std::array<char, 20> bmpName;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-truncation"
-  snprintf(bmpName, 20, "linapple%7d.bmp", i);
-  while (!stat(bmpName, &bufp)) {
+  snprintf(bmpName.data(), bmpName.size(), "linapple%7d.bmp", i);
+  while (!stat(bmpName.data(), &bufp)) {
     i++;
-    snprintf(bmpName, 20, "linapple%7d.bmp", i);
+    snprintf(bmpName.data(), bmpName.size(), "linapple%7d.bmp", i);
   }
 #pragma GCC diagnostic pop
 
-  SDL_SaveBMP(screen, bmpName);
-  printf("File %s saved!\n", bmpName);
+  SDL_SaveBMP(screen, bmpName.data());
+  printf("File %s saved!\n", bmpName.data());
   i++;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): button and mod are semantically distinct
 void ProcessButtonClick(int button, int mod) {
   SDL_Event qe;
 
@@ -632,7 +642,7 @@ void ProcessButtonClick(int button, int mod) {
         VideoReinitialize();
         if (g_state.mode != MODE_LOGO) {
           if (g_state.mode == MODE_DEBUG) {
-            unsigned int debugVideoMode = 0;
+            uint32_t debugVideoMode = 0;
             if (DebugGetVideoMode(&debugVideoMode)) {
               VideoRefreshScreen();
             }
@@ -749,7 +759,7 @@ auto FrameCreateWindow() -> int {
     return 1;
   }
 
-  g_renderer = SDL_CreateRenderer(g_window, NULL);
+  g_renderer = SDL_CreateRenderer(g_window, nullptr);
   if (!g_renderer) {
     fprintf(stderr, "Could not create SDL renderer: %s\n", SDL_GetError());
     return 1;
@@ -757,7 +767,7 @@ auto FrameCreateWindow() -> int {
 
   screen = SDL_CreateSurface(g_state.ScreenWidth, g_state.ScreenHeight,
                              SDL_PIXELFORMAT_XRGB8888);
-  if (screen == NULL) {
+  if (screen == nullptr) {
     fprintf(stderr, "Could not create SDL surface: %s\n", SDL_GetError());
     return 1;
   }
@@ -787,15 +797,15 @@ void SetIcon() {
   /* Black is the transparency colour.
      Part of the logo seems to use it !? */
   Uint32 colorkey = SDL_MapRGB(
-      SDL_GetPixelFormatDetails(((SDL_Surface*)assets->icon)->format),
-      SDL_GetSurfacePalette((SDL_Surface*)assets->icon), 0, 0, 0);
-  SDL_SetSurfaceColorKey((SDL_Surface*)assets->icon, true, colorkey);
+      SDL_GetPixelFormatDetails((static_cast<SDL_Surface*>(assets->icon))->format),
+      SDL_GetSurfacePalette(static_cast<SDL_Surface*>(assets->icon)), 0, 0, 0);
+  SDL_SetSurfaceColorKey(static_cast<SDL_Surface*>(assets->icon), true, colorkey);
 
   /* No need to pass a mask given the above. */
-  SDL_SetWindowIcon(g_window, (SDL_Surface*)assets->icon);
+  SDL_SetWindowIcon(g_window, static_cast<SDL_Surface*>(assets->icon));
 }
 
-int InitSDL() {
+auto InitSDL() -> int {
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK)) {
     fprintf(stderr, "Could not initialize SDL: %s\n", SDL_GetError());
     return 1;

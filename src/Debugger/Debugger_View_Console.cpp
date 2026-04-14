@@ -20,8 +20,9 @@ const int DISPLAY_WIDTH = 560;
 
 void DrawSubWindow_Console(Update_t bUpdate)
 {
-  if (!CanDrawDebugger())
+  if (!CanDrawDebugger()) {
     return;
+}
 
 #if !USE_APPLE_FONT
   SelectObject(GetDebuggerMemDC(), g_aFontConfig[FONT_CONSOLE]._hFont);
@@ -41,7 +42,7 @@ void DrawSubWindow_Console(Update_t bUpdate)
       }
       else
       {
-        DrawConsoleLine(NULL, y);
+        DrawConsoleLine(nullptr, y);
       }
       iLine++;
     }

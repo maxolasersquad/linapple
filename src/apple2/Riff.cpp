@@ -28,102 +28,101 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 /* Adaptation for SDL and POSIX (l) by beom beotiger, Nov-Dec 2007 */
 
-#include <inttypes.h>
+#include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include "core/Common.h"
 #include "apple2/Riff.h"
 
-static FILE* g_hRiffFile = NULL;
-static unsigned int dwTotalOffset;
-static unsigned int dwDataOffset;
-static unsigned int g_dwTotalNumberOfBytesWritten = 0;
-static unsigned int g_NumChannels = 2;
+static FilePtr g_hRiffFile(nullptr, fclose);
+static uint32_t dwTotalOffset;
+static uint32_t dwDataOffset;
+static uint32_t g_dwTotalNumberOfBytesWritten = 0;
+static uint32_t g_NumChannels = 2;
 
-int RiffInitWriteFile(char *pszFile, unsigned int sample_rate, unsigned int NumChannels)
+auto RiffInitWriteFile(char *pszFile, uint32_t sample_rate, uint32_t NumChannels) -> int
 {
-  g_hRiffFile = fopen(pszFile, "wb");
+  g_hRiffFile.reset(fopen(pszFile, "wb"));
 
-  if (g_hRiffFile == NULL) {
+  if (!g_hRiffFile) {
     return 1;
   }
 
   g_NumChannels = NumChannels;
 
-  unsigned int temp32;
-  unsigned short temp16;
+  uint32_t temp32 = 0;
+  uint16_t temp16 = 0;
 
-  fwrite("RIFF", 1, 4, g_hRiffFile);
+  fwrite("RIFF", 1, 4, g_hRiffFile.get());
 
   temp32 = 0;        // total size
-  dwTotalOffset = ftell(g_hRiffFile);
-  fwrite(&temp32, 1, 4, g_hRiffFile);
+  dwTotalOffset = static_cast<uint32_t>(ftell(g_hRiffFile.get()));
+  fwrite(&temp32, 1, 4, g_hRiffFile.get());
 
-  fwrite("WAVE", 1, 4, g_hRiffFile);
+  fwrite("WAVE", 1, 4, g_hRiffFile.get());
 
-  fwrite("fmt ", 1, 4, g_hRiffFile);
+  fwrite("fmt ", 1, 4, g_hRiffFile.get());
 
   temp32 = 16;      // format length
-  fwrite(&temp32, 1, 4, g_hRiffFile);
+  fwrite(&temp32, 1, 4, g_hRiffFile.get());
 
   temp16 = 1;        // PCM format
-  fwrite(&temp16, 1, 2, g_hRiffFile);
+  fwrite(&temp16, 1, 2, g_hRiffFile.get());
 
-  temp16 = NumChannels;    // channels
-  fwrite(&temp16, 1, 2, g_hRiffFile);
+  temp16 = static_cast<uint16_t>(NumChannels);    // channels
+  fwrite(&temp16, 1, 2, g_hRiffFile.get());
 
   temp32 = sample_rate;  // sample rate
-  fwrite(&temp32, 1, 4, g_hRiffFile);
+  fwrite(&temp32, 1, 4, g_hRiffFile.get());
 
   temp32 = sample_rate * 2 * NumChannels;  // bytes/second
-  fwrite(&temp32, 1, 4, g_hRiffFile);
+  fwrite(&temp32, 1, 4, g_hRiffFile.get());
 
-  temp16 = 2 * NumChannels;  // block align
-  fwrite(&temp16, 1, 2, g_hRiffFile);
+  temp16 = static_cast<uint16_t>(2 * NumChannels);  // block align
+  fwrite(&temp16, 1, 2, g_hRiffFile.get());
 
   temp16 = 16;      // bits/sample
-  fwrite(&temp16, 1, 2, g_hRiffFile);
+  fwrite(&temp16, 1, 2, g_hRiffFile.get());
 
-  fwrite("data", 1, 4, g_hRiffFile);
+  fwrite("data", 1, 4, g_hRiffFile.get());
 
   temp32 = 0;        // data length
-  dwDataOffset = ftell(g_hRiffFile);
-  fwrite(&temp32, 1, 4, g_hRiffFile);
+  dwDataOffset = static_cast<uint32_t>(ftell(g_hRiffFile.get()));
+  fwrite(&temp32, 1, 4, g_hRiffFile.get());
 
-  g_dwTotalNumberOfBytesWritten = ftell(g_hRiffFile);
+  g_dwTotalNumberOfBytesWritten = static_cast<uint32_t>(ftell(g_hRiffFile.get()));
 
   return 0;
 }
 
-int RiffFinishWriteFile() {
-  if (g_hRiffFile == NULL) {
+auto RiffFinishWriteFile() -> int {
+  if (!g_hRiffFile) {
     return 1;
   }
 
-  unsigned int temp32;
+  uint32_t temp32 = 0;
 
   temp32 = g_dwTotalNumberOfBytesWritten - (dwTotalOffset + 4);
-  fseek(g_hRiffFile, dwTotalOffset, SEEK_SET);
-  fwrite(&temp32, 1, 4, g_hRiffFile);
+  fseek(g_hRiffFile.get(), static_cast<long>(dwTotalOffset), SEEK_SET);
+  fwrite(&temp32, 1, 4, g_hRiffFile.get());
 
   temp32 = g_dwTotalNumberOfBytesWritten - (dwDataOffset + 4);
-  fseek(g_hRiffFile, dwDataOffset, SEEK_SET);
-  fwrite(&temp32, 1, 4, g_hRiffFile);
+  fseek(g_hRiffFile.get(), static_cast<long>(dwDataOffset), SEEK_SET);
+  fwrite(&temp32, 1, 4, g_hRiffFile.get());
 
-  int res = fclose(g_hRiffFile);
-  g_hRiffFile = NULL;
-  return (res == 0) ? 0 : 1;
+  g_hRiffFile.reset();
+  return 0;
 }
 
-int RiffPutSamples(short *buf, unsigned int uSamples) {
-  if (g_hRiffFile == NULL) {
+auto RiffPutSamples(short *buf, uint32_t uSamples) -> int {
+  if (!g_hRiffFile) {
     return 1;
   }
 
-  size_t bytesToWrite = uSamples * sizeof(short) * g_NumChannels;
-  size_t bytesWritten = fwrite(buf, 1, bytesToWrite, g_hRiffFile);
-  g_dwTotalNumberOfBytesWritten += (unsigned int)bytesWritten;
+  size_t bytesToWrite = static_cast<size_t>(uSamples) * sizeof(short) * g_NumChannels;
+  size_t bytesWritten = fwrite(buf, 1, bytesToWrite, g_hRiffFile.get());
+  g_dwTotalNumberOfBytesWritten += static_cast<uint32_t>(bytesWritten);
 
   return 0;
 }

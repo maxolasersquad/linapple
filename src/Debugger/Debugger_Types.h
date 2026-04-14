@@ -1,6 +1,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cstdint>
 
 using std::vector;
 using std::map;
@@ -189,13 +190,19 @@ enum BreakpointOperator_t {
 };
 
 struct Breakpoint_t {
-  unsigned short nAddress; // for registers, functions as nValue
-  unsigned short nLength;
+  uint16_t nAddress; // for registers, functions as nValue
+  uint16_t nLength;
   BreakpointSource_t eSource;
   BreakpointOperator_t eOperator;
   bool bSet; // used to be called enabled pre 2.0
   bool bEnabled;
   bool bTemp;    // If true then remove BP when hit or stepping cancelled (eg. G xxxx)
+};
+
+struct BreakpointInfo_t {
+  bool bActive;
+  bool bEnabled;
+  bool bFound;
 };
 
 typedef Breakpoint_t Bookmark_t;
@@ -829,17 +836,17 @@ struct DisasmData_t
   Nopcode_e eElementType ; // eElementType -> iNoptype
   int       iDirective   ; // iDirective   -> iNopcode
 
-  unsigned short nStartAddress; // link to block [start,end)
-  unsigned short nEndAddress  ;
-  unsigned short nArraySize   ; // Total bytes
-  //  unsigned short nBytePerRow  ; // 1, 8
+  uint16_t nStartAddress; // link to block [start,end)
+  uint16_t nEndAddress  ;
+  uint16_t nArraySize   ; // Total bytes
+  //  uint16_t nBytePerRow  ; // 1, 8
 
   // with symbol lookup
   char bSymbolLookup ;
-  unsigned short nTargetAddress;
+  uint16_t nTargetAddress;
 
-  unsigned short nSpriteW;
-  unsigned short nSpriteH;
+  uint16_t nSpriteW;
+  uint16_t nSpriteH;
 };
 
 enum DisasmBranch_e {
@@ -1033,7 +1040,7 @@ enum Opcode_e {
 };
 
 // Note: "int" causes overflow when profiling for any amount of time.
-// typedef unsigned int Profile_t;
+// typedef uint32_t Profile_t;
 // i.e.
 //  double nPercent = static_cast<double>(100 * tProfileOpcode.uProfile) / nOpcodeTotal; // overflow
 typedef double Profile_t;
@@ -1066,13 +1073,13 @@ enum ProfileFormat_e {
 
 const          int _6502_BRANCH_POS      = +127;
 const          int _6502_BRANCH_NEG      = -128;
-const unsigned int _6502_ZEROPAGE_END    = 0x00FF;
-const unsigned int _6502_STACK_BEGIN     = 0x0100;
-const unsigned int _6502_STACK_END       = 0x01FF;
-const unsigned int _6502_IO_BEGIN        = 0xC000;
-const unsigned int _6502_IO_END          = 0xC0FF;
-const unsigned int _6502_BRK_VECTOR      = 0xFFFE;
-const unsigned int _6502_MEM_BEGIN = 0x0000;
+const uint32_t _6502_ZEROPAGE_END    = 0x00FF;
+const uint32_t _6502_STACK_BEGIN     = 0x0100;
+const uint32_t _6502_STACK_END       = 0x01FF;
+const uint32_t _6502_IO_BEGIN        = 0xC000;
+const uint32_t _6502_IO_END          = 0xC0FF;
+const uint32_t _6502_BRK_VECTOR      = 0xFFFE;
+const uint32_t _6502_MEM_BEGIN = 0x0000;
 
 
 enum DEVICE_e {
@@ -1092,7 +1099,7 @@ enum MemoryView_e {
 
 struct MemoryDump_t {
   bool bActive;
-  unsigned short nAddress;
+  uint16_t nAddress;
   DEVICE_e eDevice;
   MemoryView_e eView;
 };
@@ -1116,7 +1123,7 @@ enum MemorySearch_e {
 };
 
 struct MemorySearch_t {
-  unsigned char m_nValue; // search value
+  uint8_t m_nValue; // search value
   MemorySearch_e m_iType; //
   bool m_bFound; //
 };
@@ -1196,7 +1203,7 @@ struct TokenTable_t {
 struct Arg_t {
   char sArg[MAX_ARG_LEN]; // Array chars comes first, for alignment
   int nArgLen; // Needed for TextSearch "ABC\x00"
-  unsigned short nValue; // 2
+  uint16_t nValue; // 2
   // Enums and Bools should come last for alignment
   ArgToken_e eToken; // 1/2/4
   int bType; // 1/2/4 // Flags of ArgType_e
@@ -1318,7 +1325,15 @@ enum Parameters_e {
   PARAM_SRC_ORCA,
   _PARAM_SOURCE_END,
   PARAM_SOURCE_NUM = _PARAM_SOURCE_END - _PARAM_SOURCE_BEGIN,
-  _PARAM_WINDOW_BEGIN = _PARAM_SOURCE_END,  // Daisy Chain
+  _PARAM_PROFILE_BEGIN = _PARAM_SOURCE_END, // Daisy Chain
+  PARAM_PROFILE_RESET = _PARAM_PROFILE_BEGIN,
+  PARAM_PROFILE_SAVE,
+  PARAM_PROFILE_LIST,
+  PARAM_PROFILE_ON,
+  PARAM_PROFILE_OFF,
+  _PARAM_PROFILE_END,
+  PARAM_PROFILE_NUM = _PARAM_PROFILE_END - _PARAM_PROFILE_BEGIN,
+  _PARAM_WINDOW_BEGIN = _PARAM_PROFILE_END,  // Daisy Chain
   // These are the "full screen" "windows" / Panels / Tab sheets
   PARAM_CODE = _PARAM_WINDOW_BEGIN, // disasm
   PARAM_CODE_2,  // disasm bot
@@ -1343,7 +1358,7 @@ enum {
   NO_SOURCE_LINE = -1
 };
 
-typedef map<unsigned short, int> SourceAssembly_t; // Address -> Line #  &  FileName
+typedef map<uint16_t, int> SourceAssembly_t; // Address -> Line #  &  FileName
 
 // Symbols
 
@@ -1382,7 +1397,7 @@ enum SymbolTable_Masks_e // SymbolTable_e ->
   SYMBOL_TABLE_PRODOS    = (1 << 8),
 };
 
-typedef map <unsigned short, string> SymbolTable_t;
+typedef map <uint16_t, string> SymbolTable_t;
 
 // Watches
 enum {
@@ -1403,6 +1418,21 @@ struct WindowSplit_t {
   int left, top, right, bottom;
 };
 
+
+extern uint64_t g_nCumulativeCycles;
+class VideoScannerDisplayInfo {
+public:
+  VideoScannerDisplayInfo(void) : isDecimal(false), isHorzReal(false), isAbsCycle(false),
+                  lastCumulativeCycles(0), cycleDelta(0) {}
+  void Reset(void) { lastCumulativeCycles = g_nCumulativeCycles; cycleDelta = 0; }
+
+  bool isDecimal;
+  bool isHorzReal;
+  bool isAbsCycle;
+
+  uint64_t lastCumulativeCycles;
+  uint32_t cycleDelta;
+};
 
 // Zero Page
 enum {

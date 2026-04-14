@@ -4,7 +4,7 @@
 typedef struct tagSS_CARD_MOCKINGBOARD SS_CARD_MOCKINGBOARD;
 
 extern bool g_bMBTimerIrqActive;
-extern unsigned int g_uTimer1IrqCount;
+extern uint32_t g_uTimer1IrqCount;
 
 void MB_Initialize();
 
@@ -36,11 +36,11 @@ double MB_GetFramePeriod();
 
 bool MB_IsActive();
 
-unsigned int MB_GetVolume();
+uint32_t MB_GetVolume();
 
-void MB_SetVolume(unsigned int dwVolume, unsigned int dwVolumeMax);
+void MB_SetVolume(uint32_t dwVolume, uint32_t dwVolumeMax);
 
-unsigned int MB_GetSnapshot(SS_CARD_MOCKINGBOARD *pSS, unsigned int dwSlot);
+uint32_t MB_GetSnapshot(SS_CARD_MOCKINGBOARD *pSS, uint32_t dwSlot);
 
-unsigned int MB_SetSnapshot(SS_CARD_MOCKINGBOARD *pSS, unsigned int dwSlot);
+uint32_t MB_SetSnapshot(SS_CARD_MOCKINGBOARD *pSS, uint32_t dwSlot);
 

@@ -16,16 +16,16 @@
 int        g_nBookmarks = 0;
 Bookmark_t g_aBookmarks[ MAX_BOOKMARKS ];
 
-extern unsigned short g_nDisasmCurAddress;
+extern uint16_t g_nDisasmCurAddress;
 extern int g_nDisasmCurLine;
 extern MemoryTextFile_t g_ConfigState;
 
-bool ConfigSave_BufferToDisk ( const char *pFileName, ConfigSave_t eConfigSave );
+auto ConfigSave_BufferToDisk ( const char *pFileName, ConfigSave_t eConfigSave ) -> bool;
 void ConfigSave_PrepareHeader ( const Parameters_e eCategory, const Commands_e eCommandClear );
 void DisasmCalcTopBotAddress ();
 
 // Bookmark Functions
-bool _Bookmark_Add( const int iBookmark, const unsigned short nAddress )
+auto _Bookmark_Add( const int iBookmark, const uint16_t nAddress ) -> bool
 {
   if (iBookmark < MAX_BOOKMARKS)
   {
@@ -39,40 +39,42 @@ bool _Bookmark_Add( const int iBookmark, const unsigned short nAddress )
 }
 
 
-bool _Bookmark_Del( const unsigned short nAddress )
+auto _Bookmark_Del( const uint16_t nAddress ) -> bool
 {
   bool bDeleted = false;
-  for (int iBookmark = 0; iBookmark < MAX_BOOKMARKS; iBookmark++ )
+  for (auto & g_aBookmark : g_aBookmarks)
   {
-    if (g_aBookmarks[ iBookmark ].nAddress == nAddress)
+    if (g_aBookmark.nAddress == nAddress)
     {
-      g_aBookmarks[ iBookmark ].bSet = false;
+      g_aBookmark.bSet = false;
       bDeleted = true;
     }
   }
   return bDeleted;
 }
 
-bool Bookmark_Find( const unsigned short nAddress )
+auto Bookmark_Find( const uint16_t nAddress ) -> bool
 {
   // Ugh, linear search
-  int iBookmark;
+  int iBookmark = 0;
   for (iBookmark = 0; iBookmark < MAX_BOOKMARKS; iBookmark++ )
   {
     if (g_aBookmarks[ iBookmark ].nAddress == nAddress)
     {
-      if (g_aBookmarks[ iBookmark ].bSet)
+      if (g_aBookmarks[ iBookmark ].bSet) {
         return true;
+}
     }
   }
   return false;
 }
 
 
-bool _Bookmark_Get( const int iBookmark, unsigned short & nAddress )
+auto _Bookmark_Get( const int iBookmark, uint16_t & nAddress ) -> bool
 {
-  if (iBookmark >= MAX_BOOKMARKS)
+  if (iBookmark >= MAX_BOOKMARKS) {
     return false;
+}
 
   if (g_aBookmarks[ iBookmark ].bSet)
   {
@@ -94,26 +96,27 @@ void _Bookmark_Reset()
 }
 
 
-int _Bookmark_Size()
+auto _Bookmark_Size() -> int
 {
   g_nBookmarks = 0;
 
-  int iBookmark;
+  int iBookmark = 0;
   for (iBookmark = 0; iBookmark < MAX_BOOKMARKS; iBookmark++ )
   {
-    if (g_aBookmarks[ iBookmark ].bSet)
+    if (g_aBookmarks[ iBookmark ].bSet) {
       g_nBookmarks++;
+}
   }
 
   return g_nBookmarks;
 }
 
-Update_t CmdBookmark (int nArgs)
+auto CmdBookmark (int nArgs) -> Update_t
 {
   return CmdBookmarkAdd( nArgs );
 }
 
-Update_t CmdBookmarkAdd (int nArgs )
+auto CmdBookmarkAdd (int nArgs ) -> Update_t
 {
   // BMA [address]
   // BMA # address
@@ -134,7 +137,7 @@ Update_t CmdBookmarkAdd (int nArgs )
   bool bAdded = false;
   for (; iArg <= nArgs; iArg++ )
   {
-    unsigned short nAddress = g_aArgs[ iArg ].nValue;
+    uint16_t nAddress = g_aArgs[ iArg ].nValue;
 
     if (iBookmark == NO_6502_TARGET)
     {
@@ -163,8 +166,9 @@ Update_t CmdBookmarkAdd (int nArgs )
     }
   }
 
-  if (!bAdded)
+  if (!bAdded) {
     goto _Help;
+}
 
   return UPDATE_DISASM | ConsoleUpdate();
 
@@ -174,40 +178,43 @@ _Help:
 }
 
 
-Update_t CmdBookmarkClear (int nArgs)
+auto CmdBookmarkClear (int nArgs) -> Update_t
 {
   int iBookmark = 0;
 
-  int iArg;
+  int iArg = 0;
   for (iArg = 1; iArg <= nArgs; iArg++ )
   {
     if (! strcmp(g_aArgs[nArgs].sArg, g_aParameters[ PARAM_WILDSTAR ].m_sName))
     {
       for (iBookmark = 0; iBookmark < MAX_BOOKMARKS; iBookmark++ )
       {
-        if (g_aBookmarks[ iBookmark ].bSet)
+        if (g_aBookmarks[ iBookmark ].bSet) {
           g_aBookmarks[ iBookmark ].bSet = false;
+}
       }
       break;
     }
 
     iBookmark = g_aArgs[ iArg ].nValue;
-    if (g_aBookmarks[ iBookmark ].bSet)
+    if (g_aBookmarks[ iBookmark ].bSet) {
       g_aBookmarks[ iBookmark ].bSet = false;
+}
   }
 
   return UPDATE_DISASM;
 }
 
 
-Update_t CmdBookmarkGoto ( int nArgs )
+auto CmdBookmarkGoto ( int nArgs ) -> Update_t
 {
-  if (! nArgs)
+  if (! nArgs) {
     return Help_Arg_1( CMD_BOOKMARK_GOTO );
+}
 
   int iBookmark = g_aArgs[ 1 ].nValue;
 
-  unsigned short nAddress;
+  uint16_t nAddress = 0;
   if (_Bookmark_Get( iBookmark, nAddress ))
   {
     g_nDisasmCurAddress = nAddress;
@@ -219,7 +226,7 @@ Update_t CmdBookmarkGoto ( int nArgs )
 }
 
 
-Update_t CmdBookmarkList (int nArgs)
+auto CmdBookmarkList (int nArgs) -> Update_t
 {
   (void)nArgs;
   if (! g_nBookmarks)
@@ -235,7 +242,7 @@ Update_t CmdBookmarkList (int nArgs)
 }
 
 
-Update_t CmdBookmarkLoad (int nArgs)
+auto CmdBookmarkLoad (int nArgs) -> Update_t
 {
   if (nArgs == 1)
   {
@@ -250,7 +257,7 @@ Update_t CmdBookmarkLoad (int nArgs)
 }
 
 
-Update_t CmdBookmarkSave (int nArgs)
+auto CmdBookmarkSave (int nArgs) -> Update_t
 {
   char sText[ CONSOLE_WIDTH ];
 
@@ -275,8 +282,9 @@ Update_t CmdBookmarkSave (int nArgs)
 
   if (nArgs)
   {
-    if (! (g_aArgs[ 1 ].bType & TYPE_QUOTED_2))
+    if (! (g_aArgs[ 1 ].bType & TYPE_QUOTED_2)) {
       return Help_Arg_1( CMD_BOOKMARK_SAVE );
+}
 
     if (ConfigSave_BufferToDisk( g_aArgs[ 1 ].sArg, CONFIG_SAVE_FILE_CREATE ))
     {

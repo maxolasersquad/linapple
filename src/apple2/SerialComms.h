@@ -25,12 +25,12 @@ enum SscStopBits {
 
 typedef struct SSC_DIPSW_tag {
   //DIPSW1
-  unsigned int uBaudRate;
+  uint32_t uBaudRate;
   FirmwareMode eFirmwareMode;
 
   //DIPSW2
   SscStopBits eStopBits;
-  unsigned int uByteSize;
+  uint32_t uByteSize;
   SscParity eParity;
   bool bLinefeed;
   bool bInterrupts;
@@ -51,18 +51,18 @@ struct SuperSerialCard {
   SSC_DIPSW m_DIPSWCurrent;
 
   // Derived from DIPSWs
-  unsigned int m_uBaudRate;
+  uint32_t m_uBaudRate;
   SscStopBits m_eStopBits;
-  unsigned int m_uByteSize;
+  uint32_t m_uByteSize;
   SscParity m_eParity;
 
   // SSC Registers
-  unsigned char m_uControlByte;
-  unsigned char m_uCommandByte;
+  uint8_t m_uControlByte;
+  uint8_t m_uCommandByte;
 
   // State
-  unsigned char m_RecvBuffer[uRecvBufferSize];
-  volatile unsigned int m_vRecvBytes;
+  uint8_t m_RecvBuffer[uRecvBufferSize];
+  volatile uint32_t m_vRecvBytes;
 
   bool m_bTxIrqEnabled;
   bool m_bRxIrqEnabled;
@@ -70,21 +70,21 @@ struct SuperSerialCard {
   bool m_bWrittenTx;
   volatile bool m_vbCommIRQ;
 
-  unsigned char *m_pExpansionRom;
+  uint8_t *m_pExpansionRom;
 };
 
 // Procedural functions for the core logic
 void SSC_Reset(SuperSerialCard* pSSC);
-void SSC_Initialize(SuperSerialCard* pSSC, uint8_t* pCxRomPeripheral, unsigned int uSlot);
+void SSC_Initialize(SuperSerialCard* pSSC, uint8_t* pCxRomPeripheral, uint32_t uSlot);
 void SSC_Destroy(SuperSerialCard* pSSC);
 
 // Snapshot
-auto SSC_GetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> unsigned int;
-auto SSC_SetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> unsigned int;
+auto SSC_GetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> uint32_t;
+auto SSC_SetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> uint32_t;
 
 // IO Handlers
-auto SSC_IORead(unsigned short PC, unsigned short uAddr, unsigned char bWrite, unsigned char uValue, uint32_t nCyclesLeft) -> unsigned char;
-auto SSC_IOWrite(unsigned short PC, unsigned short uAddr, unsigned char bWrite, unsigned char uValue, uint32_t nCyclesLeft) -> unsigned char;
+auto SSC_IORead(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t;
+auto SSC_IOWrite(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t;
 
 // Interface for Frontend to Core
 void SSC_PushRxByte(SuperSerialCard* pSSC, uint8_t byte);
@@ -92,7 +92,7 @@ void SSC_PushRxByte(SuperSerialCard* pSSC, uint8_t byte);
 // Interface for Core to call Frontend (implemented in Frontend)
 extern void SSCFrontend_SendByte(uint8_t byte);
 extern auto SSCFrontend_IsActive() -> bool;
-extern void SSCFrontend_UpdateState(unsigned int baud, unsigned int bits,
+extern void SSCFrontend_UpdateState(uint32_t baud, uint32_t bits,
                                            SscParity parity, SscStopBits stop);
 
 // Global instance (to be moved/handled)

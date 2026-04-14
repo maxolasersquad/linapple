@@ -7,11 +7,12 @@
 #include <cstring>
 #include <pthread.h>
 #include <string>
+#include <array>
 
 static int g_hCommHandle = -1;
 static std::string g_sSerialPortPath = "";
 static bool g_bSerialLoopback = false;
-static unsigned int g_dwCommInactivity = 0;
+static uint32_t g_dwCommInactivity = 0;
 static pthread_mutex_t g_CriticalSection = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t g_CommThread;
 static volatile bool g_bThreadRunning = false;
@@ -19,7 +20,7 @@ static volatile bool g_bThreadTerminate = false;
 
 extern auto DiskIsSpinning() -> bool; // from Disk.cpp or elsewhere
 
-void SSCFrontend_UpdateCommState(unsigned int baud, unsigned int bits, SscParity parity, SscStopBits stop) {
+void SSCFrontend_UpdateCommState(uint32_t baud, uint32_t bits, SscParity parity, SscStopBits stop) {
   if (g_hCommHandle == -1) {
     return;
   }
@@ -86,16 +87,16 @@ void SSCFrontend_UpdateCommState(unsigned int baud, unsigned int bits, SscParity
 }
 
 static auto SerialPollingThread(void* arg) -> void* {
-    SuperSerialCard* pSSC = (SuperSerialCard*)arg;
-    uint8_t buffer[256];
+    auto* pSSC = static_cast<SuperSerialCard*>(arg);
+    std::array<uint8_t, 256> buffer;
 
     while (!g_bThreadTerminate) {
         if (g_hCommHandle != -1) {
-            int n = read(g_hCommHandle, buffer, sizeof(buffer));
+            int n = static_cast<int>(read(g_hCommHandle, buffer.data(), buffer.size()));
             if (n > 0) {
                 pthread_mutex_lock(&g_CriticalSection);
                 for (int i = 0; i < n; ++i) {
-                    SSC_PushRxByte(pSSC, buffer[i]);
+                    SSC_PushRxByte(pSSC, buffer[static_cast<size_t>(i)]);
                 }
                 pthread_mutex_unlock(&g_CriticalSection);
             }
@@ -123,7 +124,7 @@ auto SSCFrontend_IsActive() -> bool {
   return (g_hCommHandle != -1);
 }
 
-void SSCFrontend_UpdateState(unsigned int baud, unsigned int bits, SscParity parity, SscStopBits stop) {
+void SSCFrontend_UpdateState(uint32_t baud, uint32_t bits, SscParity parity, SscStopBits stop) {
   SSCFrontend_UpdateCommState(baud, bits, parity, stop);
 }
 

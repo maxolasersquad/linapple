@@ -15,10 +15,10 @@ void CpuNmiAssert(eIRQSRC source) { (void)source; }
 void CpuNmiDeassert(eIRQSRC source) { (void)source; }
 
 // Mock Memory functions
-void RegisterIoHandler(unsigned int slot, iofunction r, iofunction w, iofunction cr, iofunction cw, void* p, unsigned char* rom) {
+void RegisterIoHandler(uint32_t slot, iofunction r, iofunction w, iofunction cr, iofunction cw, void* p, uint8_t* rom) {
     (void)slot; (void)r; (void)w; (void)cr; (void)cw; (void)p; (void)rom;
 }
-unsigned char IO_Null(unsigned short nPC, unsigned short nAddr, unsigned char nWriteFlag, unsigned char nWriteValue, uint32_t nCyclesLeft) {
+auto IO_Null(uint16_t nPC, uint16_t nAddr, uint8_t nWriteFlag, uint8_t nWriteValue, uint32_t nCyclesLeft) -> uint8_t {
     (void)nPC; (void)nAddr; (void)nWriteFlag; (void)nWriteValue; (void)nCyclesLeft;
     return 0;
 }
@@ -30,13 +30,13 @@ void SSCFrontend_SendByte(uint8_t byte) {
     g_lastSentByte = byte;
     g_sendCalled = true;
 }
-bool SSCFrontend_IsActive() { return true; }
-void SSCFrontend_UpdateState(unsigned int b, unsigned int s, SscParity p, SscStopBits t) {
+auto SSCFrontend_IsActive() -> bool { return true; }
+void SSCFrontend_UpdateState(uint32_t b, uint32_t s, SscParity p, SscStopBits t) {
     (void)b; (void)s; (void)p; (void)t;
 }
 
 // Helper for slot parameters
-void* MemGetSlotParameters(unsigned int slot) {
+auto MemGetSlotParameters(uint32_t slot) -> void* {
     (void)slot;
     return &sg_SSC;
 }

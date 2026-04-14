@@ -10,14 +10,14 @@ void SSCFrontend_Update(struct SuperSerialCard* pSSC, uint32_t cycles) { (void)p
 void PrinterFrontend_Update(uint32_t cycles) { (void)cycles; }
 
 // Printer Frontend stubs
-auto PrinterFrontend_CheckStatus() -> unsigned char { return 0; }
-void PrinterFrontend_SendChar(unsigned char c) { (void)c; }
+auto PrinterFrontend_CheckStatus() -> uint8_t { return 0; }
+void PrinterFrontend_SendChar(uint8_t c) { (void)c; }
 void PrinterFrontend_Destroy() {}
 
 // SSC Frontend stubs
 void SSCFrontend_SendByte(uint8_t byte) { (void)byte; }
 auto SSCFrontend_IsActive() -> bool { return false; }
-void SSCFrontend_UpdateState(unsigned int baud, unsigned int bits, SscParity parity, SscStopBits stop) {
+void SSCFrontend_UpdateState(uint32_t baud, uint32_t bits, SscParity parity, SscStopBits stop) {
     (void)baud; (void)bits; (void)parity; (void)stop;
 }
 
@@ -32,3 +32,6 @@ void DSShutdown() {}
 
 // Debugger stubs (normally in SDL_Video.cpp)
 void StretchBltMemToFrameDC() {}
+
+void SoundCore_SetFade(int fade) { (void)fade; }
+void PrinterFrontend_Reset() {}

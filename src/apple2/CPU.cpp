@@ -61,17 +61,21 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "apple2/MouseInterface.h"
 #include "core/Common_Globals.h"
 
-#define   AF_SIGN       0x80
-#define   AF_OVERFLOW   0x40
-#define   AF_RESERVED   0x20
-#define   AF_BREAK      0x10
-#define   AF_DECIMAL    0x08
-#define   AF_INTERRUPT  0x04
-#define   AF_ZERO       0x02
-#define   AF_CARRY      0x01
+enum {
+AF_SIGN =       0x80,
+AF_OVERFLOW =   0x40,
+AF_RESERVED =   0x20,
+AF_BREAK =      0x10,
+AF_DECIMAL =    0x08,
+AF_INTERRUPT =  0x04,
+AF_ZERO =       0x02,
+AF_CARRY =      0x01
+};
 
-#define   SHORTOPCODES  22
-#define   BENCHOPCODES  33
+enum {
+SHORTOPCODES =  22,
+BENCHOPCODES =  33
+};
 
 // What is this 6502 code?
 static uint8_t benchopcode[BENCHOPCODES] = {0x06, 0x16, 0x24, 0x45, 0x48, 0x65, 0x68, 0x76, 0x84, 0x85, 0x86, 0x91, 0x94,
@@ -119,14 +123,14 @@ static volatile bool g_bNmiFlank = false; // Positive going flank on NMI line
             | AF_RESERVED | AF_BREAK;
 // CYC(a): This can be optimised, as only certain opcodes will affect uExtraCycles
 #define CYC(a)   uExecutedCycles += (a)+uExtraCycles; g_nIrqCheckTimeout -= (a)+uExtraCycles;
-#define POP   (*(mem+((regs.sp >= 0x1FF) ? (regs.sp = 0x100) : ++regs.sp)))
+#define POP   (*(mem+((regs.sp >= STACK_END) ? (regs.sp = STACK_BEGIN) : ++regs.sp)))
 #define PUSH(a)   *(mem+regs.sp--) = (a);            \
-     if (regs.sp < 0x100)              \
-       regs.sp = 0x1FF;
-extern auto IOMap_Dispatch(unsigned short pc, unsigned short addr, unsigned char write, unsigned char d, uint32_t cycles) -> unsigned char;
+     if (regs.sp < STACK_BEGIN)              \
+       regs.sp = STACK_END;
+extern auto IOMap_Dispatch(uint16_t pc, uint16_t addr, uint8_t write, uint8_t d, uint32_t cycles) -> uint8_t;
 
 #define READ   (                  \
-        ((addr & 0xF000) == 0xC000)            \
+        ((addr & IO_REGION_MASK) == IO_REGION_START)            \
         ? IOMap_Dispatch(regs.pc,addr,0,0,uExecutedCycles) \
       : *(mem+addr)              \
      )
@@ -140,7 +144,7 @@ extern auto IOMap_Dispatch(unsigned short pc, unsigned short addr, unsigned char
        uint8_t* page = memwrite[addr >> 8];        \
        if (page)                \
          *(page+(addr & 0xFF)) = (uint8_t)(a);          \
-       else if ((addr & 0xF000) == 0xC000)          \
+       else if ((addr & IO_REGION_MASK) == IO_REGION_START)          \
          IOMap_Dispatch(regs.pc,addr,1,(uint8_t)(a),uExecutedCycles); \
      }
 
@@ -671,7 +675,7 @@ uint16_t g_nIdx = 0;
 const uint16_t BUFFER_SIZE = 4096;  // 80 secs
 uint16_t g_nBuffer[BUFFER_SIZE];
 uint32_t g_nMean = 0;
-uint32_t g_nMin = 0xFFFFFFFF;
+uint32_t g_nMin = UINT32_MAX_VAL;
 uint32_t g_nMax = 0;
 
 static inline void DoIrqProfiling(uint32_t uCycles)
@@ -711,9 +715,9 @@ static inline void Fetch(uint8_t &iOpcode, uint32_t uExecutedCycles)
   const uint16_t PC = regs.pc;
   g_uInternalExecutedCycles = uExecutedCycles;
 
-  iOpcode = ((PC & 0xF000) == 0xC000) ? IOMap_Dispatch(PC, PC, 0, 0,
+  iOpcode = ((PC & IO_REGION_MASK) == IO_REGION_START) ? IOMap_Dispatch(PC, PC, 0, 0,
                                                                  uExecutedCycles)  // Fetch opcode from I/O memory, but params are still from mem[]
-                                      : *(mem + PC);
+                                      : mem[PC];
 
   regs.pc++;
 }
@@ -738,7 +742,7 @@ static inline void NMI(uint32_t &uExecutedCycles, uint16_t &uExtraCycles, uint8_
     EF_TO_AF
     PUSH(regs.ps & ~AF_BREAK)
     regs.ps = regs.ps | AF_INTERRUPT & ~AF_DECIMAL;
-    regs.pc = * (uint16_t*) (mem+0xFFFA);
+    regs.pc = * (uint16_t*) (mem+NMI_VECTOR_ADDR);
     CYC(7)
   }
   #endif
@@ -754,7 +758,7 @@ static inline void IRQ(uint32_t &uExecutedCycles, uint16_t &uExtraCycles, uint8_
     EF_TO_AF
     PUSH(regs.ps & ~AF_BREAK)
     regs.ps = (regs.ps | AF_INTERRUPT) & (~AF_DECIMAL);
-    regs.pc = *(uint16_t * )(mem + 0xFFFE);
+    regs.pc = *reinterpret_cast<uint16_t *>(mem + IRQ_VECTOR_ADDR);
     CYC(7)
   }
 }
@@ -770,26 +774,26 @@ static inline void CheckInterruptSources(uint32_t uExecutedCycles)
   }
 }
 
-static uint32_t Cpu65C02(uint32_t uTotalCycles)
+static auto Cpu65C02(uint32_t uTotalCycles) -> uint32_t
 {
   // Optimisation:
   // . Copy the global /regs/ vars to stack-based local vars
   //   (Oliver Schmidt says this gives a performance gain, see email - The real deal: "1.10.5")
-  uint16_t addr;
-  uint8_t flagc; // must always be 0 or 1, no other values allowed
-  uint8_t flagn; // must always be 0 or 0x80.
-  uint8_t flagv; // any value allowed
-  uint8_t flagz; // any value allowed
-  uint16_t temp;
-  uint16_t temp2;
-  uint16_t val;
+  uint16_t addr = 0;
+  uint8_t flagc = 0; // must always be 0 or 1, no other values allowed
+  uint8_t flagn = 0; // must always be 0 or 0x80.
+  uint8_t flagv = 0; // any value allowed
+  uint8_t flagz = 0; // any value allowed
+  uint16_t temp = 0;
+  uint16_t temp2 = 0;
+  uint16_t val = 0;
   AF_TO_EF
   uint32_t uExecutedCycles = 0;
-  uint16_t base;
+  uint16_t base = 0;
 
   do {
     uint16_t uExtraCycles = 0;
-    uint8_t iOpcode;
+    uint8_t iOpcode = 0;
 
     Fetch(iOpcode, uExecutedCycles);
 
@@ -2068,24 +2072,24 @@ static uint32_t Cpu65C02(uint32_t uTotalCycles)
 
 //===========================================================================
 
-static uint32_t Cpu6502(uint32_t uTotalCycles)
+static auto Cpu6502(uint32_t uTotalCycles) -> uint32_t
 {
-  uint16_t addr;
-  uint8_t flagc; // must always be 0 or 1, no other values allowed
-  uint8_t flagn; // must always be 0 or 0x80.
-  uint8_t flagv; // any value allowed
-  uint8_t flagz; // any value allowed
-  uint16_t temp;
-  uint16_t val;
-  uint16_t low;
-  uint16_t high;
+  uint16_t addr = 0;
+  uint8_t flagc = 0; // must always be 0 or 1, no other values allowed
+  uint8_t flagn = 0; // must always be 0 or 0x80.
+  uint8_t flagv = 0; // any value allowed
+  uint8_t flagz = 0; // any value allowed
+  uint16_t temp = 0;
+  uint16_t val = 0;
+  uint16_t low = 0;
+  uint16_t high = 0;
   AF_TO_EF
   uint32_t uExecutedCycles = 0;
-  uint16_t base;
+  uint16_t base = 0;
 
   do {
     uint16_t uExtraCycles = 0;
-    uint8_t iOpcode;
+    uint8_t iOpcode = 0;
 
     Fetch(iOpcode, uExecutedCycles);
 
@@ -3441,7 +3445,7 @@ static uint32_t Cpu6502(uint32_t uTotalCycles)
   return uExecutedCycles;
 }
 
-static uint32_t InternalCpuExecute(uint32_t uTotalCycles)
+static auto InternalCpuExecute(uint32_t uTotalCycles) -> uint32_t
 {
   #ifdef UPDATE_ALL_PER_CYCLE
   MB_Update();

@@ -19,10 +19,10 @@ eApple2Type g_Apple2Type = A2TYPE_APPLE2EENHANCED;
 
 uint64_t cumulativecycles = 0;
 uint64_t cyclenum = 0;
-unsigned int emulmsec = 0;
+uint32_t emulmsec = 0;
 bool g_bFullSpeed = false;
 bool hddenabled = false;
-unsigned int clockslot;
+uint32_t clockslot;
 
 SystemState_t g_state = {MODE_LOGO,
                          false,
@@ -47,17 +47,17 @@ SystemState_t g_state = {MODE_LOGO,
 
 double g_fCurrentCLK6502 = CLOCK_6502;
 int g_nCpuCyclesFeedback = 0;
-unsigned int g_dwCyclesThisFrame = 0;
+uint32_t g_dwCyclesThisFrame = 0;
 
-FILE* g_fh = nullptr;
+FilePtr g_fh(nullptr, fclose);
 bool g_bDisableDirectSound = false;
 
 SuperSerialCard sg_SSC;
 
-unsigned int g_Slot4 = CT_Mockingboard;
-CURL* g_curl = NULL;
+uint32_t g_Slot4 = CT_Mockingboard;
+CURL* g_curl = nullptr;
 
-const char* GetTitleApple2() { return TITLE_APPLE_2_; }
-const char* GetTitleApple2Plus() { return TITLE_APPLE_2_PLUS_; }
-const char* GetTitleApple2e() { return TITLE_APPLE_2E_; }
-const char* GetTitleApple2eEnhanced() { return TITLE_APPLE_2E_ENHANCED_; }
+auto GetTitleApple2() -> const char* { return TITLE_APPLE_2_; }
+auto GetTitleApple2Plus() -> const char* { return TITLE_APPLE_2_PLUS_; }
+auto GetTitleApple2e() -> const char* { return TITLE_APPLE_2E_; }
+auto GetTitleApple2eEnhanced() -> const char* { return TITLE_APPLE_2E_ENHANCED_; }

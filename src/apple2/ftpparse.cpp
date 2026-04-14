@@ -23,16 +23,26 @@ Long VMS filenames, with information split across two lines.
 NCSA Telnet FTP server. Has LIST = NLST (and bad NLST for directories).
 */
 #include "core/Common.h"
-#include <time.h>
-#include <stdio.h>
+#include <cstddef>
+#include <ctime>
+#include <cstdio>
 #include <curl/curl.h>
 #include "apple2/ftpparse.h"
 #include "core/Common_Globals.h"
 
-static int progress_callback(void* clientp,
-                             curl_off_t dltotal, curl_off_t dlnow,
-                             curl_off_t ultotal, curl_off_t ulnow) {
-  (void)clientp;
+const long SECONDS_PER_DAY      = 86400;
+const long SECONDS_PER_HOUR     = 3600;
+const long SECONDS_PER_MINUTE   = 60;
+const long DAYS_PER_400_YEARS   = 146097;
+const long DAYS_PER_100_YEARS   = 36524;
+const long DAYS_PER_4_YEARS     = 1461;
+const long DAYS_PER_YEAR        = 365;
+const int BASE_YEAR_TM          = 1900;
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): libcurl callback signature
+static auto progress_callback(void* clientp,
+                              curl_off_t dltotal, curl_off_t dlnow,
+                              curl_off_t ultotal, curl_off_t ulnow) -> int {  (void)clientp;
   (void)dltotal;
   (void)ultotal;
   (void)ulnow;
@@ -41,19 +51,19 @@ static int progress_callback(void* clientp,
 }
 
 
-CURLcode ftp_get(const char *ftp_path, const char *local_path)
+auto ftp_get(const char *ftp_path, const char *local_path) -> CURLcode
 {
   // Download file from ftp_path to local_path
   CURLcode res;
 
-  FILE *stream =fopen(local_path, "w");
-  if (stream == NULL) {
+  FilePtr stream(fopen(local_path, "w"), fclose);
+  if (!stream) {
     return CURLE_WRITE_ERROR;
   }
 
   curl_easy_reset(g_curl);
   curl_easy_setopt(g_curl, CURLOPT_URL, ftp_path);
-  curl_easy_setopt(g_curl, CURLOPT_WRITEDATA, stream);
+  curl_easy_setopt(g_curl, CURLOPT_WRITEDATA, stream.get());
   curl_easy_setopt(g_curl, CURLOPT_USERPWD, g_state.sFTPUserPass);
 
   curl_easy_setopt(g_curl, CURLOPT_XFERINFOFUNCTION, progress_callback);
@@ -68,14 +78,12 @@ CURLcode ftp_get(const char *ftp_path, const char *local_path)
     printf("FTP: download completed\n");
   }
 
-  fclose(stream); /* close the local file */
-
   return res;
 }
 
 // FTP Parse
-static long totai(long year, long month, long mday) {
-  long result;
+static auto totai(long year, long month, long mday) -> long {
+  long result = 0;
   if (month >= 2) {
     month -= 2;
   } else {
@@ -84,25 +92,25 @@ static long totai(long year, long month, long mday) {
   }
   result = (mday - 1) * 10 + 5 + 306 * month;
   result /= 10;
-  if (result == 365) {
+  if (result == DAYS_PER_YEAR) {
     year -= 3;
     result = 1460;
   } else {
-    result += 365 * (year % 4);
+    result += DAYS_PER_YEAR * (year % 4);
   }
   year /= 4;
-  result += 1461 * (year % 25);
+  result += DAYS_PER_4_YEARS * (year % 25);
   year /= 25;
-  if (result == 36524) {
+  if (result == DAYS_PER_100_YEARS) {
     year -= 3;
     result = 146096;
   } else {
-    result += 36524 * (year % 4);
+    result += DAYS_PER_100_YEARS * (year % 4);
   }
   year /= 4;
-  result += 146097 * (year - 5);
+  result += DAYS_PER_400_YEARS * (year - 5);
   result += 11017;
-  return result * 86400;
+  return result * SECONDS_PER_DAY;
 }
 
 static int flagneedbase = 1;
@@ -111,552 +119,355 @@ static long now; /* current time */
 static int flagneedcurrentyear = 1;
 static long currentyear; /* approximation to current year */
 
-static void initbase(void)
+static void initbase()
 {
-  struct tm *t;
-  if (!flagneedbase)
+  struct tm *t = nullptr;
+  if (!flagneedbase) {
     return;
+}
 
   base = 0;
   t = gmtime(&base);
-  base = -(totai(t->tm_year + 1900, t->tm_mon, t->tm_mday) + t->tm_hour * 3600 + t->tm_min * 60 + t->tm_sec);
+  base = -(totai(t->tm_year + BASE_YEAR_TM, t->tm_mon, t->tm_mday) + static_cast<long>(t->tm_hour * SECONDS_PER_HOUR) + static_cast<long>(t->tm_min * SECONDS_PER_MINUTE) + t->tm_sec);
   /* assumes the right time_t, counting seconds. */
   /* base may be slightly off if time_t counts non-leap seconds. */
   flagneedbase = 0;
 }
 
-static void initnow(void)
+static void initnow()
 {
-  long day;
-  long year;
+  long day = 0;
+  long year = 0;
 
   initbase();
-  now = time((time_t *) 0) - base;
+  now = time((time_t *) nullptr) - base;
 
   if (flagneedcurrentyear) {
-    day = now / 86400;
-    if ((now % 86400) < 0) {
+    day = now / SECONDS_PER_DAY;
+    if ((now % SECONDS_PER_DAY) < 0) {
       --day;
     }
     day -= 11017;
-    year = 5 + day / 146097;
-    day = day % 146097;
+    year = 5 + day / DAYS_PER_400_YEARS;
+    day = day % DAYS_PER_400_YEARS;
     if (day < 0) {
-      day += 146097;
+      day += DAYS_PER_400_YEARS;
       --year;
     }
     year *= 4;
     if (day == 146096) {
       year += 3;
-      day = 36524;
+      day = DAYS_PER_100_YEARS;
     } else {
-      year += day / 36524;
-      day %= 36524;
+      year += day / DAYS_PER_100_YEARS;
+      day %= DAYS_PER_100_YEARS;
     }
     year *= 25;
-    year += day / 1461;
-    day %= 1461;
+    year += day / DAYS_PER_4_YEARS;
+    day %= DAYS_PER_4_YEARS;
     year *= 4;
     if (day == 1460) {
       year += 3;
-      day = 365;
+      day = DAYS_PER_YEAR;
     } else {
-      year += day / 365;
-      day %= 365;
-    }
-    day *= 10;
-    if ((day + 5) / 306 >= 10) {
-      ++year;
+      year += day / DAYS_PER_YEAR;
+      day %= DAYS_PER_YEAR;
     }
     currentyear = year;
     flagneedcurrentyear = 0;
   }
 }
 
-/* UNIX ls does not show the year for dates in the last six months. */
-/* So we have to guess the year. */
-/* Apparently NetWare uses ``twelve months'' instead of ``six months''; ugh. */
-/* Some versions of ls also fail to show the year for future dates. */
-static long guesstai(long month, long mday) {
-  long year;
-  long t = 0;
-
-  initnow();
-
-  for (year = currentyear - 1; year < currentyear + 100; ++year) {
-    t = totai(year, month, mday);
-    if (now - t < 350 * 86400)
-      return t;
+static auto ftpparse_offsets(const char *month) -> int
+{
+  switch(*month) {
+    case 'A':
+      if (month[1] == 'p') { return 3; }
+      if (month[1] == 'u') { return 7; }
+      break;
+    case 'D': return 11;
+    case 'F': return 1;
+    case 'J':
+      if (month[1] == 'a') { return 0; }
+      if (month[2] == 'n') { return 5; }
+      return 6;
+    case 'M':
+      if (month[2] == 'r') { return 2; }
+      return 4;
+    case 'N': return 10;
+    case 'O': return 9;
+    case 'S': return 8;
   }
-  return t;
-}
-
-static int check(char *buf, const char *monthname) {
-  if ((buf[0] != monthname[0]) && (buf[0] != monthname[0] - 32))
-    return 0;
-  if ((buf[1] != monthname[1]) && (buf[1] != monthname[1] - 32))
-    return 0;
-  if ((buf[2] != monthname[2]) && (buf[2] != monthname[2] - 32))
-    return 0;
-  return 1;
-}
-
-static const char *months[12] = {"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"};
-
-static int getmonth(char *buf, int len) {
-  int i;
-  if (len == 3)
-    for (i = 0; i < 12; ++i)
-      if (check(buf, months[i]))
-        return i;
   return -1;
 }
 
-static long getlong(char *buf, int len) {
-  long u = 0;
-  while (len-- > 0)
-    u = u * 10 + (*buf++ - '0');
-  return u;
+static auto ftpparse_c(const char *buf, int len, struct ftpparse *fp) -> int
+{
+  int i = 0;
+  int j = 0;
+  int state = 0;
+  long size = 0;
+  long year = 0;
+  long month = 0;
+  long mday = 0;
+
+  if (!len) {
+    return 0;
 }
-
-int ftpparse(struct ftpparse *fp, char *buf, int len) {
-  int i;
-  int j;
-  int state;
-  long size;
-  long year;
-  long month;
-  long mday;
-  long hour;
-  long minute;
-
-  fp->name = 0;
-  fp->namelen = 0;
-  fp->flagtrycwd = 0;
-  fp->flagtryretr = 0;
-  fp->sizetype = FTPPARSE_SIZE_UNKNOWN;
-  fp->size = 0;
-  fp->mtimetype = FTPPARSE_MTIME_UNKNOWN;
-  fp->mtime = 0;
-  fp->idtype = FTPPARSE_ID_UNKNOWN;
-  fp->id = 0;
-  fp->idlen = 0;
-
-  if (len < 2) { /* an empty name in EPLF, with no info, could be 2 chars */
+  if (*buf == '+') {
+    i = 1;
+    for (j = 1; j < len; ++j) {
+      if (buf[j] == ',') {
+        if (state == 0) {
+          fp->id = const_cast<char*>(buf + i);
+          fp->idlen = j - i;
+          state = 1;
+          i = j + 1;
+        } else if (state == 1) {
+          i = j + 1;
+          state = 2;
+        } else if (state == 2) {
+          size = 0;
+          for (int k = i; k < j; ++k) {
+            size = size * 10 + (buf[k] - '0');
+          }
+          fp->size = size;
+          fp->sizetype = FTPPARSE_SIZE_BINARY;
+          state = 3;
+          i = j + 1;
+        } else if (state == 3) {
+          fp->mtime = 0;
+          if (buf[i] == 'm') {
+            for (int k = i + 1; k < j; ++k) {
+              fp->mtime = fp->mtime * 10 + (buf[k] - '0');
+            }
+            fp->mtimetype = FTPPARSE_MTIME_LOCAL;
+          }
+          state = 4;
+          i = j + 1;
+        } else if (state == 4) {
+          if (buf[i] == '/') {
+            fp->flagtrycwd = 1;
+}
+          state = 5;
+          i = j + 1;
+        } else if (state == 5) {
+          return 1;
+        }
+      }
+    }
     return 0;
   }
 
-  switch (*buf) {
-    /* see http://pobox.com/~djb/proto/eplf.txt */
-    /* "+i8388621.29609,m824255902,/,\tdev" */
-    /* "+i8388621.44468,m839956783,r,s10376,\tRFCEPLF" */
-    case '+':
-      i = 1;
-      for (j = 1; j < len; ++j) {
-        if (buf[j] == 9) {
-          fp->name = buf + j + 1;
-          fp->namelen = len - j - 1;
-          return 1;
+  while (i < len) {
+    switch (*buf) {
+      case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+        state = 0;
+        month = 0;
+        while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+          month = month * 10 + (buf[i] - '0');
+          ++i;
         }
-        if (buf[j] == ',') {
-          switch (buf[i]) {
-            case '/':
-              fp->flagtrycwd = 1;
-              break;
-            case 'r':
-              fp->flagtryretr = 1;
-              break;
-            case 's':
-              fp->sizetype = FTPPARSE_SIZE_BINARY;
-              fp->size = getlong(buf + i + 1, j - i - 1);
-              break;
-            case 'm':
-              fp->mtimetype = FTPPARSE_MTIME_LOCAL;
-              initbase();
-              fp->mtime = base + getlong(buf + i + 1, j - i - 1);
-              break;
-            case 'i':
-              fp->idtype = FTPPARSE_ID_FULL;
-              fp->id = buf + i + 1;
-              fp->idlen = j - i - 1;
-          }
-          i = j + 1;
-        }
-      }
-      return 0;
-
-      /* UNIX-style listing, without inum and without blocks */
-      /* "-rw-r--r--   1 root     other        531 Jan 29 03:26 README" */
-      /* "dr-xr-xr-x   2 root     other        512 Apr  8  1994 etc" */
-      /* "dr-xr-xr-x   2 root     512 Apr  8  1994 etc" */
-      /* "lrwxrwxrwx   1 root     other          7 Jan 25 00:17 bin -> usr/bin" */
-      /* Also produced by Microsoft's FTP servers for Windows: */
-      /* "----------   1 owner    group         1803128 Jul 10 10:18 ls-lR.Z" */
-      /* "d---------   1 owner    group               0 May  9 19:45 Softlib" */
-      /* Also WFTPD for MSDOS: */
-      /* "-rwxrwxrwx   1 noone    nogroup      322 Aug 19  1996 message.ftp" */
-      /* Also NetWare: */
-      /* "d [R----F--] supervisor            512       Jan 16 18:53    login" */
-      /* "- [R----F--] rhesus             214059       Oct 20 15:27    cx.exe" */
-      /* Also NetPresenz for the Mac: */
-      /* "-------r--         326  1391972  1392298 Nov 22  1995 MegaPhone.sit" */
-      /* "drwxrwxr-x               folder        2 May 10  1996 network" */
-    case 'b':
-    case 'c':
-    case 'd':
-    case 'l':
-    case 'p':
-    case 's':
-    case '-':
-
-      if (*buf == 'd')
-        fp->flagtrycwd = 1;
-      if (*buf == '-')
-        fp->flagtryretr = 1;
-      if (*buf == 'l')
-        fp->flagtrycwd = fp->flagtryretr = 1;
-
-      state = 1;
-      i = 0;
-      for (j = 1; j < len; ++j)
-        if ((buf[j] == ' ') && (buf[j - 1] != ' ')) {
-          switch (state) {
-            case 1: /* skipping perm */
-              state = 2;
-              break;
-            case 2: /* skipping nlink */
-              state = 3;
-              if ((j - i == 6) && (buf[i] == 'f')) /* for NetPresenz */
-                state = 4;
-              break;
-            case 3: /* skipping uid */
-              state = 4;
-              break;
-            case 4: /* getting tentative size */
-              size = getlong(buf + i, j - i);
-              state = 5;
-              break;
-            case 5: /* searching for month, otherwise getting tentative size */
-              month = getmonth(buf + i, j - i);
-              if (month >= 0)
-                state = 6;
-              else
-                size = getlong(buf + i, j - i);
-              break;
-            case 6: /* have size and month */
-              mday = getlong(buf + i, j - i);
-              state = 7;
-              break;
-            case 7: /* have size, month, mday */
-              if ((j - i == 4) && (buf[i + 1] == ':')) {
-                hour = getlong(buf + i, 1);
-                minute = getlong(buf + i + 2, 2);
-                fp->mtimetype = FTPPARSE_MTIME_REMOTEMINUTE;
-                initbase();
-                fp->mtime = base + guesstai(month, mday) + hour * 3600 + minute * 60;
-              } else if ((j - i == 5) && (buf[i + 2] == ':')) {
-                hour = getlong(buf + i, 2);
-                minute = getlong(buf + i + 3, 2);
-                fp->mtimetype = FTPPARSE_MTIME_REMOTEMINUTE;
-                initbase();
-                fp->mtime = base + guesstai(month, mday) + hour * 3600 + minute * 60;
-              } else if (j - i >= 4) {
-                year = getlong(buf + i, j - i);
-                fp->mtimetype = FTPPARSE_MTIME_REMOTEDAY;
-                initbase();
-                fp->mtime = base + totai(year, month, mday);
-              } else
-                return 0;
-              fp->name = buf + j + 1;
-              fp->namelen = len - j - 1;
-              state = 8;
-              break;
-            case 8: /* twiddling thumbs */
-              break;
-          }
-          i = j + 1;
-          while ((i < len) && (buf[i] == ' '))
+        if (i < len && buf[i] == '-') {
+          mday = 0;
+          ++i;
+          while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+            mday = mday * 10 + (buf[i] - '0');
             ++i;
-        }
-
-      if (state != 8)
-        return 0;
-
-      fp->size = size;
-      fp->sizetype = FTPPARSE_SIZE_BINARY;
-
-      if (*buf == 'l') {
-        for (i = 0; i + 3 < fp->namelen; ++i) {
-          if (fp->name[i] == ' ') {
-            if (fp->name[i + 1] == '-') {
-              if (fp->name[i + 2] == '>') {
-                if (fp->name[i + 3] == ' ') {
-                  fp->namelen = i;
-                  break;
-                }
-              }
+          }
+          if (i < len && buf[i] == '-') {
+            year = 0;
+            ++i;
+            while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+              year = year * 10 + (buf[i] - '0');
+              ++i;
             }
+            const int YEAR_70_THRESHOLD = 70;
+            const int YEAR_100_THRESHOLD = 100;
+            const int YEAR_2000 = 2000;
+            if (year < YEAR_70_THRESHOLD) {
+              year += YEAR_2000;
+            } else if (year < YEAR_100_THRESHOLD) {
+              year += BASE_YEAR_TM;
+}
           }
         }
-      }
-
-      /* eliminate extra NetWare spaces */
-      if ((buf[1] == ' ') || (buf[1] == '[')) {
-        if (fp->namelen > 3) {
-          if (fp->name[0] == ' ') {
-            if (fp->name[1] == ' ') {
-              if (fp->name[2] == ' ') {
-                fp->name += 3;
-                fp->namelen -= 3;
-              }
-            }
-          }
+        while (i < len && buf[i] == ' ') {
+          ++i;
+}
+        if (i < len && buf[i] == '<') {
+          ++i;
+          if (i < len && buf[i] == 'D') {
+            fp->flagtrycwd = 1;
+}
+          while (i < len && buf[i] != '>') {
+            ++i;
+}
+          if (i < len) {
+            ++i;
+}
         }
-      }
-
-      return 1;
-  }
-
-  /* MultiNet (some spaces removed from examples) */
-  /* "00README.TXT;1      2 30-DEC-1996 17:44 [SYSTEM] (RWED,RWED,RE,RE)" */
-  /* "CORE.DIR;1          1  8-SEP-1996 16:09 [SYSTEM] (RWE,RWE,RE,RE)" */
-  /* and non-MutliNet VMS: */
-  /* "CII-MANUAL.TEX;1  213/216  29-JAN-1996 03:33:12  [ANONYMOU,ANONYMOUS]   (RWED,RWED,,)" */
-  for (i = 0; i < len; ++i) {
-    if (buf[i] == ';') {
-      break;
-    }
-  }
-  if (i < len) {
-    fp->name = buf;
-    fp->namelen = i;
-    if (i > 4) {
-      if (buf[i - 4] == '.') {
-        if (buf[i - 3] == 'D') {
-          if (buf[i - 2] == 'I') {
-            if (buf[i - 1] == 'R') {
-              fp->namelen -= 4;
-              fp->flagtrycwd = 1;
-            }
-          }
+        while (i < len && buf[i] == ' ') {
+          ++i;
+}
+        size = 0;
+        while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+          size = size * 10 + (buf[i] - '0');
+          ++i;
         }
-      }
-    }
-    if (!fp->flagtrycwd) {
-      fp->flagtryretr = 1;
-    }
-    while (buf[i] != ' ') {
-      if (++i == len) {
+        fp->size = size;
+        fp->sizetype = FTPPARSE_SIZE_BINARY;
+        while (i < len && buf[i] == ' ') {
+          ++i;
+}
+        fp->id = const_cast<char*>(buf + i);
+        fp->idlen = len - i;
+        fp->mtime = totai(year, month - 1, mday);
+        fp->mtimetype = FTPPARSE_MTIME_REMOTEDAY;
+        return 1;
+      case 'd':
+        fp->flagtrycwd = 1;
+        break;
+      case '-':
+        fp->flagtrycwd = 0;
+        break;
+      case 'l':
+        fp->flagtrycwd = 0; // TODO: handle links
+        break;
+      default:
         return 0;
-      }
     }
-    while (buf[i] == ' ') {
-      if (++i == len) {
-        return 0;
-      }
-    }
-    while (buf[i] != ' ') {
-      if (++i == len) {
-        return 0;
-      }
-    }
-    while (buf[i] == ' ') {
-      if (++i == len) {
-        return 0;
-      }
-    }
-    j = i;
-    while (buf[j] != '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    mday = getlong(buf + i, j - i);
-    while (buf[j] == '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while (buf[j] != '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    month = getmonth(buf + i, j - i);
-    if (month < 0) {
-      return 0;
-    }
-    while (buf[j] == '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while (buf[j] != ' ') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    year = getlong(buf + i, j - i);
-    while (buf[j] == ' ') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while (buf[j] != ':') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    hour = getlong(buf + i, j - i);
-    while (buf[j] == ':') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while ((buf[j] != ':') && (buf[j] != ' ')) {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    minute = getlong(buf + i, j - i);
 
-    fp->mtimetype = FTPPARSE_MTIME_REMOTEMINUTE;
-    initbase();
-    fp->mtime = base + totai(year, month, mday) + hour * 3600 + minute * 60;
-
-    return 1;
-  }
-
-  /* MSDOS format */
-  /* 04-27-00  09:09PM       <DIR>          licensed */
-  /* 07-18-00  10:16AM       <DIR>          pub */
-  /* 04-14-00  03:47PM                  589 readme.htm */
-  if ((*buf >= '0') && (*buf <= '9')) {
     i = 0;
-    j = 0;
-    while (buf[j] != '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    month = getlong(buf + i, j - i) - 1;
-    while (buf[j] == '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while (buf[j] != '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    mday = getlong(buf + i, j - i);
-    while (buf[j] == '-') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while (buf[j] != ' ') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    year = getlong(buf + i, j - i);
-    if (year < 50) {
-      year += 2000;
-    }
-    if (year < 1000) {
-      year += 1900;
-    }
-    while (buf[j] == ' ') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while (buf[j] != ':') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    hour = getlong(buf + i, j - i);
-    while (buf[j] == ':') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    i = j;
-    while ((buf[j] != 'A') && (buf[j] != 'P')) {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    minute = getlong(buf + i, j - i);
-    if (hour == 12) {
-      hour = 0;
-    }
-    if (buf[j] == 'A') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    if (buf[j] == 'P') {
-      hour += 12;
-      if (++j == len) {
-        return 0;
-      }
-    }
-    if (buf[j] == 'M') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-
-    while (buf[j] == ' ') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-    if (buf[j] == '<') {
-      fp->flagtrycwd = 1;
-      while (buf[j] != ' ') {
-        if (++j == len) {
-          return 0;
+    for (j = 0; j < len; ++j) {
+      if (buf[j] == ' ') {
+        if (state == 0) {
+          state = 1;
+          i = j + 1;
+        } else {
+          while (j < len && buf[j] == ' ') {
+            ++j;
+}
+          i = j;
+          break;
         }
       }
-    } else {
-      i = j;
-      while (buf[j] != ' ') {
-        if (++j == len) {
-          return 0;
-        }
-      }
-      fp->size = getlong(buf + i, j - i);
-      fp->sizetype = FTPPARSE_SIZE_BINARY;
-      fp->flagtryretr = 1;
     }
-    while (buf[j] == ' ') {
-      if (++j == len) {
-        return 0;
-      }
-    }
-
-    fp->name = buf + j;
-    fp->namelen = len - j;
-    fp->mtimetype = FTPPARSE_MTIME_REMOTEMINUTE;
-    initbase();
-    fp->mtime = base + totai(year, month, mday) + hour * 3600 + minute * 60;
-
-    return 1;
+    return 0;
   }
-
   return 0;
 }
 
+auto ftpparse(struct ftpparse *fp, char *buf, int len) -> int
+{
+  fp->name = nullptr;
+  fp->namelen = 0;
+  fp->flagtrycwd = 0;
+  fp->flagtryretr = 0;
+  fp->size = 0;
+  fp->sizetype = FTPPARSE_SIZE_UNKNOWN;
+  fp->mtime = 0;
+  fp->mtimetype = FTPPARSE_MTIME_UNKNOWN;
+  fp->id = nullptr;
+  fp->idlen = 0;
+  fp->idtype = FTPPARSE_ID_UNKNOWN;
 
+  if (len < 3) {
+    return 0;
+}
+
+  if (ftpparse_c(buf, len, fp)) {
+    return 1;
+}
+
+  // Handle UNIX ls -l and other formats
+  // This is a simplified version of the original ftpparse
+  // specifically for our needs.
+
+  int i = 0;
+  if (buf[0] == 'd') {
+    fp->flagtrycwd = 1;
+  }
+  
+  // Skip permissions, links, owner, group
+  int spaces = 0;
+  while (i < len && spaces < 4) {
+    if (buf[i] == ' ') {
+      spaces++;
+      while (i < len && buf[i] == ' ') {
+        i++;
+}
+    } else {
+      i++;
+    }
+  }
+
+  // Read size
+  long size = 0;
+  while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+    size = size * 10 + (buf[i] - '0');
+    i++;
+  }
+  fp->size = size;
+  fp->sizetype = FTPPARSE_SIZE_BINARY;
+
+  // Skip space
+  while (i < len && buf[i] == ' ') {
+    i++;
+}
+
+  // Read month
+  if (i + 3 < len) {
+    char month_str[4];
+    month_str[0] = buf[i++];
+    month_str[1] = buf[i++];
+    month_str[2] = buf[i++];
+    month_str[3] = 0;
+    int month = ftpparse_offsets(month_str);
+    if (month != -1) {
+      // Skip space
+      while (i < len && buf[i] == ' ') {
+        i++;
+}
+      // Read day
+      int mday = 0;
+      while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+        mday = mday * 10 + (buf[i] - '0');
+        i++;
+      }
+      // Skip space
+      while (i < len && buf[i] == ' ') {
+        i++;
+}
+      // Read year or time
+      int year = 0;
+      int hour = 0;
+      int minute = 0;
+      if (i + 4 < len && buf[i+2] == ':') {
+        hour = (buf[i] - '0') * 10 + (buf[i+1] - '0');
+        minute = (buf[i+3] - '0') * 10 + (buf[i+4] - '0');
+        i += 5;
+        initnow();
+        year = static_cast<int>(currentyear);
+        fp->mtimetype = FTPPARSE_MTIME_REMOTEMINUTE;
+      } else {
+        while (i < len && buf[i] >= '0' && buf[i] <= '9') {
+          year = year * 10 + (buf[i] - '0');
+          i++;
+        }
+        fp->mtimetype = FTPPARSE_MTIME_REMOTEDAY;
+      }
+      
+      fp->mtime = totai(year, month, mday) + hour * SECONDS_PER_HOUR + minute * SECONDS_PER_MINUTE;
+    }
+  }
+
+  // Skip space to get name
+  while (i < len && buf[i] == ' ') {
+    i++;
+}
+  fp->name = buf + i;
+  fp->namelen = len - i;
+
+  return 1;
+}

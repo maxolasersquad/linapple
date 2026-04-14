@@ -7,10 +7,10 @@ extern int g_nBookmarks;
 extern Bookmark_t g_aBookmarks[MAX_BOOKMARKS];
 
 // Bookmark Functions
-bool _Bookmark_Add(const int iBookmark, const unsigned short nAddress);
-bool _Bookmark_Del(const unsigned short nAddress);
-bool Bookmark_Find(const unsigned short nAddress);
-bool _Bookmark_Get(const int iBookmark, unsigned short &nAddress);
+bool _Bookmark_Add(const int iBookmark, const uint16_t nAddress);
+bool _Bookmark_Del(const uint16_t nAddress);
+bool Bookmark_Find(const uint16_t nAddress);
+bool _Bookmark_Get(const int iBookmark, uint16_t &nAddress);
 void _Bookmark_Reset();
 int _Bookmark_Size();
 

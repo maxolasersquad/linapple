@@ -38,8 +38,9 @@ struct PrintFormat_t
 //===========================================================================
 void DebuggerRunScript(const char* pFileName)
 {
-  if (!pFileName || !*pFileName)
+  if (!pFileName || !*pFileName) {
     return;
+}
 
   MemoryTextFile_t script;
   std::string sFileName;
@@ -69,7 +70,7 @@ void DebuggerRunScript(const char* pFileName)
         break;
       }
       script.GetLine(iLine, g_pConsoleInput, CONSOLE_WIDTH - 2);
-      g_nConsoleInputChars = (int)strlen(g_pConsoleInput);
+      g_nConsoleInputChars = static_cast<int>(strlen(g_pConsoleInput));
       DebuggerProcessCommand(false);
     }
   }
@@ -82,17 +83,18 @@ void DebuggerRunScript(const char* pFileName)
 }
 
 //===========================================================================
-Update_t CmdOutputCalc (int nArgs)
+auto CmdOutputCalc (int nArgs) -> Update_t
 {
-  if (! nArgs)
+  if (! nArgs) {
     return Help_Arg_1( CMD_OUTPUT_CALC );
+}
 
-  unsigned short nAddress = g_aArgs[1].nValue;
+  uint16_t nAddress = g_aArgs[1].nValue;
   char sText [ CONSOLE_WIDTH ];
 
   bool bHi = false;
   bool bLo = false;
-  char c = FormatChar4Font( (unsigned char) nAddress, &bHi, &bLo );
+  char c = FormatChar4Font( static_cast<uint8_t>(nAddress), &bHi, &bLo );
   bool bParen = bHi || bLo;
 
   int nBit = 0;
@@ -107,24 +109,27 @@ Update_t CmdOutputCalc (int nArgs)
 
   sprintf( sText, "  $%02X = %3d = %%%s", nAddress, nAddress, sBin );
 
-  if (bParen)
+  if (bParen) {
     strcat( sText, " (" );
+}
 
   if (bParen)
   {
-    int nLen = (int)strlen( sText );
+    int nLen = static_cast<int>(strlen( sText ));
     sText[ nLen ] = c;
     sText[ nLen + 1 ] = 0;
   }
 
-  if (bHi)
+  if (bHi) {
     strcat( sText, "High" );
-  else
-  if (bLo)
+  } else
+  if (bLo) {
     strcat( sText, "Ctrl" );
+}
 
-  if (bParen)
+  if (bParen) {
     strcat( sText, ")" );
+}
 
   ConsoleBufferPush( sText );
 
@@ -132,7 +137,7 @@ Update_t CmdOutputCalc (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdOutputEcho (int nArgs)
+auto CmdOutputEcho (int nArgs) -> Update_t
 {
   (void)nArgs;
   if (g_aArgs[1].bType & TYPE_QUOTED_2)
@@ -152,18 +157,19 @@ Update_t CmdOutputEcho (int nArgs)
 }
 
 //===========================================================================
-Update_t CmdOutputPrint (int nArgs)
+auto CmdOutputPrint (int nArgs) -> Update_t
 {
   // PRINT "A:",A," X:",X
   char sText[ CONSOLE_WIDTH ] = "";
   int nLen = 0;
 
-  unsigned short nValue;
+  uint16_t nValue = 0;
+  int iArg = 0;
 
-  if (! nArgs)
+  if (! nArgs) {
     goto _Help;
+}
 
-  int iArg;
   for (iArg = 1; iArg <= nArgs; iArg++ )
   {
     if (g_aArgs[ iArg ].bType & TYPE_QUOTED_2)
@@ -180,8 +186,9 @@ Update_t CmdOutputPrint (int nArgs)
     nLen += sprintf( &sText[ nLen ], "%d", nValue );
   }
 
-  if (nLen)
+  if (nLen) {
     ConsoleBufferPush( sText );
+}
 
   return ConsoleUpdate();
 
@@ -190,7 +197,7 @@ _Help:
 }
 
 //===========================================================================
-Update_t CmdOutputPrintf (int nArgs)
+auto CmdOutputPrintf (int nArgs) -> Update_t
 {
   // PRINTF "A:%d X:%d",A,X
   // PRINTF "Hex:%x  Dec:%d  Bin:%z",A,A,A
@@ -199,18 +206,21 @@ Update_t CmdOutputPrintf (int nArgs)
 
   std::vector<Arg_t> aValues;
   int iValue = 0;
-  unsigned short nValue = 0;
-  int nParamValues;
+  uint16_t nValue = 0;
+  int nParamValues = 0;
   int nWidth = 0;
   int nLen = 0;
   PrintState_e eThis = PS_LITERAL;
-  int iArg;
+  int iArg = 0;
+  const char *pFormat = nullptr;
 
-  if (nArgs < 1)
+  if (nArgs < 1) {
     goto _Help;
+}
 
-  if (! (g_aArgs[ 1 ].bType & TYPE_QUOTED_2))
+  if (! (g_aArgs[ 1 ].bType & TYPE_QUOTED_2)) {
     goto _Help;
+}
 
   nParamValues = nArgs - 1;
 
@@ -219,7 +229,6 @@ Update_t CmdOutputPrintf (int nArgs)
     aValues.push_back( g_aArgs[ iArg ] );
   }
 
-  const char *pFormat;
   pFormat = g_aArgs[ 1 ].sArg;
 
   while (*pFormat)
@@ -229,9 +238,9 @@ Update_t CmdOutputPrintf (int nArgs)
     switch (eThis)
     {
       case PS_LITERAL:
-        if (c == '%')
+        if (c == '%') {
           eThis = PS_ESCAPE;
-        else
+        } else
         {
           sText[ nLen++ ] = c;
         }
@@ -275,28 +284,31 @@ Update_t CmdOutputPrintf (int nArgs)
           switch (eThis)
           {
             case PS_NEXT_ARG_HEX:
-              if (nWidth)
+              if (nWidth) {
                 sprintf( sFormat, "%%0%dX", nWidth );
-              else
+              } else {
                 sprintf( sFormat, "%%X" );
+}
 
               sprintf( sValue, sFormat, nValue );
               break;
 
             case PS_NEXT_ARG_DEC:
-              if (nWidth)
+              if (nWidth) {
                 sprintf( sFormat, "%%%dd", nWidth );
-              else
+              } else {
                 sprintf( sFormat, "%%d" );
+}
 
               sprintf( sValue, sFormat, nValue );
               break;
 
             case PS_NEXT_ARG_BIN:
               {
-                int nBit;
-                if (! nWidth)
+                int nBit = 0;
+                if (! nWidth) {
                   nWidth = 8;
+}
 
                 for (nBit = 0; nBit < nWidth; nBit++ )
                 {
@@ -307,7 +319,7 @@ Update_t CmdOutputPrintf (int nArgs)
               break;
 
             case PS_NEXT_ARG_CHR:
-              sValue[ 0 ] = (char) nValue;
+              sValue[ 0 ] = static_cast<char>(nValue);
               sValue[ 1 ] = 0;
               break;
 
@@ -326,12 +338,14 @@ Update_t CmdOutputPrintf (int nArgs)
         break;
     }
 
-    if (nLen >= (CONSOLE_WIDTH - 1))
+    if (nLen >= (CONSOLE_WIDTH - 1)) {
       break;
+}
   }
 
-  if (nLen)
+  if (nLen) {
     ConsoleBufferPush( sText );
+}
 
   return ConsoleUpdate();
 
@@ -340,13 +354,15 @@ _Help:
 }
 
 //===========================================================================
-Update_t CmdOutputRun(int nArgs)
+auto CmdOutputRun(int nArgs) -> Update_t
 {
-  if (!nArgs)
+  if (!nArgs) {
     return Help_Arg_1(CMD_OUTPUT_RUN);
+}
 
-  if (nArgs != 1)
+  if (nArgs != 1) {
     return Help_Arg_1(CMD_OUTPUT_RUN);
+}
 
   DebuggerRunScript(g_aArgs[1].sArg);
 

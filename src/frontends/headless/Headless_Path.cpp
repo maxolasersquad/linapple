@@ -1,16 +1,17 @@
 #include "core/Util_Path.h"
 #include <unistd.h>
-#include <limits.h>
+#include <climits>
 #include <cstdlib>
+#include <array>
 
 namespace Path {
 
 auto GetExecutableDir() -> std::string {
-    char buf[PATH_MAX];
-    ssize_t len = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    std::array<char, PATH_MAX> buf;
+    ssize_t len = ::readlink("/proc/self/exe", buf.data(), buf.size() - 1);
     if (len != -1) {
-        buf[len] = '\0';
-        std::string path(buf);
+        buf[static_cast<size_t>(len)] = '\0';
+        std::string path(buf.data());
         size_t pos = path.find_last_of('/');
         if (pos != std::string::npos) {
             return path.substr(0, pos + 1);

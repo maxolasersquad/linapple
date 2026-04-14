@@ -55,8 +55,8 @@ bool g_bIgnoreNextKey = false;
 
 extern bool g_bDebugFullSpeed;
 
-Update_t ConsoleInputHistoryPrev();
-Update_t ConsoleInputHistoryNext();
+auto ConsoleInputHistoryPrev() -> Update_t;
+auto ConsoleInputHistoryNext() -> Update_t;
 
 // Console ________________________________________________________________________________________
 
@@ -108,8 +108,8 @@ Update_t ConsoleInputHistoryNext();
 
 		// Cooked input line (no prompt)
 		int          g_nConsoleInputChars  = 0;
-		      char * g_pConsoleInput       = 0; // points to past prompt
-		const char * g_pConsoleFirstArg    = 0; // points to first arg
+		      char * g_pConsoleInput       = nullptr; // points to past prompt
+		const char * g_pConsoleFirstArg    = nullptr; // points to first arg
 		bool         g_bConsoleInputQuoted = false; // Allows lower-case to be entered
 		int          g_nConsoleInputSkip   = 0;
 
@@ -120,7 +120,7 @@ Update_t ConsoleInputHistoryNext();
 
 // Console ________________________________________________________________________________________
 
-int ConsoleLineLength( const conchar_t * pText )
+auto ConsoleLineLength( const conchar_t * pText ) -> int
 {
 	int nLen = 0;
 	const conchar_t *pSrc = pText;
@@ -138,14 +138,14 @@ int ConsoleLineLength( const conchar_t * pText )
 
 
 //===========================================================================
-const conchar_t* ConsoleBufferPeek ()
+auto ConsoleBufferPeek () -> const conchar_t*
 {
 	return g_aConsoleBuffer[ 0 ];
 }
 
 
 //===========================================================================
-bool ConsolePrint ( const char * pText )
+auto ConsolePrint ( const char * pText ) -> bool
 {
 	while (g_nConsoleBuffer >= CONSOLE_BUFFER_HEIGHT)
 	{
@@ -154,7 +154,7 @@ bool ConsolePrint ( const char * pText )
 
 	// Convert color string to native console color text
 	// Ignores g_nConsoleDisplayWidth
-	char c;
+	char c = 0;
 
 	int x = 0;
 	const char *pSrc = pText;
@@ -187,8 +187,9 @@ bool ConsolePrint ( const char * pText )
 			// `# `A  color encode mouse text
 			if (ConsoleColor_IsCharMeta( c ))
 			{
-				if (! pSrc[1])
+				if (! pSrc[1]) {
 					break;
+}
 
 				if (ConsoleColor_IsCharMeta( pSrc[1] )) // ` `
 				{
@@ -293,13 +294,13 @@ bool ConsolePrint ( const char * pText )
 	return true;
 }
 
-bool ConsolePrintVa ( char* buf, size_t bufsz, const char * pFormat, va_list va )
+auto ConsolePrintVa ( char* buf, size_t bufsz, const char * pFormat, va_list va ) -> bool
 {
 	vsnprintf(buf, bufsz, pFormat, va);
 	return ConsolePrint(buf);
 }
 
-bool ConsoleBufferPushVa ( char* buf, size_t bufsz, const char * pFormat, va_list va )
+auto ConsoleBufferPushVa ( char* buf, size_t bufsz, const char * pFormat, va_list va ) -> bool
 {
 	vsnprintf(buf, bufsz, pFormat, va);
 	return ConsoleBufferPush(buf);
@@ -308,14 +309,14 @@ bool ConsoleBufferPushVa ( char* buf, size_t bufsz, const char * pFormat, va_lis
 // Add string to buffered output
 // Shifts the buffered console output lines "Up"
 //===========================================================================
-bool ConsoleBufferPush ( const char * pText )
+auto ConsoleBufferPush ( const char * pText ) -> bool
 {
 	while (g_nConsoleBuffer >= CONSOLE_BUFFER_HEIGHT)
 	{
 		ConsoleBufferToDisplay();
 	}
 
-	conchar_t c;
+	conchar_t c = 0;
 
 	int x = 0;
 	const char *pSrc = pText;
@@ -369,8 +370,9 @@ void ConsoleBufferPop ()
 	}
 
 	g_nConsoleBuffer--;
-	if (g_nConsoleBuffer < 0)
+	if (g_nConsoleBuffer < 0) {
 		g_nConsoleBuffer = 0;
+}
 }
 
 // Remove string from buffered output
@@ -389,7 +391,7 @@ void ConsoleConvertFromText ( conchar_t * sText, const char * pText )
 	conchar_t  *pDst = sText;
 	while (pSrc && *pSrc)
 	{
-		*pDst = (conchar_t) (*pSrc & _CONSOLE_COLOR_MASK);
+		*pDst = static_cast<conchar_t>(*pSrc & _CONSOLE_COLOR_MASK);
 		pSrc++;
 		pDst++;
 	}
@@ -397,7 +399,7 @@ void ConsoleConvertFromText ( conchar_t * sText, const char * pText )
 }
 
 //===========================================================================
-Update_t ConsoleDisplayError ( const char * pText)
+auto ConsoleDisplayError ( const char * pText) -> Update_t
 {
 	ConsoleBufferPush( pText );
 	return ConsoleUpdate();
@@ -421,8 +423,8 @@ void ConsoleDisplayPush ( const conchar_t * pText )
 	while (nLen--)
 	{
 		memcpy(
-			  (char*) g_aConsoleDisplay[(nLen + 1 + CONSOLE_FIRST_LINE )]
-			, (char*) g_aConsoleDisplay[nLen + CONSOLE_FIRST_LINE]
+			  reinterpret_cast<char*>(g_aConsoleDisplay[(nLen + 1 + CONSOLE_FIRST_LINE )])
+			, reinterpret_cast<char*>(g_aConsoleDisplay[nLen + CONSOLE_FIRST_LINE])
 			, sizeof(conchar_t) * CONSOLE_WIDTH
 		);
 	}
@@ -430,15 +432,16 @@ void ConsoleDisplayPush ( const conchar_t * pText )
 	if (pText)
 	{
 		memcpy(
-			  (char*) g_aConsoleDisplay[ CONSOLE_FIRST_LINE ]
+			  reinterpret_cast<char*>(g_aConsoleDisplay[ CONSOLE_FIRST_LINE ])
 			, pText
 			, sizeof(conchar_t) * CONSOLE_WIDTH
 		);
 	}
 	
 	g_nConsoleDisplayTotal++;
-	if (g_nConsoleDisplayTotal > (CONSOLE_HEIGHT - CONSOLE_FIRST_LINE))
+	if (g_nConsoleDisplayTotal > (CONSOLE_HEIGHT - CONSOLE_FIRST_LINE)) {
 		g_nConsoleDisplayTotal = (CONSOLE_HEIGHT - CONSOLE_FIRST_LINE);
+}
 
 }
 
@@ -471,7 +474,7 @@ void ConsoleDisplayPause ()
 }
 
 //===========================================================================
-bool ConsoleInputBackSpace ()
+auto ConsoleInputBackSpace () -> bool
 {
 	if (g_nConsoleInputChars)
 	{
@@ -480,8 +483,9 @@ bool ConsoleInputBackSpace ()
 		g_nConsoleInputChars--;
 
 		if ((g_pConsoleInput[ g_nConsoleInputChars ] == CHAR_QUOTE_DOUBLE) ||
-			(g_pConsoleInput[ g_nConsoleInputChars ] == CHAR_QUOTE_SINGLE))
+			(g_pConsoleInput[ g_nConsoleInputChars ] == CHAR_QUOTE_SINGLE)) {
 			g_bConsoleInputQuoted = ! g_bConsoleInputQuoted;
+}
 
 		g_pConsoleInput[ g_nConsoleInputChars ] = CHAR_SPACE;
 		return true;
@@ -491,7 +495,7 @@ bool ConsoleInputBackSpace ()
 
 // Clears prompt too
 //===========================================================================
-bool ConsoleInputClear ()
+auto ConsoleInputClear () -> bool
 {
 	memset( g_aConsoleInput, 0, CONSOLE_WIDTH );
 
@@ -504,7 +508,7 @@ bool ConsoleInputClear ()
 }
 
 //===========================================================================
-bool ConsoleInputChar ( const char ch )
+auto ConsoleInputChar ( const char ch ) -> bool
 {
 	if (g_nConsoleInputChars < g_nConsoleDisplayWidth) // bug? include prompt?
 	{
@@ -519,11 +523,11 @@ bool ConsoleInputChar ( const char ch )
 //===========================================================================
 void ConsoleUpdateCursor ( char ch )
 {
-	if (ch)
+	if (ch) {
 		g_sConsoleCursor[0] = ch;
-	else
+	} else
 	{
-		ch = (char) g_aConsoleInput[ g_nConsoleInputChars + g_nConsolePromptLen ];
+		ch = g_aConsoleInput[ g_nConsoleInputChars + g_nConsolePromptLen ];
 		if (! ch)
 		{
 			ch = CHAR_SPACE;
@@ -534,7 +538,7 @@ void ConsoleUpdateCursor ( char ch )
 
 
 //===========================================================================
-const char * ConsoleInputPeek ()
+auto ConsoleInputPeek () -> const char *
 {
 //	return g_aConsoleDisplay[0];
 //	return g_pConsoleInput;
@@ -559,23 +563,24 @@ void ConsoleInputReset ()
 }
 
 //===========================================================================
-int ConsoleInputTabCompletion ()
+auto ConsoleInputTabCompletion () -> int
 {
 	return UPDATE_CONSOLE_INPUT;
 }
 
 //===========================================================================
-Update_t ConsoleScrollHome ()
+auto ConsoleScrollHome () -> Update_t
 {
 	g_iConsoleDisplayStart = g_nConsoleDisplayTotal - CONSOLE_FIRST_LINE;
-	if (g_iConsoleDisplayStart < 0)
+	if (g_iConsoleDisplayStart < 0) {
 		g_iConsoleDisplayStart = 0;
+}
 
 	return UPDATE_CONSOLE_DISPLAY;
 }
 
 //===========================================================================
-Update_t ConsoleScrollEnd ()
+auto ConsoleScrollEnd () -> Update_t
 {
 	g_iConsoleDisplayStart = 0;
 
@@ -583,31 +588,34 @@ Update_t ConsoleScrollEnd ()
 }
 
 //===========================================================================
-Update_t ConsoleScrollUp ( int nLines )
+auto ConsoleScrollUp ( int nLines ) -> Update_t
 {
 	g_iConsoleDisplayStart += nLines;
 
-	if (g_iConsoleDisplayStart > (g_nConsoleDisplayTotal - CONSOLE_FIRST_LINE))
+	if (g_iConsoleDisplayStart > (g_nConsoleDisplayTotal - CONSOLE_FIRST_LINE)) {
 		g_iConsoleDisplayStart = (g_nConsoleDisplayTotal - CONSOLE_FIRST_LINE);
+}
 
-	if (g_iConsoleDisplayStart < 0)
+	if (g_iConsoleDisplayStart < 0) {
 		g_iConsoleDisplayStart = 0;
+}
 
 	return UPDATE_CONSOLE_DISPLAY;
 }
 
 //===========================================================================
-Update_t ConsoleScrollDn ( int nLines )
+auto ConsoleScrollDn ( int nLines ) -> Update_t
 {
 	g_iConsoleDisplayStart -= nLines;
-	if (g_iConsoleDisplayStart < 0)
+	if (g_iConsoleDisplayStart < 0) {
 		g_iConsoleDisplayStart = 0;
+}
 
 	return UPDATE_CONSOLE_DISPLAY;
 }
 
 //===========================================================================
-Update_t ConsoleScrollPageUp ()
+auto ConsoleScrollPageUp () -> Update_t
 {
 	ConsoleScrollUp( g_nConsoleDisplayLines - CONSOLE_FIRST_LINE );
 
@@ -615,7 +623,7 @@ Update_t ConsoleScrollPageUp ()
 }
 
 //===========================================================================
-Update_t ConsoleScrollPageDn ()
+auto ConsoleScrollPageDn () -> Update_t
 {
 	ConsoleScrollDn( g_nConsoleDisplayLines - CONSOLE_FIRST_LINE );
 
@@ -623,7 +631,7 @@ Update_t ConsoleScrollPageDn ()
 }
 
 //===========================================================================
-Update_t ConsoleBufferTryUnpause (int nLines)
+auto ConsoleBufferTryUnpause (int nLines) -> Update_t
 {
 	for( int y = 0; y < nLines; y++ )
 	{
@@ -643,7 +651,7 @@ Update_t ConsoleBufferTryUnpause (int nLines)
 
 // Flush the console
 //===========================================================================
-Update_t ConsoleUpdate ()
+auto ConsoleUpdate () -> Update_t
 {
 	if (! g_bConsoleBufferPaused)
 	{
@@ -663,13 +671,14 @@ void ConsoleFlush ()
 
 void DebuggerCursorUpdate()
 {
-  if (g_state.mode != MODE_DEBUG)
+  if (g_state.mode != MODE_DEBUG) {
     return;
+}
 
   const  int nUpdatesPerSecond = 4;
-  const  unsigned int nUpdateInternal_ms = 1000 / nUpdatesPerSecond;
-  static unsigned int nBeg = Linapple_GetTicks(); // timeGetTime();
-         unsigned int nNow = Linapple_GetTicks(); // timeGetTime();
+  const  uint32_t nUpdateInternal_ms = 1000 / nUpdatesPerSecond;
+  static uint32_t nBeg = Linapple_GetTicks(); // timeGetTime();
+         uint32_t nNow = Linapple_GetTicks(); // timeGetTime();
 
   if (((nNow - nBeg) >= nUpdateInternal_ms) && !DebugVideoMode::Instance().IsSet())
   {
@@ -689,10 +698,11 @@ void DebuggerCursorUpdate()
 void DebuggerCursorNext()
 {
   g_bInputCursor ^= true;
-  if (g_bInputCursor)
+  if (g_bInputCursor) {
     ConsoleUpdateCursor( g_aInputCursor[ g_iInputCursor ] );
-  else
+  } else {
     ConsoleUpdateCursor( 0 ); // show char under cursor
+}
 }
 
 void DebuggerUpdate()
@@ -704,11 +714,13 @@ void DebuggerInputConsoleChar( char ch )
 {
   assert(g_state.mode == MODE_DEBUG);
 
-  if (g_state.mode != MODE_DEBUG)
+  if (g_state.mode != MODE_DEBUG) {
     return;
+}
 
-  if (g_bConsoleBufferPaused)
+  if (g_bConsoleBufferPaused) {
     return;
+}
 
   if (g_bIgnoreNextKey)
   {
@@ -718,8 +730,9 @@ void DebuggerInputConsoleChar( char ch )
 
   if ((ch >= CHAR_SPACE) && (ch <= 126)) // HACK MAGIC # 32 -> ' ', # 126
   {
-    if ((ch == TCHAR_QUOTE_DOUBLE) || (ch == TCHAR_QUOTE_SINGLE))
+    if ((ch == TCHAR_QUOTE_DOUBLE) || (ch == TCHAR_QUOTE_SINGLE)) {
       g_bConsoleInputQuoted = ! g_bConsoleInputQuoted;
+}
 
     if (!g_bConsoleInputQuoted)
     {
@@ -751,18 +764,19 @@ void ToggleFullScreenConsole()
   }
 }
 
-extern Update_t CmdWindowViewConsole(int);
-extern Update_t CmdWindowLast(int);
-extern Update_t CmdGoNormalSpeed(int);
+extern auto CmdWindowViewConsole(int) -> Update_t;
+extern auto CmdWindowLast(int) -> Update_t;
+extern auto CmdGoNormalSpeed(int) -> Update_t;
 extern void _CursorMoveUpAligned(int);
 extern void _CursorMoveDownAligned(int);
-extern int WindowGetHeight(int);
+extern auto WindowGetHeight(int) -> int;
 
 void DebuggerProcessKey( int keycode )
 {
   printf("DebuggerProcessKey: keycode=%d mode=%d start\n", keycode, g_state.mode);
-  if (g_state.mode != MODE_DEBUG)
+  if (g_state.mode != MODE_DEBUG) {
     return;
+}
 
   if (DebugVideoMode::Instance().IsSet())
   {
@@ -861,18 +875,20 @@ void DebuggerProcessKey( int keycode )
       case LINAPPLE_KEY_DOWN:  bUpdateDisplay |= ConsoleInputHistoryNext(); break;
 
       case LINAPPLE_KEY_PAGEUP:
-        if (KeybGetCtrlStatus())
+        if (KeybGetCtrlStatus()) {
           _CursorMoveUpAligned( WindowGetHeight( g_iWindowThis ) );
-        else
+        } else {
           _CursorMoveUpAligned( 1 );
+}
         bUpdateDisplay |= UPDATE_DISASM;
         break;
 
       case LINAPPLE_KEY_PAGEDOWN:
-        if (KeybGetCtrlStatus())
+        if (KeybGetCtrlStatus()) {
           _CursorMoveDownAligned( WindowGetHeight( g_iWindowThis ) );
-        else
+        } else {
           _CursorMoveDownAligned( 1 );
+}
         bUpdateDisplay |= UPDATE_DISASM;
         break;
 
@@ -903,8 +919,9 @@ void DebuggerProcessKey( int keycode )
 
 void DebuggerMouseClick( int /*x*/, int /*y*/ )
 {
-  if (g_state.mode != MODE_DEBUG)
+  if (g_state.mode != MODE_DEBUG) {
     return;
+}
 
   int iAltCtrlShift  = 0;
   iAltCtrlShift |= KeybGetAltStatus()   ? 1<<0 : 0;
@@ -912,13 +929,14 @@ void DebuggerMouseClick( int /*x*/, int /*y*/ )
   iAltCtrlShift |= KeybGetShiftStatus() ? 1<<2 : 0;
 
   // GH#462 disasm click #
-  if (iAltCtrlShift != g_bConfigDisasmClick)
+  if (iAltCtrlShift != g_bConfigDisasmClick) {
     return;
+}
 
   // TODO: WindowMouseClick( x, y );
 }
 
-Update_t ConsoleInputHistoryPrev()
+auto ConsoleInputHistoryPrev() -> Update_t
 {
 	if (g_nHistoryLinesTotal)
 	{
@@ -927,7 +945,7 @@ Update_t ConsoleInputHistoryPrev()
 	return UPDATE_NOTHING;
 }
 
-Update_t ConsoleInputHistoryNext()
+auto ConsoleInputHistoryNext() -> Update_t
 {
 	if (g_nHistoryLinesTotal)
 	{

@@ -1,9 +1,11 @@
 #include "core/Common.h"
+#include <cstddef>
 #include <ctime>
 #include <cstdio>
 #include <cassert>
 #include <cstring>
 #include <cstdint>
+#include <array>
 #include "apple2/Clock.h"
 #include "apple2/Memory.h"
 
@@ -59,7 +61,7 @@ I/O map: (please add an offset of Slot#*16 to the address below)
 */
 
 
-unsigned char Clock_ROM[] =
+static const std::array<uint8_t, 95> Clock_ROM =
 /*
 *
 * ROM code for a simplistic ProDOS-compatible clock card
@@ -144,26 +146,26 @@ D2
 
  END
 */
-  {
+  {{
     0x08, 0x90, 0x28, 0xb0, 0x58, 0x00, 0x70, 0x00, 0xea, 0xea, 0xa9, 0x60, 0x08, 0x78, 0x20, 0x58,
     0xff, 0xba, 0xbd, 0x00, 0x01, 0x28, 0x0a, 0x0a, 0x0a, 0x0a, 0xa8, 0xb9, 0x8f, 0xc0, 0xa2, 0x00,
     0xf0, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x28, 0x60, 0xb9, 0x80, 0xc0,
     0xc8, 0x09, 0xb0, 0x9d, 0x00, 0x02, 0xe8, 0xb9, 0x80, 0xc0, 0xc8, 0x09, 0xb0, 0x9d, 0x00, 0x02,
     0xe8, 0xa9, 0xac, 0x9d, 0x00, 0x02, 0xe8, 0x98, 0x29, 0x0f, 0xc9, 0x0a, 0x90, 0xdf, 0xa9, 0x80,
     0x9d, 0xff, 0x01, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb0, 0xcc,
-  };
+  }};
 
 
-static unsigned char latches[10];
+static std::array<uint8_t, 10> latches;
 
 static void set_latch_pair(int index, int value) {
-  latches[index&=0x0E] = (value%=100) / 10;
-  latches[index|1] = value%10;
+  latches[static_cast<size_t>(index&=0x0E)] = static_cast<uint8_t>((value%=100) / 10);
+  latches[static_cast<size_t>(index|1)] = static_cast<uint8_t>(value%10);
 }
 
 static void update_latches() {
-  time_t t;
-  struct tm tm;
+  time_t t = 0;
+  struct tm tm{};
 
   time(&t);
   localtime_r(&t, &tm);
@@ -175,14 +177,14 @@ static void update_latches() {
 }
 
 
-static unsigned char Clock_IORead (unsigned short pc, unsigned short addr, unsigned char bWrite, unsigned char d, uint32_t nCyclesLeft) {
+static auto Clock_IORead (uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
   switch(addr &= 0x0F) {
   case 0: case 1:
   case 2: case 3:
   case 4: case 5:
   case 6: case 7:
   case 8: case 9:
-    return latches[addr];
+    return latches[static_cast<size_t>(addr)];
 
   case 0xF:
     update_latches();
@@ -191,19 +193,15 @@ static unsigned char Clock_IORead (unsigned short pc, unsigned short addr, unsig
   default:
     return IO_Null(pc, addr, bWrite, d, nCyclesLeft);
   }
-  assert(0 == "Compiler Bug?!");
 }
 
 
 void Clock_Insert(int slot) {
-  memset(MemGetCxRomPeripheral() + slot*256, 0, 256);
-  memcpy(MemGetCxRomPeripheral() + slot*256, Clock_ROM, sizeof(Clock_ROM));
+  memset(MemGetCxRomPeripheral() + static_cast<ptrdiff_t>(slot*256), 0, 256);
+  memcpy(MemGetCxRomPeripheral() + static_cast<ptrdiff_t>(slot*256), Clock_ROM.data(), Clock_ROM.size());
 
-  RegisterIoHandler(slot,
-		    Clock_IORead, NULL,
-		    NULL, NULL,
-		    NULL, NULL);
+  RegisterIoHandler(static_cast<uint32_t>(slot),
+		    Clock_IORead, nullptr,
+		    nullptr, nullptr,
+		    nullptr, nullptr);
 }
-
-
-//end

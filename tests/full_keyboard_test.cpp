@@ -54,7 +54,7 @@ void Linapple_KeyboardThink(uint32_t dwCycles) {
 
 void Linapple_SetAppleKey(int, bool) {}
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv) -> int {
     (void)argc; (void)argv;
     g_Apple2Type = A2TYPE_APPLE2EENHANCED;
 

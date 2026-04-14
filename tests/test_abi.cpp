@@ -12,30 +12,30 @@
 static bool g_dummy_reset_called = false;
 static bool g_dummy_shutdown_called = false;
 
-typedef struct {
+using DummyInstance_t = struct {
     uint8_t last_val;
     HostInterface_t* host;
-} DummyInstance_t;
+};
 
-static uint8_t Dummy_IORead(void* instance, uint16_t pc, uint16_t addr, uint8_t write, uint8_t val, uint32_t cycles) {
+static auto Dummy_IORead(void* instance, uint16_t pc, uint16_t addr, uint8_t write, uint8_t val, uint32_t cycles) -> uint8_t {
     (void)pc; (void)addr; (void)write; (void)val; (void)cycles;
-    return ((DummyInstance_t*)instance)->last_val;
+    return (static_cast<DummyInstance_t*>(instance))->last_val;
 }
 
-static uint8_t Dummy_IOWrite(void* instance, uint16_t pc, uint16_t addr, uint8_t write, uint8_t val, uint32_t cycles) {
+static auto Dummy_IOWrite(void* instance, uint16_t pc, uint16_t addr, uint8_t write, uint8_t val, uint32_t cycles) -> uint8_t {
     (void)pc; (void)addr; (void)write; (void)cycles;
-    ((DummyInstance_t*)instance)->last_val = val;
-    ((DummyInstance_t*)instance)->host->Log(instance, LOG_INFO, "Wrote %02X", val);
+    (static_cast<DummyInstance_t*>(instance))->last_val = val;
+    (static_cast<DummyInstance_t*>(instance))->host->Log(instance, LOG_INFO, "Wrote %02X", val);
     return 0;
 }
 
-static void* Dummy_Init(int slot, HostInterface_t* host) {
-    DummyInstance_t* inst = new DummyInstance_t();
+static auto Dummy_Init(int slot, HostInterface_t* host) -> void* {
+    auto* inst = new DummyInstance_t();
     inst->last_val = 0;
     inst->host = host;
 
     // Register I/O for $C0nX
-    host->RegisterIO(slot, Dummy_IORead, Dummy_IOWrite, NULL, NULL);
+    host->RegisterIO(slot, Dummy_IORead, Dummy_IOWrite, nullptr, nullptr);
 
     // Register expansion ROM $Cn00
     static uint8_t dummy_rom[256];
@@ -52,7 +52,7 @@ static void Dummy_Reset(void* instance) {
 
 static void Dummy_Shutdown(void* instance) {
     g_dummy_shutdown_called = true;
-    delete (DummyInstance_t*)instance;
+    delete static_cast<DummyInstance_t*>(instance);
 }
 
 static Peripheral_t g_dummy_peripheral = {
@@ -62,9 +62,9 @@ static Peripheral_t g_dummy_peripheral = {
     Dummy_Init,
     Dummy_Reset,
     Dummy_Shutdown,
-    NULL, // think
-    NULL, // save
-    NULL  // load
+    nullptr, // think
+    nullptr, // save
+    nullptr  // load
 };
 
 // --- Test Cases ---

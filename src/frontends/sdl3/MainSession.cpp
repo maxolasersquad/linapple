@@ -128,11 +128,12 @@ void CpuTestHeadless(const char* szTestFile) {
 
   Linapple_Init();
 
-  FILE* f = fopen(szTestFile, "rb");
-  if (!f) return;
+  FilePtr f(fopen(szTestFile, "rb"), fclose);
+  if (!f) {
+    return;
+}
 
-  fread(mem, 1, 65536, f);
-  fclose(f);
+  fread(mem, 1, 65536, f.get());
 
   regs.pc = 0x0400;
   uint64_t count = 0;

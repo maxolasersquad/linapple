@@ -140,8 +140,8 @@
 	extern int g_aColorIndex[ NUM_DEBUG_COLORS ];
 
 // Color
-	unsigned int DebuggerGetColor( int iColor );
-	bool DebuggerSetColor ( const int iScheme, const int iColor, const unsigned int nColor );
+	uint32_t DebuggerGetColor( int iColor );
+	bool DebuggerSetColor ( const int iScheme, const int iColor, const uint32_t nColor );
 	void ConfigColorsReset(void);
 	void _CmdColorGet( const int iScheme, const int iColor );
 
