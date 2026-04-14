@@ -22,7 +22,7 @@ auto Asset_LoadBMP(const char *filename) -> SDL_Surface * {
 
 void SDL_Asset_LoadIcon() {
   if (assets) {
-    assets->icon = (void*)IMG_ReadXPMFromArray(icon_xpm);
+    assets->icon = (void*)IMG_ReadXPMFromArray((char**)icon_xpm);
   }
 }
 
