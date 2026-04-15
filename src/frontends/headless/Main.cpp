@@ -82,6 +82,8 @@ auto main(int argc, char* argv[]) -> int {
         DiskInsert(1, disk2, false, false);
     }
 
+    Linapple_RegisterPeripherals();
+
     g_state.mode = MODE_RUNNING;
 
     // Simulate 60 frames (1 second of emulation)

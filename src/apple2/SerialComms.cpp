@@ -256,6 +256,7 @@ static auto SSC_ABI_Init(int slot, HostInterface_t* host) -> void* {
       memcpy(sg_SSC.m_pExpansionRom, SSC_rom.data(), SSC_FW_SIZE);
     }
   }
+  host->RegisterExpansionROM(slot, sg_SSC.m_pExpansionRom);
 
   host->RegisterIO(slot, SSC_IORead, SSC_IOWrite, nullptr, nullptr);
   
@@ -279,7 +280,7 @@ static void SSC_ABI_Think(void* instance, uint32_t cycles) {
 Peripheral_t g_ssc_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Super Serial Card",
-    (1u << 2), // Slot 2 by default
+    0xFE, // Slots 1-7
     SSC_ABI_Init,
     SSC_ABI_Reset,
     SSC_ABI_Shutdown,

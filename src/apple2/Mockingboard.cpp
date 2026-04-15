@@ -261,14 +261,10 @@ static void UpdateIFR(SY6522_AY8910 *pMB) {
     bIRQ |= i.sy6522.IFR & VIA_IFR_IRQ_FLAG;
   }
 
-  if (g_pMBHost) {
-    g_pMBHost->AssertIrq(g_nMB_Slot, bIRQ != 0);
+  if (bIRQ) {
+    CpuIrqAssert(IS_6522);
   } else {
-    if (bIRQ) {
-      CpuIrqAssert(IS_6522);
-    } else {
-      CpuIrqDeassert(IS_6522);
-    }
+    CpuIrqDeassert(IS_6522);
   }
 }
 
@@ -444,31 +440,68 @@ static auto SY6522_Read(uint8_t nDevice, uint8_t nReg) -> uint8_t {
 
 void MB_Update() {
   #if defined MOCKINGBOARD
-  const int nNumSamples = static_cast<int>(g_fCurrentCLK6502 / 60);
-  for (int i = 0; i < NUM_AY8910; i++) {
-    int16_t* voices[3];
-    voices[0] = reinterpret_cast<int16_t*>(ppAYVoiceBuffer[i * 3 + 0].get());
-    voices[1] = reinterpret_cast<int16_t*>(ppAYVoiceBuffer[i * 3 + 1].get());
-    voices[2] = reinterpret_cast<int16_t*>(ppAYVoiceBuffer[i * 3 + 2].get());
-    AY8910Update(i, voices, nNumSamples);
+  static int nNumSamplesError = 0;
+
+  double n6522TimerPeriod = MB_GetFramePeriod();
+  double nIrqFreq = g_fCurrentCLK6502 / n6522TimerPeriod - 0.5;      // GPH: Round DOWN instead of up
+  int nNumSamplesPerPeriod = static_cast<int>(static_cast<double>(SAMPLE_RATE) / nIrqFreq);    // Eg. For 60Hz this is 735
+  int nNumSamples = nNumSamplesPerPeriod + nNumSamplesError;          // Apply correction
+  if(nNumSamples <= 0) {
+    nNumSamples = 0;
+  }
+  if(nNumSamples > 2*nNumSamplesPerPeriod) {
+    nNumSamples = 2*nNumSamplesPerPeriod;
   }
 
-  // Clear mix buffer
-  memset(&g_nMixBuffer[0], 0, sizeof(g_nMixBuffer));
+  if (nNumSamples > 0) {
+    for (int i = 0; i < NUM_AY8910; i++) {
+      int16_t* voices[3];
+      voices[0] = reinterpret_cast<int16_t*>(ppAYVoiceBuffer[i * 3 + 0].get());
+      voices[1] = reinterpret_cast<int16_t*>(ppAYVoiceBuffer[i * 3 + 1].get());
+      voices[2] = reinterpret_cast<int16_t*>(ppAYVoiceBuffer[i * 3 + 2].get());
+      AY8910Update(i, voices, nNumSamples);
+    }
 
-  // MB output is stereo: L=AY0+AY2, R=AY1+AY3
-  // Each AY has 3 voices (A,B,C). L = AY0(A+B+C) + AY2(A+B+C)? 
-  // Actually, the original code used ppAYVoiceBuffer[0] and [2] directly which seems wrong if it was per-voice.
-  // Wait, I need to check how it was originally summing them.
-  // For now I'll just try to get it to compile.
-  for (int i = 0; i < nNumSamples; i++) {
-    g_nMixBuffer[i * 2] = static_cast<short>((ppAYVoiceBuffer[0][i] + ppAYVoiceBuffer[1][i] + ppAYVoiceBuffer[2][i]) / 3);
-    g_nMixBuffer[i * 2 + 1] = static_cast<short>((ppAYVoiceBuffer[3][i] + ppAYVoiceBuffer[4][i] + ppAYVoiceBuffer[5][i]) / 3);
+    double fAttenuation = g_bPhasorEnable ? 2.0/3.0 : 1.0;
+
+    // MB output is stereo: L=AY0+AY2, R=AY1+AY3
+    for (int i = 0; i < nNumSamples; i++) {
+      int nDataL = 0;
+      int nDataR = 0;
+      
+      for(int j=0; j<3; j++) {
+        // Slot4
+        nDataL += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[0 * 3 + j].get()[i]) * fAttenuation);
+        nDataR += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[1 * 3 + j].get()[i]) * fAttenuation);
+
+        // Slot5
+        nDataL += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[2 * 3 + j].get()[i]) * fAttenuation);
+        nDataR += static_cast<int>(static_cast<double>(ppAYVoiceBuffer[3 * 3 + j].get()[i]) * fAttenuation);
+      }
+
+      // Cap the superpositioned output
+      if(nDataL < -32768) {
+        nDataL = -32768;
+      } else if(nDataL > 32767) {
+        nDataL = 32767;
+      }
+
+      if(nDataR < -32768) {
+        nDataR = -32768;
+      } else if(nDataR > 32767) {
+        nDataR = 32767;
+      }
+
+      g_nMixBuffer[i * 2] = static_cast<short>(nDataL);
+      g_nMixBuffer[i * 2 + 1] = static_cast<short>(nDataR);
+    }
+    
+    DSUploadMockBuffer(g_nMixBuffer, nNumSamples * 2);
+
+    #ifndef HEADLESS
+    RiffPutSamples(&g_nMixBuffer[0], nNumSamples);
+    #endif
   }
-
-  #ifndef HEADLESS
-  RiffPutSamples(&g_nMixBuffer[0], nNumSamples);
-  #endif
   #endif  // if defined MOCKINGBOARD
 }
 
@@ -493,21 +526,6 @@ void MB_Initialize() {
   }
 
   g_bMB_Active = (g_SoundcardType != SC_NONE);
-
-  // Register with legacy system (will be overwritten by Peripheral Manager if active)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-function-type"
-  if (g_Slot4 == CT_Mockingboard) {
-    const uint32_t uSlot4 = 4;
-    RegisterIoHandler(uSlot4, reinterpret_cast<iofunction>(PhasorIO), reinterpret_cast<iofunction>(PhasorIO), 
-                              reinterpret_cast<iofunction>(MB_Read), reinterpret_cast<iofunction>(MB_Write), nullptr, nullptr);
-  }
-
-  const uint32_t uSlot5 = 5;
-  RegisterIoHandler(uSlot5, reinterpret_cast<iofunction>(PhasorIO), reinterpret_cast<iofunction>(PhasorIO), 
-                            reinterpret_cast<iofunction>(MB_Read), reinterpret_cast<iofunction>(MB_Write), nullptr, nullptr);
-#pragma GCC diagnostic pop
-
 }
 
 // NB. Called when /g_fCurrentCLK6502/ changes
@@ -763,7 +781,12 @@ auto MB_SetSnapshot(SS_CARD_MOCKINGBOARD *pSS, uint32_t) -> uint32_t {
 static auto MB_ABI_Init(int slot, HostInterface_t* host) -> void* {
   g_pMBHost = host;
   g_nMB_Slot = slot;
-  MB_Initialize();
+  
+  static bool s_mb_initialized = false;
+  if (!s_mb_initialized) {
+    MB_Initialize();
+    s_mb_initialized = true;
+  }
   
   // MB_Initialize already calls RegisterIoHandler, but we also register via
   // the host interface to ensure the manager is aware.
@@ -792,7 +815,7 @@ static void MB_ABI_Think(void* instance, uint32_t cycles) {
 Peripheral_t g_mockingboard_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Mockingboard",
-    (1u << 4) | (1u << 5), // Slots 4 and 5
+    0xFE, // Slots 1-7
     MB_ABI_Init,
     MB_ABI_Reset,
     MB_ABI_Shutdown,

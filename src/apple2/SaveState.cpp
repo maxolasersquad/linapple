@@ -10,10 +10,11 @@
 #include "apple2/Speaker.h"
 #include "apple2/Disk.h"
 #include "apple2/Mockingboard.h"
-#include "Video.h"
+#include "apple2/Video.h"
 #include "apple2/SerialComms.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
+#include "core/LinAppleCore.h"
 /*
 linapple : An Apple //e emulator for Linux
 
@@ -101,10 +102,9 @@ void Snapshot_LoadState() {
       MemResetPaging();
     }
 
-    DiskReset();
+    Peripheral_Manager_Reset();
     KeybReset();
     VideoResetState();
-    MB_Reset();
 
     CpuSetSnapshot(&pSS->Apple2Unit.CPU6502);
     SSC_SetSnapshot(&sg_SSC, &pSS->Apple2Unit.Comms);

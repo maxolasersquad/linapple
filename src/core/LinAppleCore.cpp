@@ -129,7 +129,6 @@ void Linapple_Init() {
   VideoInitialize();
   
   Peripheral_Manager_Init();
-  Peripheral_Register_Internal();
 
   KeybReset();
   JoyReset();
@@ -140,6 +139,10 @@ void Linapple_Init() {
 #ifndef HEADLESS
   DebugInitialize();
 #endif
+}
+
+void Linapple_RegisterPeripherals() {
+  Peripheral_Register_Internal();
 }
 
 void Linapple_Shutdown() {

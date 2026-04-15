@@ -29,6 +29,7 @@ using ActivePeripheral_t = struct {
   PeripheralIOHandler writeC0;
   PeripheralIOHandler readCx;
   PeripheralIOHandler writeCx;
+  uint8_t* expansionRom;
 };
 
 // Justification: Peripheral Manager requires global state to track registered 
@@ -48,13 +49,14 @@ static auto Peripheral_C0_Proxy(uint16_t pc, uint16_t addr, uint8_t write,
     if (p.writeC0) {
       return p.writeC0(p.instance, pc, addr, write, val, cycles_left);
     }
+    return 0;
   } else {
     if (p.readC0) {
       return p.readC0(p.instance, pc, addr, write, val, cycles_left);
     }
   }
 
-  return 0;
+  return MemReadFloatingBus(cycles_left);
 }
 
 static auto Peripheral_Cx_Proxy(uint16_t pc, uint16_t addr, uint8_t write,
@@ -62,7 +64,7 @@ static auto Peripheral_Cx_Proxy(uint16_t pc, uint16_t addr, uint8_t write,
   const uint16_t PAGE_ADDR_MASK = 0xF;
   const int slot = (addr >> 8) & PAGE_ADDR_MASK;
   if (slot >= NUM_SLOTS) {
-    return 0;
+    return write ? 0 : MemReadFloatingBus(cycles_left);
   }
   ActivePeripheral_t& p = g_active_peripherals.at(static_cast<size_t>(slot));
 
@@ -70,13 +72,14 @@ static auto Peripheral_Cx_Proxy(uint16_t pc, uint16_t addr, uint8_t write,
     if (p.writeCx) {
       return p.writeCx(p.instance, pc, addr, write, val, cycles_left);
     }
+    return 0;
   } else {
     if (p.readCx) {
       return p.readCx(p.instance, pc, addr, write, val, cycles_left);
     }
   }
 
-  return 0;
+  return MemReadFloatingBus(cycles_left);
 }
 
 // --- Host Interface Implementation ---
@@ -165,7 +168,7 @@ static void Host_RegisterIO(int slot, PeripheralIOHandler readC0,
       writeC0 ? static_cast<iofunction>(Peripheral_C0_Proxy) : nullptr,
       readCx ? static_cast<iofunction>(Peripheral_Cx_Proxy) : nullptr,
       writeCx ? static_cast<iofunction>(Peripheral_Cx_Proxy) : nullptr, nullptr,
-      nullptr);
+      ap.expansionRom);
 }
 
 static void Host_RegisterCxROM(int slot, uint8_t* rom_ptr) {
@@ -182,6 +185,23 @@ static void Host_RegisterCxROM(int slot, uint8_t* rom_ptr) {
                                static_cast<ptrdiff_t>(PAGE_SIZE)),
            rom_ptr, static_cast<size_t>(PAGE_SIZE));
   }
+}
+
+static void Host_RegisterExpansionROM(int slot, uint8_t* rom_ptr) {
+  if (slot < 1 || slot >= NUM_SLOTS) {
+    return;
+  }
+
+  ActivePeripheral_t& ap = g_active_peripherals.at(static_cast<size_t>(slot));
+  ap.expansionRom = rom_ptr;
+
+  RegisterIoHandler(
+      static_cast<uint32_t>(slot),
+      ap.readC0 ? static_cast<iofunction>(Peripheral_C0_Proxy) : nullptr,
+      ap.writeC0 ? static_cast<iofunction>(Peripheral_C0_Proxy) : nullptr,
+      ap.readCx ? static_cast<iofunction>(Peripheral_Cx_Proxy) : nullptr,
+      ap.writeCx ? static_cast<iofunction>(Peripheral_Cx_Proxy) : nullptr,
+      nullptr, ap.expansionRom);
 }
 
 // Track direct I/O handlers ($C000-$C07F)
@@ -251,7 +271,7 @@ static auto Host_GetCycles() -> uint64_t { return cumulativecycles; }
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static const HostInterface_t g_host_interface = {
     Host_Log,           Host_AssertIrq,        Host_RegisterIO,
-    Host_RegisterCxROM, Host_RegisterDirectIO, Host_GetMemPtr,
+    Host_RegisterCxROM, Host_RegisterExpansionROM, Host_RegisterDirectIO, Host_GetMemPtr,
     Host_GetCycles};
 
 // --- Public Core API ---
@@ -265,6 +285,7 @@ void Peripheral_Manager_Init() {
     ap.writeC0 = nullptr;
     ap.readCx = nullptr;
     ap.writeCx = nullptr;
+    ap.expansionRom = nullptr;
   }
 
   for (size_t i = 0; i < IO_DIRECT_COUNT; ++i) {
@@ -343,6 +364,6 @@ auto Peripheral_Register(Peripheral_t* api, int slot) -> int {
 
   // Justification: Logger uses standard C variadics.
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-  Logger::Info("Registered peripheral '%s' in slot %d", api->name, slot);
+  Logger::Info("Registered peripheral '%s' in slot %d\n", api->name, slot);
   return 0;
 }

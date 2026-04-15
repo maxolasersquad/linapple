@@ -736,7 +736,7 @@ static void Disk_ABI_Think(void* instance, uint32_t cycles) {
 Peripheral_t g_disk_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Disk II",
-    (1u << 6), // Slot 6 by default
+    0xFE, // Slots 1-7
     Disk_ABI_Init,
     Disk_ABI_Reset,
     Disk_ABI_Shutdown,

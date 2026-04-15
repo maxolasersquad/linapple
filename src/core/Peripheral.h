@@ -53,6 +53,7 @@ typedef struct {
     void (*RegisterIO)(int slot, PeripheralIOHandler readC0, PeripheralIOHandler writeC0, 
                                  PeripheralIOHandler readCx, PeripheralIOHandler writeCx);
     void (*RegisterCxROM)(int slot, uint8_t* rom_ptr);
+    void (*RegisterExpansionROM)(int slot, uint8_t* rom_ptr);
     void (*RegisterDirectIO)(void* instance, uint16_t addr, PeripheralIOHandler read, PeripheralIOHandler write);
     uint8_t* (*GetMemPtr)(uint16_t addr);
     uint64_t (*GetCycles)(void);

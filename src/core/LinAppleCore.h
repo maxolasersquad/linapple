@@ -26,6 +26,11 @@ extern "C" {
 void Linapple_Init();
 
 /**
+ * @brief Register internal peripherals based on configuration.
+ */
+void Linapple_RegisterPeripherals();
+
+/**
  * @brief Clean up resources and shut down the emulator core.
  */
 void Linapple_Shutdown();

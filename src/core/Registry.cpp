@@ -90,6 +90,14 @@ void Configuration::LoadDefaults() {
     SetInt("Configuration", "Show Leds", 1);
     SetString("Configuration", "Screen factor", "1.0");
 
+    SetString("Slots", "Slot 1", "Parallel Printer");
+    SetString("Slots", "Slot 2", "Super Serial Card");
+    SetString("Slots", "Slot 3", "No-Slot Clock");
+    SetString("Slots", "Slot 4", "Mockingboard");
+    SetString("Slots", "Slot 5", "Mockingboard");
+    SetString("Slots", "Slot 6", "Disk II");
+    SetString("Slots", "Slot 7", "Harddisk");
+
     SetString("Preferences", "FTP Server", "ftp://ftp.apple.asimov.net/pub/apple_II/images/games/");
     SetString("Preferences", "FTP ServerHDD", "ftp://ftp.apple.asimov.net/pub/apple_II/images/");
     SetString("Preferences", "FTP UserPass", "anonymous:my-mail@mail.com");

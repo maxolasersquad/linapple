@@ -63,7 +63,7 @@ static void Printer_ABI_Think(void* instance, uint32_t cycles) {
 Peripheral_t g_printer_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Parallel Printer",
-    (1u << 1), // Slot 1 by default
+    0xFE, // Slots 1-7
     Printer_ABI_Init,
     Printer_ABI_Reset,
     Printer_ABI_Shutdown,

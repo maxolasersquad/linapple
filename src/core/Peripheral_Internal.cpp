@@ -2,60 +2,113 @@
 #include "LinAppleCore.h"
 #include "core/Common_Globals.h"
 #include "apple2/Structs.h"
+#include "core/Log.h"
+#include <cstring>
+#include <array>
+
+/**
+ * Justification: Peripheral Manager requires a static list of built-in hardware 
+ * to support runtime slot assignment via configuration.
+ */
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables, cppcoreguidelines-interfaces-global-init)
+static const std::array<Peripheral_t*, 9> g_builtin_peripherals = {{
+#if defined(ENABLE_PERIPHERAL_SPEAKER)
+    &g_speaker_peripheral,
+#endif
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
+    &g_mockingboard_peripheral,
+#endif
+#if defined(ENABLE_PERIPHERAL_DISK)
+    &g_disk_peripheral,
+#endif
+#if defined(ENABLE_PERIPHERAL_SSC)
+    &g_ssc_peripheral,
+#endif
+#if defined(ENABLE_PERIPHERAL_PRINTER)
+    &g_printer_peripheral,
+#endif
+#if defined(ENABLE_PERIPHERAL_HARDDISK)
+    &g_harddisk_peripheral,
+#endif
+#if defined(ENABLE_PERIPHERAL_MOUSE)
+    &g_mouse_peripheral,
+#endif
+#if defined(ENABLE_PERIPHERAL_CLOCK)
+    &g_clock_peripheral,
+#endif
+    nullptr
+}};
+
+auto Peripheral_Find_Internal(const char* name) -> Peripheral_t* {
+    if (!name) return nullptr;
+    
+    for (auto const& p : g_builtin_peripherals) {
+        if (p && strcmp(p->name, name) == 0) {
+            return p;
+        }
+    }
+    return nullptr;
+}
+
+static auto GetDefaultPeripheralForSlot(int slot) -> const char* {
+    const int SLOT_PRINTER = 1;
+    const int SLOT_SSC = 2;
+    const int SLOT_CLOCK = 3;
+    const int SLOT_DEFAULT_MB_MOUSE = 4;
+    const int SLOT_DEFAULT_MB = 5;
+    const int SLOT_DISK = 6;
+    const int SLOT_HARDDISK = 7;
+
+    switch (slot) {
+        case SLOT_PRINTER: return "Parallel Printer";
+        case SLOT_SSC: return "Super Serial Card";
+        case SLOT_CLOCK: return "No-Slot Clock";
+        case SLOT_DEFAULT_MB_MOUSE: 
+            if (g_Slot4 == CT_Mockingboard) return "Mockingboard";
+            if (g_Slot4 == CT_MouseInterface) return "Mouse Interface";
+            return nullptr;
+        case SLOT_DEFAULT_MB: return "Mockingboard";
+        case SLOT_DISK: return "Disk II";
+        case SLOT_HARDDISK: return "Harddisk";
+        default: return nullptr;
+    }
+}
 
 void Peripheral_Register_Internal() {
-    // These will be enabled as peripherals are migrated in subsequent tasks.
-    
 #if defined(ENABLE_PERIPHERAL_SPEAKER)
-    // Speaker is always present but we treat it as slot 0 for registration
+    // Speaker is internal (Slot 0)
     Peripheral_Register(&g_speaker_peripheral, 0);
 #endif
-    
-#if defined(ENABLE_PERIPHERAL_PRINTER)
-    Peripheral_Register(&g_printer_peripheral, 1);
-#endif
 
-#if defined(ENABLE_PERIPHERAL_SSC)
-    Peripheral_Register(&g_ssc_peripheral, 2);
-#endif
-
-    // Slot 4 could be Mockingboard or Mouse
-#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
-    if (g_Slot4 == CT_Mockingboard) {
-        Peripheral_Register(&g_mockingboard_peripheral, 4);
+    for (int slot = 1; slot < NUM_SLOTS; ++slot) {
+        const size_t KEY_SIZE = 16;
+        // Justification: Formatting slot key name for registry lookup.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg, cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+        char key[KEY_SIZE];
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg, cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        snprintf(key, sizeof(key), "Slot %d", slot);
+        
+        std::string name;
+        // Justification: Loading slot configuration from registry.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+        bool in_config = ConfigLoadString("Slots", key, &name);
+        
+        if (in_config) {
+            if (name == "None" || name.empty()) {
+                continue;
+            }
+        } else {
+            const char* default_name = GetDefaultPeripheralForSlot(slot);
+            if (default_name) {
+                name = default_name;
+            } else {
+                continue;
+            }
+        }
+        
+        Peripheral_t* p = Peripheral_Find_Internal(name.c_str());
+        if (p) {
+            Peripheral_Register(p, slot);
+        }
     }
-#endif
-
-#if defined(ENABLE_PERIPHERAL_MOUSE)
-    if (g_Slot4 == CT_MouseInterface) {
-        Peripheral_Register(&g_mouse_peripheral, 4);
-    }
-#endif
-
-    // Slot 5 is often also Mockingboard
-#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
-    // Registering twice for the same peripheral might not be supported directly by the simple ABI yet,
-    // wait Mockingboard init registers itself on slots specified by compatible_slots or just whatever slot is passed.
-    // The previous code had a loop or two separate init calls.
-    // Let's just do slot 5 if CT_Mockingboard.
-    // Wait, the ABI init is called per-slot. It creates an instance or uses a global one.
-    // Let's just register it for slot 5 too for now if it supports it.
-    // actually, g_mockingboard_peripheral can just be registered on slot 5
-    // But Mockingboard code had `uSlot5 = SLOT5; ConfigLoadInt(...)`.
-    // I'll just register it on 5 blindly for now.
-    Peripheral_Register(&g_mockingboard_peripheral, 5);
-#endif
-
-#if defined(ENABLE_PERIPHERAL_DISK)
-    Peripheral_Register(&g_disk_peripheral, 6);
-#endif
-
-#if defined(ENABLE_PERIPHERAL_HARDDISK)
-    Peripheral_Register(&g_harddisk_peripheral, 7);
-#endif
-
-#if defined(ENABLE_PERIPHERAL_CLOCK)
-    // No-slot clock can be placed in an unused slot. We'll use slot 3.
-    Peripheral_Register(&g_clock_peripheral, 3);
-#endif
 }

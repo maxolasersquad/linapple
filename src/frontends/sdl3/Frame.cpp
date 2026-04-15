@@ -669,12 +669,11 @@ void ProcessButtonClick(int button, int mod) {
           MemResetPaging();
         }
 
-        DiskReset();
+        Peripheral_Manager_Reset();
         KeybReset();
         if (!IS_APPLE2()) {
           VideoResetState();
         }
-        MB_Reset();
         CpuReset();
       } else if (mod & SDL_KMOD_ALT) {
         Snapshot_LoadState();
@@ -690,18 +689,14 @@ void ProcessButtonClick(int button, int mod) {
 }
 
 void ResetMachineState() {
-  DiskReset();
   g_bFullSpeed = false;  // Might've hit reset in middle of InternalCpuExecute()
                          // - so beep may get (partially) muted
 
   MemReset();
+  Peripheral_Manager_Reset();
   DiskBoot();
   VideoResetState();
-  SSC_Reset(&sg_SSC);
-  PrintReset();
   JoyReset();
-  MB_Reset();
-  SpkrReset();
 }
 
 static bool bIamFullScreened;
