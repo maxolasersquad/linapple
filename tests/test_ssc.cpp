@@ -47,7 +47,7 @@ TEST_CASE("SSC: Status Register Bit 4 (TDRE) Set On Reset") {
     g_sendCalled = false;
 
     // Hardware Reset (SSC_Reset)
-    uint8_t status = SSC_IORead(0, 0xC090 | (2 << 4) | 0x9, 0, 0, 0); // Slot 2, Offset 9
+    uint8_t status = SSC_IORead(&sg_SSC, 0, 0xC090 | (2 << 4) | 0x9, 0, 0, 0); // Slot 2, Offset 9
     CHECK((status & (1 << 4)) != 0); // TDRE should be 1 (Empty)
 }
 
@@ -59,13 +59,13 @@ TEST_CASE("SSC: Transmit Sets TDRE Interrupt") {
     // 1. Enable Transmit Interrupts (Command Register bit 0=0 for enabled? No, bit 0 is parity)
     // 6551 ACIA: Command Register bits 2-3 control transmitter interrupt
     // bit 3=0, bit 2=1 -> Transmit interrupt enabled, RTS low.
-    SSC_IOWrite(0, 0xC090 | (2 << 4) | 0xB, 1, 0x04, 0); // Command Register
+    SSC_IOWrite(&sg_SSC, 0, 0xC090 | (2 << 4) | 0xB, 1, 0x04, 0); // Command Register
 
     // 2. Write to Transmit Data Register
-    SSC_IOWrite(0, 0xC090 | (2 << 4) | 0x8, 1, 0x41, 0); // Data 'A'
+    SSC_IOWrite(&sg_SSC, 0, 0xC090 | (2 << 4) | 0x8, 1, 0x41, 0); // Data 'A'
 
     // 3. Check status (TDRE should be 0 immediately if busy, or 1 after transmit)
     // Our mock transmit is immediate.
-    uint8_t status = SSC_IORead(0, 0xC090 | (2 << 4) | 0x9, 0, 0, 0);
+    uint8_t status = SSC_IORead(&sg_SSC, 0, 0xC090 | (2 << 4) | 0x9, 0, 0, 0);
     CHECK((status & (1 << 4)) != 0);
 }

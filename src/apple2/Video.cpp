@@ -48,6 +48,8 @@ static auto GetTickCount() -> uint32_t {
 #include "apple2/Memory.h"
 #include "apple2/CPU.h"
 #include "apple2/Joystick.h"
+#include "core/LinAppleCore.h"
+#include "core/Peripheral.h"
 #include "core/Log.h"
 #include "core/Common_Globals.h"
 #include "apple2/Keyboard.h"
@@ -1405,8 +1407,7 @@ void VideoBenchmark() {
       while (cycles > 0) {
         uint32_t executedcycles = CpuExecute(static_cast<uint32_t>(103));
         cycles -= executedcycles;
-        DiskUpdatePosition(executedcycles);
-        JoyUpdatePosition(executedcycles);
+        Peripheral_Manager_Think(executedcycles);
         VideoUpdateVbl(0);
       }
     }

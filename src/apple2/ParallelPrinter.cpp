@@ -30,38 +30,56 @@ static const std::array<uint8_t, 256> Parallel_bin = {{
     0x05, 0x48, 0x29, 0x80, 0x09, 0x20, 0x2C, 0x58, 0xFF, 0xF0, 0x03, 0xFE, 0x38, 0x07, 0x70, 0x84
 }};
 
+#include "core/Peripheral.h"
+
 uint32_t const PRINTDRVR_SIZE = 0x100;
 
-static auto PrintStatus(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t;
-static auto PrintTransmit(uint16_t, uint16_t, uint8_t, uint8_t value, uint32_t) -> uint8_t;
+static auto PrintStatus(void* instance, uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t;
+static auto PrintTransmit(void* instance, uint16_t, uint16_t, uint8_t, uint8_t value, uint32_t) -> uint8_t;
 
-void PrintInitialize() {
-  // Currently no initialization needed for Parallel Printer Card
+static auto Printer_ABI_Init(int slot, HostInterface_t* host) -> void* {
+  uint8_t slot_rom[256];
+  memcpy(slot_rom, Parallel_bin.data(), Parallel_bin.size());
+  host->RegisterCxROM(slot, slot_rom);
+  host->RegisterIO(slot, PrintStatus, PrintTransmit, nullptr, nullptr);
+  return reinterpret_cast<void*>(1); // Dummy instance
 }
 
-void PrintLoadRom(uint8_t* pCxRomPeripheral, const uint32_t uSlot) {
-  memcpy(pCxRomPeripheral + static_cast<size_t>(uSlot * 256), Parallel_bin.data(), Parallel_bin.size());
-  RegisterIoHandler(uSlot, PrintStatus, PrintTransmit, nullptr, nullptr, nullptr, nullptr);
-}
-
-void PrintDestroy() {
-  PrinterFrontend_Destroy();
-}
-
-void PrintUpdate(uint32_t totalcycles) {
-  PrinterFrontend_Update(totalcycles);
-}
-
-void PrintReset() {
+static void Printer_ABI_Reset(void* instance) {
+  (void)instance;
   PrinterFrontend_Reset();
 }
 
-static auto PrintStatus(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t {
+static void Printer_ABI_Shutdown(void* instance) {
+  (void)instance;
+  PrinterFrontend_Destroy();
+}
+
+static void Printer_ABI_Think(void* instance, uint32_t cycles) {
+  (void)instance;
+  PrinterFrontend_Update(cycles);
+}
+
+Peripheral_t g_printer_peripheral = {
+    LINAPPLE_ABI_VERSION,
+    "Parallel Printer",
+    (1u << 1), // Slot 1 by default
+    Printer_ABI_Init,
+    Printer_ABI_Reset,
+    Printer_ABI_Shutdown,
+    Printer_ABI_Think,
+    nullptr, // save_state
+    nullptr  // load_state
+};
+
+static auto PrintStatus(void* instance, uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t {
+  (void)instance;
   PrinterFrontend_CheckStatus();
   return 0xFF;
 }
 
-static auto PrintTransmit(uint16_t, uint16_t, uint8_t, uint8_t value, uint32_t) -> uint8_t {
+static auto PrintTransmit(void* instance, uint16_t, uint16_t, uint8_t, uint8_t value, uint32_t) -> uint8_t {
+  (void)instance;
   PrinterFrontend_SendChar(value);
   return 0;
 }

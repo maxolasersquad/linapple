@@ -135,8 +135,7 @@ void Linapple_Init() {
   JoyReset();
 
   uint8_t* pCxRomPeripheral = MemGetAuxPtr(APPLE_SLOT_BEGIN);
-  SSC_Initialize(&sg_SSC, pCxRomPeripheral, 2); // Slot 2
-  PrintInitialize();
+  (void)pCxRomPeripheral;
 
 #ifndef HEADLESS
   DebugInitialize();
@@ -144,7 +143,6 @@ void Linapple_Init() {
 }
 
 void Linapple_Shutdown() {
-  PrintDestroy();
   Peripheral_Manager_Shutdown();
   DiskDestroy();
   VideoDestroy();
@@ -266,11 +264,8 @@ static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
   cyclenum += dwExecutedCycles;
   cumulativecycles = g_nCumulativeCycles;
 
-  DiskUpdatePosition(dwExecutedCycles);
   VideoUpdateVbl(dwExecutedCycles);
   JoyUpdatePosition(dwExecutedCycles);
-  SSCFrontend_Update(&sg_SSC, dwExecutedCycles);
-  PrinterFrontend_Update(dwExecutedCycles);
   
   Peripheral_Manager_Think(dwExecutedCycles);
   

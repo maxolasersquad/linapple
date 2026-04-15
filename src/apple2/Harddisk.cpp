@@ -118,29 +118,70 @@ static auto HD_Load_Image(int nDrive, const char *filename) -> bool
   return g_HardDrive[nDrive].hd_imageloaded;
 }
 
-static auto HD_IO_EMUL(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
+static auto HD_IO_EMUL(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
+
+#include "core/Peripheral.h"
+
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+static HostInterface_t* g_pHDHost = nullptr;
+
+static auto HD_ABI_Init(int slot, HostInterface_t* host) -> void* {
+  g_pHDHost = host;
+  g_uSlot = slot;
+  
+  if (g_bHD_Enabled) {
+    uint8_t slot_rom[256];
+    memcpy(slot_rom, Hddrvr_dat, 256);
+    host->RegisterCxROM(slot, slot_rom);
+    g_bHD_RomLoaded = true;
+  }
+  
+  host->RegisterIO(slot, HD_IO_EMUL, HD_IO_EMUL, nullptr, nullptr);
+  
+  return reinterpret_cast<void*>(1); // Dummy instance
+}
+
+static void HD_ABI_Reset(void* instance) {
+  (void)instance;
+}
+
+static void HD_ABI_Shutdown(void* instance) {
+  (void)instance;
+  HD_Cleanup();
+}
+
+Peripheral_t g_harddisk_peripheral = {
+    LINAPPLE_ABI_VERSION,
+    "Harddisk",
+    (1u << 7), // Slot 7 by default
+    HD_ABI_Init,
+    HD_ABI_Reset,
+    HD_ABI_Shutdown,
+    nullptr, // think
+    nullptr, // save_state
+    nullptr  // load_state
+};
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 auto HD_CardIsEnabled() -> bool { return g_bHD_RomLoaded && g_bHD_Enabled; }
 
 void HD_SetEnabled(bool bEnabled) {
   if (g_bHD_Enabled == bEnabled) return;
   g_bHD_Enabled = bEnabled;
-  uint8_t* pCxRomPeripheral = MemGetCxRomPeripheral();
-  if (pCxRomPeripheral == nullptr) return;
-  if (g_bHD_Enabled) { HD_Load_Rom(pCxRomPeripheral, g_uSlot);
-  } else { memset(pCxRomPeripheral + static_cast<size_t>(g_uSlot * 256), 0, 0x100);
-}
-  RegisterIoHandler(g_uSlot, HD_IO_EMUL, HD_IO_EMUL, nullptr, nullptr, nullptr, nullptr);
+  if (!g_pHDHost) return;
+  if (g_bHD_Enabled) {
+    uint8_t slot_rom[256];
+    memcpy(slot_rom, Hddrvr_dat, 256);
+    g_pHDHost->RegisterCxROM(g_uSlot, slot_rom);
+    g_bHD_RomLoaded = true;
+  } else {
+    uint8_t empty_rom[256] = {0};
+    g_pHDHost->RegisterCxROM(g_uSlot, empty_rom);
+    g_bHD_RomLoaded = false;
+  }
 }
 
 auto HD_GetFullName(int nDrive) -> const char* { return g_HardDrive[nDrive].hd_fullname; }
-
-void HD_Load_Rom(uint8_t* pCxRomPeripheral, uint32_t uSlot) {
-  if (!g_bHD_Enabled) return;
-  g_uSlot = uSlot;
-  memcpy(pCxRomPeripheral + static_cast<size_t>(uSlot * 256), Hddrvr_dat, 0x100);
-  g_bHD_RomLoaded = true;
-}
 
 void HD_Cleanup() {
   for (int i = 0; i < 2; i++) HD_CleanupDrive(i);
@@ -178,7 +219,8 @@ DEVICE_UNKNOWN_ERROR =  0x03,
 DEVICE_IO_ERROR =      0x08
 };
 
-static auto HD_IO_EMUL(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+static auto HD_IO_EMUL(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+  (void)instance;
   uint8_t r = DEVICE_OK;
   addr &= 0xFF;
   if (!HD_CardIsEnabled()) return r;

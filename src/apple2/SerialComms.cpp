@@ -227,6 +227,68 @@ static auto CommReceive(SuperSerialCard* pSSC, uint16_t pc, uint16_t addr, uint8
 static auto CommStatus(SuperSerialCard* pSSC, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
 static auto CommTransmit(SuperSerialCard* pSSC, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
 
+#include "core/Peripheral.h"
+
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+static HostInterface_t* g_pSSCHost = nullptr;
+static int g_nSSCSlot = 0;
+
+auto SSC_IORead(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
+auto SSC_IOWrite(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
+
+static auto SSC_ABI_Init(int slot, HostInterface_t* host) -> void* {
+  g_pSSCHost = host;
+  g_nSSCSlot = slot;
+  
+  const uint32_t SSC_FW_SIZE = 2 * 1024;
+  const uint32_t SSC_SLOT_FW_SIZE = 256;
+  const uint32_t SSC_SLOT_FW_OFFSET = 7 * 256;
+
+  // Copy the 256 byte portion to CxROM
+  uint8_t slot_rom[256];
+  memcpy(slot_rom, SSC_rom.data() + SSC_SLOT_FW_OFFSET, SSC_SLOT_FW_SIZE);
+  host->RegisterCxROM(slot, slot_rom);
+
+  // Expansion ROM
+  if (sg_SSC.m_pExpansionRom == nullptr) {
+    sg_SSC.m_pExpansionRom = new uint8_t[SSC_FW_SIZE];
+    if (sg_SSC.m_pExpansionRom) {
+      memcpy(sg_SSC.m_pExpansionRom, SSC_rom.data(), SSC_FW_SIZE);
+    }
+  }
+
+  host->RegisterIO(slot, SSC_IORead, SSC_IOWrite, nullptr, nullptr);
+  
+  return &sg_SSC; // Use the global instance for now
+}
+
+static void SSC_ABI_Reset(void* instance) {
+  SSC_Reset(static_cast<SuperSerialCard*>(instance));
+}
+
+static void SSC_ABI_Shutdown(void* instance) {
+  SSC_Destroy(static_cast<SuperSerialCard*>(instance));
+}
+
+extern void SSCFrontend_Update(SuperSerialCard* pSSC, uint32_t totalcycles);
+
+static void SSC_ABI_Think(void* instance, uint32_t cycles) {
+  SSCFrontend_Update(static_cast<SuperSerialCard*>(instance), cycles);
+}
+
+Peripheral_t g_ssc_peripheral = {
+    LINAPPLE_ABI_VERSION,
+    "Super Serial Card",
+    (1u << 2), // Slot 2 by default
+    SSC_ABI_Init,
+    SSC_ABI_Reset,
+    SSC_ABI_Shutdown,
+    SSC_ABI_Think,
+    nullptr, // save_state
+    nullptr  // load_state
+};
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+
 void SSC_Reset(SuperSerialCard* pSSC) {
   GetDIPSW(pSSC);
   pSSC->m_vRecvBytes = 0;
@@ -235,25 +297,6 @@ void SSC_Reset(SuperSerialCard* pSSC) {
   pSSC->m_bWrittenTx = false;
   pSSC->m_vbCommIRQ = false;
   pSSC->m_uCommandByte = 0xFF; // Ensure first write always triggers UpdateCommState
-}
-
-void SSC_Initialize(SuperSerialCard* pSSC, uint8_t* pCxRomPeripheral, uint32_t uSlot) {
-  const uint32_t SSC_FW_SIZE = 2 * 1024;
-  const uint32_t SSC_SLOT_FW_SIZE = 256;
-  const uint32_t SSC_SLOT_FW_OFFSET = 7 * 256;
-
-  memcpy(pCxRomPeripheral + static_cast<size_t>(uSlot * 256), SSC_rom.data() + SSC_SLOT_FW_OFFSET, SSC_SLOT_FW_SIZE);
-
-  // Expansion ROM
-  if (pSSC->m_pExpansionRom == nullptr) {
-    pSSC->m_pExpansionRom = new uint8_t[SSC_FW_SIZE];
-    if (pSSC->m_pExpansionRom) {
-      memcpy(pSSC->m_pExpansionRom, SSC_rom.data(), SSC_FW_SIZE);
-    }
-  }
-
-  RegisterIoHandler(uSlot, &SSC_IORead, &SSC_IOWrite, nullptr, nullptr, pSSC,
-                    pSSC->m_pExpansionRom);
 }
 
 void SSC_Destroy(SuperSerialCard* pSSC) {
@@ -312,9 +355,8 @@ static void UpdateCommState(SuperSerialCard* pSSC) {
   }
 }
 
-auto SSC_IORead(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
-  uint32_t uSlot = ((uAddr & 0xff) >> 4) - 8;
-  auto *pSSC = static_cast<SuperSerialCard *>(MemGetSlotParameters(uSlot));
+auto SSC_IORead(void* instance, uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
+  auto *pSSC = static_cast<SuperSerialCard *>(instance);
 
   switch (uAddr & ADDR_NIBBLE_MASK) {
     case SSC_OFFSET_DIPSW1: return CommDipSw(pSSC, PC, uAddr, bWrite, uValue, nCyclesLeft);
@@ -327,9 +369,8 @@ auto SSC_IORead(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uin
   }
 }
 
-auto SSC_IOWrite(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
-  uint32_t uSlot = ((uAddr & 0xff) >> 4) - 8;
-  auto *pSSC = static_cast<SuperSerialCard *>(MemGetSlotParameters(uSlot));
+auto SSC_IOWrite(void* instance, uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
+  auto *pSSC = static_cast<SuperSerialCard *>(instance);
 
   switch (uAddr & ADDR_NIBBLE_MASK) {
     case SSC_OFFSET_DATA: return CommTransmit(pSSC, PC, uAddr, bWrite, uValue, nCyclesLeft);

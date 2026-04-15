@@ -16,6 +16,12 @@ option(REGISTRY_WRITEABLE "Enable registry writing" OFF)
 # Peripheral Options
 option(PERIPHERAL_SPEAKER "Enable built-in speaker peripheral" ON)
 option(PERIPHERAL_MOCKINGBOARD "Enable Mockingboard peripheral" ON)
+option(PERIPHERAL_DISK "Enable Disk II peripheral" ON)
+option(PERIPHERAL_SSC "Enable Super Serial Card peripheral" ON)
+option(PERIPHERAL_PRINTER "Enable Parallel Printer peripheral" ON)
+option(PERIPHERAL_HARDDISK "Enable Harddisk peripheral" ON)
+option(PERIPHERAL_MOUSE "Enable Mouse peripheral" ON)
+option(PERIPHERAL_CLOCK "Enable No-Slot Clock peripheral" ON)
 
 # --- Compiler Flags ---
 add_compile_options(-O3 -Wall -Wextra)
@@ -114,17 +120,11 @@ set(SOURCES_CORE
 set(SOURCES_A2
     src/apple2/6821.cpp
     src/apple2/CPU.cpp
-    src/apple2/Clock.cpp
-    src/apple2/Disk.cpp
     src/apple2/DiskImage.cpp
-    src/apple2/Harddisk.cpp
     src/apple2/Joystick.cpp
     src/apple2/Keyboard.cpp
     src/apple2/Memory.cpp
-    src/apple2/MouseInterface.cpp
-    src/apple2/ParallelPrinter.cpp
     src/apple2/SaveState.cpp
-    src/apple2/SerialComms.cpp
     src/apple2/SoundCore.cpp
     src/apple2/Timer.cpp
     src/apple2/Video.cpp
@@ -143,6 +143,36 @@ endif()
 if(PERIPHERAL_MOCKINGBOARD)
     list(APPEND SOURCES_A2 src/apple2/Mockingboard.cpp src/apple2/AY8910.cpp src/apple2/Riff.cpp)
     list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_MOCKINGBOARD)
+endif()
+
+if(PERIPHERAL_DISK)
+    list(APPEND SOURCES_A2 src/apple2/Disk.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_DISK)
+endif()
+
+if(PERIPHERAL_SSC)
+    list(APPEND SOURCES_A2 src/apple2/SerialComms.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_SSC)
+endif()
+
+if(PERIPHERAL_PRINTER)
+    list(APPEND SOURCES_A2 src/apple2/ParallelPrinter.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_PRINTER)
+endif()
+
+if(PERIPHERAL_HARDDISK)
+    list(APPEND SOURCES_A2 src/apple2/Harddisk.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_HARDDISK)
+endif()
+
+if(PERIPHERAL_MOUSE)
+    list(APPEND SOURCES_A2 src/apple2/MouseInterface.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_MOUSE)
+endif()
+
+if(PERIPHERAL_CLOCK)
+    list(APPEND SOURCES_A2 src/apple2/Clock.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_CLOCK)
 endif()
 
 set(SOURCES_DBG "")

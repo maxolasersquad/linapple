@@ -1,1 +1,1 @@
-extern void Clock_Insert(int);
+#pragma once

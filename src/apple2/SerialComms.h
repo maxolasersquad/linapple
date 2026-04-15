@@ -75,7 +75,6 @@ struct SuperSerialCard {
 
 // Procedural functions for the core logic
 void SSC_Reset(SuperSerialCard* pSSC);
-void SSC_Initialize(SuperSerialCard* pSSC, uint8_t* pCxRomPeripheral, uint32_t uSlot);
 void SSC_Destroy(SuperSerialCard* pSSC);
 
 // Snapshot
@@ -83,8 +82,8 @@ auto SSC_GetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> uint32_t;
 auto SSC_SetSnapshot(SuperSerialCard* pSSC, SS_IO_Comms *pSS) -> uint32_t;
 
 // IO Handlers
-auto SSC_IORead(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t;
-auto SSC_IOWrite(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t;
+auto SSC_IORead(void* instance, uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t;
+auto SSC_IOWrite(void* instance, uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t;
 
 // Interface for Frontend to Core
 void SSC_PushRxByte(SuperSerialCard* pSSC, uint8_t byte);

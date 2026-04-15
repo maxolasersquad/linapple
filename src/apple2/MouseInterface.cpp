@@ -248,8 +248,44 @@ static void M6821_Listener_B(void* objTo, uint8_t byData) {
   }
 }
 
-void Mouse_Initialize(uint8_t* pCxRomPeripheral, uint32_t uSlot) {
-  (void)pCxRomPeripheral;
+#include "core/Peripheral.h"
+
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+static HostInterface_t* g_pMouseHost = nullptr;
+
+void Mouse_SetSlotRom() {
+  if (!g_pMouseHost) return;
+
+  uint32_t uOffset = (sg_Mouse.m_by6821B << 7) & 0x0700;
+  if (sg_Mouse.m_pSlotRom) {
+    uint8_t slot_rom[256];
+    memcpy(slot_rom, sg_Mouse.m_pSlotRom + uOffset, 256);
+    g_pMouseHost->RegisterCxROM(sg_Mouse.m_uSlot, slot_rom);
+  }
+}
+
+auto Mouse_IORead(void* instance, uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
+  (void)instance;
+  (void)uValue;
+  (void)nCyclesLeft;
+  (void)PC;
+  (void)bWrite;
+  uint8_t byRS = uAddr & 3;
+  return Pia6821_Read(&sg_Mouse.m_6821, byRS);
+}
+
+auto Mouse_IOWrite(void* instance, uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
+  (void)instance;
+  (void)nCyclesLeft;
+  (void)PC;
+  (void)bWrite;
+  uint8_t byRS = uAddr & 3;
+  Pia6821_Write(&sg_Mouse.m_6821, byRS, uValue);
+  return 0;
+}
+
+static auto Mouse_ABI_Init(int slot, HostInterface_t* host) -> void* {
+  g_pMouseHost = host;
   const uint32_t FW_SIZE = 2 * 1024;
   auto *pData = reinterpret_cast<uint8_t *>(MouseInterface_rom);
 
@@ -269,7 +305,7 @@ void Mouse_Initialize(uint8_t* pCxRomPeripheral, uint32_t uSlot) {
 
   Mouse_Reset();
 
-  sg_Mouse.m_uSlot = uSlot;
+  sg_Mouse.m_uSlot = slot;
   if (sg_Mouse.m_pSlotRom == nullptr) {
     sg_Mouse.m_pSlotRom = new uint8_t[FW_SIZE];
     if (sg_Mouse.m_pSlotRom) {
@@ -278,49 +314,38 @@ void Mouse_Initialize(uint8_t* pCxRomPeripheral, uint32_t uSlot) {
   }
 
   Mouse_SetSlotRom();
-  RegisterIoHandler(uSlot, &Mouse_IORead, &Mouse_IOWrite, nullptr, nullptr, nullptr, nullptr);
+  host->RegisterIO(slot, Mouse_IORead, Mouse_IOWrite, nullptr, nullptr);
   sg_Mouse.m_bActive = true;
-  Logger::Info("MouseInterface Rom loaded and registered\n");
+  return reinterpret_cast<void*>(1);
 }
 
-void Mouse_Uninitialize() {
+static void Mouse_ABI_Reset(void* instance) {
+  (void)instance;
+  Mouse_Reset();
+}
+
+static void Mouse_ABI_Shutdown(void* instance) {
+  (void)instance;
   sg_Mouse.m_bActive = false;
   if (sg_Mouse.m_pSlotRom) {
     delete[] sg_Mouse.m_pSlotRom;
     sg_Mouse.m_pSlotRom = nullptr;
   }
+  g_pMouseHost = nullptr;
 }
 
-void Mouse_SetSlotRom() {
-  uint8_t* pCxRomPeripheral = MemGetCxRomPeripheral();
-  if (pCxRomPeripheral == nullptr) {
-    return;
-  }
-
-  uint32_t uOffset = (sg_Mouse.m_by6821B << 7) & 0x0700;
-  memcpy(pCxRomPeripheral + static_cast<size_t>(sg_Mouse.m_uSlot * 256), sg_Mouse.m_pSlotRom + uOffset, 256);
-  if (mem) {
-    memcpy(mem + 0xC000 + static_cast<size_t>(sg_Mouse.m_uSlot * 256), sg_Mouse.m_pSlotRom + uOffset, 256);
-  }
-}
-
-auto Mouse_IORead(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
-  (void)uValue;
-  (void)nCyclesLeft;
-  (void)PC;
-  (void)bWrite;
-  uint8_t byRS = uAddr & 3;
-  return Pia6821_Read(&sg_Mouse.m_6821, byRS);
-}
-
-auto Mouse_IOWrite(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft) -> uint8_t {
-  (void)nCyclesLeft;
-  (void)PC;
-  (void)bWrite;
-  uint8_t byRS = uAddr & 3;
-  Pia6821_Write(&sg_Mouse.m_6821, byRS, uValue);
-  return 0;
-}
+Peripheral_t g_mouse_peripheral = {
+    LINAPPLE_ABI_VERSION,
+    "Mouse Interface",
+    (1u << 4), // Slot 4 by default
+    Mouse_ABI_Init,
+    Mouse_ABI_Reset,
+    Mouse_ABI_Shutdown,
+    nullptr, // think
+    nullptr, // save_state
+    nullptr  // load_state
+};
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 static void Mouse_OnCommand() {
   switch (sg_Mouse.m_byBuff[0] & 0xF0) {

@@ -416,10 +416,6 @@ auto DiskGetName(int drive) -> const char*
   return g_aFloppyDisk[drive].imagename;
 }
 
-auto Disk_IORead(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
-
-auto Disk_IOWrite(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
-
 void DiskInitialize()
 {
   int loop = DRIVES;
@@ -696,24 +692,62 @@ auto DiskDriveSwap() -> bool
   return true;
 }
 
-void DiskLoadRom(uint8_t* pCxRomPeripheral, uint32_t uSlot)
-{
-  const uint32_t DISK2_FW_SIZE = 256;
+static HostInterface_t* g_pDiskHost = nullptr;
+static int g_nDiskSlot = 0;
 
-  auto *pData = reinterpret_cast<uint8_t *>(Disk2_rom);  // NB. Don't need to unlock resource
+auto Disk_IORead(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
+auto Disk_IOWrite(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t;
 
-  memcpy(pCxRomPeripheral + static_cast<size_t>(uSlot * 256), pData, DISK2_FW_SIZE);
+static auto Disk_ABI_Init(int slot, HostInterface_t* host) -> void* {
+  g_pDiskHost = host;
+  g_nDiskSlot = slot;
+  
+  DiskInitialize();
 
+  // Load and patch ROM
+  uint8_t patched_rom[256];
+  memcpy(patched_rom, Disk2_rom, 256);
   // TODO/FIXME: HACK! REMOVE A WAIT ROUTINE FROM THE DISK CONTROLLER'S FIRMWARE
-  *(pCxRomPeripheral + 0x064C) = 0xA9;
-  *(pCxRomPeripheral + 0x064D) = 0x00;
-  *(pCxRomPeripheral + 0x064E) = 0xEA;
+  patched_rom[0x4C] = 0xA9;
+  patched_rom[0x4D] = 0x00;
+  patched_rom[0x4E] = 0xEA;
+  host->RegisterCxROM(slot, patched_rom);
 
-  RegisterIoHandler(uSlot, Disk_IORead, Disk_IOWrite, nullptr, nullptr, nullptr, nullptr);
+  host->RegisterIO(slot, Disk_IORead, Disk_IOWrite, nullptr, nullptr);
+  
+  return reinterpret_cast<void*>(1); // Dummy instance
 }
 
-/*static*/ auto Disk_IORead(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t
+static void Disk_ABI_Reset(void* instance) {
+  (void)instance;
+  DiskReset();
+}
+
+static void Disk_ABI_Shutdown(void* instance) {
+  (void)instance;
+  DiskDestroy();
+}
+
+static void Disk_ABI_Think(void* instance, uint32_t cycles) {
+  (void)instance;
+  DiskUpdatePosition(cycles);
+}
+
+Peripheral_t g_disk_peripheral = {
+    LINAPPLE_ABI_VERSION,
+    "Disk II",
+    (1u << 6), // Slot 6 by default
+    Disk_ABI_Init,
+    Disk_ABI_Reset,
+    Disk_ABI_Shutdown,
+    Disk_ABI_Think,
+    nullptr, // save_state
+    nullptr  // load_state
+};
+
+/*static*/ auto Disk_IORead(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t
 {
+  (void)instance;
   addr &= 0xFF;
 
   switch (addr & 0xf) {
@@ -754,8 +788,9 @@ void DiskLoadRom(uint8_t* pCxRomPeripheral, uint32_t uSlot)
   return 0;
 }
 
-auto Disk_IOWrite(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t
+/*static*/ auto Disk_IOWrite(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t
 {
+  (void)instance;
   addr &= 0xFF;
 
   switch (addr & 0xf) {

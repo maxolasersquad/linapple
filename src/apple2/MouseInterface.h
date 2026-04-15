@@ -40,11 +40,7 @@ struct MouseInterface {
   uint32_t m_uSlot;
 };
 
-void Mouse_Initialize(uint8_t* pCxRomPeripheral, uint32_t uSlot);
-void Mouse_Uninitialize();
 void Mouse_SetSlotRom();
-uint8_t Mouse_IORead(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft);
-uint8_t Mouse_IOWrite(uint16_t PC, uint16_t uAddr, uint8_t bWrite, uint8_t uValue, uint32_t nCyclesLeft);
 void Mouse_SetPosition(int xvalue, int xrange, int yvalue, int yrange);
 void Mouse_SetButton(eBUTTON Button, eBUTTONSTATE State);
 bool Mouse_Active();

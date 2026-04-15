@@ -177,7 +177,8 @@ static void update_latches() {
 }
 
 
-static auto Clock_IORead (uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+static auto Clock_IORead(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+  (void)instance;
   switch(addr &= 0x0F) {
   case 0: case 1:
   case 2: case 3:
@@ -195,13 +196,33 @@ static auto Clock_IORead (uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d,
   }
 }
 
+#include "core/Peripheral.h"
 
-void Clock_Insert(int slot) {
-  memset(MemGetCxRomPeripheral() + static_cast<ptrdiff_t>(slot*256), 0, 256);
-  memcpy(MemGetCxRomPeripheral() + static_cast<ptrdiff_t>(slot*256), Clock_ROM.data(), Clock_ROM.size());
-
-  RegisterIoHandler(static_cast<uint32_t>(slot),
-		    Clock_IORead, nullptr,
-		    nullptr, nullptr,
-		    nullptr, nullptr);
+static auto Clock_ABI_Init(int slot, HostInterface_t* host) -> void* {
+  uint8_t slot_rom[256];
+  memset(slot_rom, 0, 256);
+  memcpy(slot_rom, Clock_ROM.data(), Clock_ROM.size());
+  host->RegisterCxROM(slot, slot_rom);
+  host->RegisterIO(slot, Clock_IORead, nullptr, nullptr, nullptr);
+  return reinterpret_cast<void*>(1); // Dummy instance
 }
+
+static void Clock_ABI_Reset(void* instance) {
+  (void)instance;
+}
+
+static void Clock_ABI_Shutdown(void* instance) {
+  (void)instance;
+}
+
+Peripheral_t g_clock_peripheral = {
+    LINAPPLE_ABI_VERSION,
+    "No-Slot Clock",
+    0xFFFFFFFF, // Any slot
+    Clock_ABI_Init,
+    Clock_ABI_Reset,
+    Clock_ABI_Shutdown,
+    nullptr, // think
+    nullptr, // save_state
+    nullptr  // load_state
+};
