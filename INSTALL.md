@@ -35,7 +35,7 @@ cd linapple
 
 ```bash
 # Create a build directory and configure with CMake
-cmake -B build -DFRONTEND=sdl3
+cmake -B build
 
 # Compile using all available CPU cores
 cmake --build build -j$(nproc)
