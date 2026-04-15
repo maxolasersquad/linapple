@@ -269,6 +269,22 @@ target_include_directories(test-abi PRIVATE src src/core src/apple2 src/Debugger
 target_link_libraries(test-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
 add_test(NAME test-abi COMMAND test-abi)
 
+# Test Peripheral ABI (C and C++)
+add_executable(test-peripheral-abi 
+    tests/test_main.cpp
+    tests/test_peripheral_abi.cpp 
+    tests/test_peripheral_abi_c.c 
+    ${SOURCES_CORE} 
+    ${SOURCES_A2} 
+    ${SOURCES_DBG} 
+    src/frontends/headless/Stubs.cpp 
+    src/frontends/headless/Headless_Path.cpp
+)
+add_dependencies(test-peripheral-abi generate_xpms)
+target_include_directories(test-peripheral-abi PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
+target_link_libraries(test-peripheral-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+add_test(NAME test-peripheral-abi COMMAND test-peripheral-abi)
+
 # CPU tests (using the built linapple binary)
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")
 set_tests_properties(test-cpu PROPERTIES ENVIRONMENT "EMULATOR=$<TARGET_FILE:linapple>")

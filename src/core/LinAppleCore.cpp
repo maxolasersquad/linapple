@@ -114,6 +114,8 @@ void Linapple_UpdateTitle(const char* title) {
     }
 }
 
+#include "core/Peripheral_Internal.h"
+
 void Linapple_Init() {
   MemPreInitialize();
   Asset_Init();
@@ -125,10 +127,12 @@ void Linapple_Init() {
   MemInitialize();
   CpuInitialize();
   VideoInitialize();
-  SpkrInitialize();
+  
+  Peripheral_Manager_Init();
+  Peripheral_Register_Internal();
+
   KeybReset();
   JoyReset();
-  MB_Initialize();
 
   uint8_t* pCxRomPeripheral = MemGetAuxPtr(APPLE_SLOT_BEGIN);
   SSC_Initialize(&sg_SSC, pCxRomPeripheral, 2); // Slot 2
@@ -141,7 +145,7 @@ void Linapple_Init() {
 
 void Linapple_Shutdown() {
   PrintDestroy();
-  MB_Destroy();
+  Peripheral_Manager_Shutdown();
   DiskDestroy();
   VideoDestroy();
   MemDestroy();
@@ -252,8 +256,9 @@ static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
   JoyUpdatePosition(dwExecutedCycles);
   SSCFrontend_Update(&sg_SSC, dwExecutedCycles);
   PrinterFrontend_Update(dwExecutedCycles);
-  MB_UpdateCycles(dwExecutedCycles);
-  SpkrUpdate(dwExecutedCycles);
+  
+  Peripheral_Manager_Think(dwExecutedCycles);
+  
   SpkrFrontend_Update(dwExecutedCycles);
   Linapple_KeyboardThink(dwExecutedCycles);
 

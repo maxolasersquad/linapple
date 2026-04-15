@@ -27,7 +27,7 @@ bool Spkr_IsActive();
 uint32_t SpkrGetSnapshot(SS_IO_Speaker *pSS);
 uint32_t SpkrSetSnapshot(SS_IO_Speaker *pSS);
 
-uint8_t SpkrToggle(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
+uint8_t SpkrToggle(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft);
 
 // Core Speaker API for Frontend
 int SpkrGetEvents(SpkrEvent *events, int max_events);

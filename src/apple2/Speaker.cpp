@@ -75,7 +75,8 @@ auto Spkr_IsActive() -> bool {
   return g_bSpkrRecentlyActive;
 }
 
-auto SpkrToggle(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t nCyclesLeft) -> uint8_t {
+auto SpkrToggle(void* instance, uint16_t, uint16_t, uint8_t, uint8_t, uint32_t nCyclesLeft) -> uint8_t {
+  (void)instance;
   g_bSpkrToggleFlag = true;
 
   if (!g_bFullSpeed) {
@@ -91,6 +92,55 @@ auto SpkrToggle(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t nCyclesLeft) -> u
 
   return MemReadFloatingBus(nCyclesLeft);
 }
+
+#include "core/Peripheral.h"
+
+// Justification: Peripheral Host Interface requires storage of core callback 
+// services and active slot information for the migrated Speaker instance.
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+static HostInterface_t* g_pSpkrHost = nullptr;
+
+static constexpr uint16_t ADDR_SPEAKER = 0xC030;
+static constexpr uint32_t ANY_SLOT_MASK = 0xFFFFFFFF;
+
+static auto Spkr_ABI_Init(int slot, HostInterface_t* host) -> void* {
+  (void)slot;
+  g_pSpkrHost = host;
+  SpkrInitialize();
+  
+  // Speaker is at $C030
+  g_pSpkrHost->RegisterDirectIO(nullptr, ADDR_SPEAKER, SpkrToggle, SpkrToggle);
+  
+  return reinterpret_cast<void*>(1); // Dummy instance
+}
+
+static void Spkr_ABI_Reset(void* instance) {
+  (void)instance;
+  SpkrReset();
+}
+
+static void Spkr_ABI_Shutdown(void* instance) {
+  (void)instance;
+  SpkrDestroy();
+}
+
+static void Spkr_ABI_Think(void* instance, uint32_t cycles) {
+  (void)instance;
+  SpkrUpdate(cycles);
+}
+
+Peripheral_t g_speaker_peripheral = {
+    LINAPPLE_ABI_VERSION,
+    "Speaker",
+    ANY_SLOT_MASK, // Compatible with any "slot"
+    Spkr_ABI_Init,
+    Spkr_ABI_Reset,
+    Spkr_ABI_Shutdown,
+    Spkr_ABI_Think,
+    nullptr, // save_state
+    nullptr  // load_state
+};
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 void SpkrUpdate(uint32_t totalcycles) {
   (void)totalcycles;

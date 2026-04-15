@@ -205,11 +205,11 @@ static auto IOWrite_C02x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, 
 }
 
 static auto IORead_C03x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
-  return SpkrToggle(pc, addr, bWrite, d, nCyclesLeft);
+  return SpkrToggle(nullptr, pc, addr, bWrite, d, nCyclesLeft);
 }
 
 static auto IOWrite_C03x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
-  return SpkrToggle(pc, addr, bWrite, d, nCyclesLeft);
+  return SpkrToggle(nullptr, pc, addr, bWrite, d, nCyclesLeft);
 }
 
 static auto IORead_C04x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {

@@ -14,7 +14,7 @@ auto ConfigLoadBool(const char* section, const char* key, bool* value) -> bool;
 auto ConfigLoadString(const char* section, const char* key, std::string* value) -> bool;
 void ConfigSaveInt(const char* section, const char* key, uint32_t value);
 
-enum eIRQSRC { IS_6522 = 0, IS_SPEECH, IS_SSC, IS_MOUSE };
+enum eIRQSRC { IS_6522 = 0, IS_SPEECH, IS_SSC, IS_MOUSE, IS_SLOT1, IS_SLOT2, IS_SLOT3, IS_SLOT4, IS_SLOT5, IS_SLOT6, IS_SLOT7 };
 
 // Configuration functions for type safety
 #define USE_SPEECH_API
@@ -214,10 +214,17 @@ enum eSOUNDCARDTYPE {
   SC_PHASOR
 };  // Apple soundcard type
 
-using iofunction = uint8_t (*)(uint16_t nPC, uint16_t nAddr,
-                                    uint8_t nWriteFlag,
-                                    uint8_t nWriteValue,
-                                    uint32_t nCyclesLeft);
+#ifdef __cplusplus
+extern "C" {
+#endif
+typedef uint8_t (*iofunction)(uint16_t nPC,
+                               uint16_t nAddr,
+                               uint8_t nWriteFlag,
+                               uint8_t nWriteValue,
+                               uint32_t nCyclesLeft);
+#ifdef __cplusplus
+}
+#endif
 
 typedef struct _IMAGE__ {
   int unused;

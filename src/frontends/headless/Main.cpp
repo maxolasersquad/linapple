@@ -3,6 +3,7 @@
 #include "core/Common_Globals.h"
 #include "core/Registry.h"
 #include "core/Util_Path.h"
+#include "apple2/Disk.h"
 #include <cstdio>
 #include <iostream>
 #include <getopt.h>
@@ -32,26 +33,37 @@ auto main(int argc, char* argv[]) -> int {
 
     static struct option long_options[] = {
         {"test-cpu", required_argument, nullptr, 't'},
-        {"test-6502", no_argument, nullptr, '1'},
-        {"test-65c02", no_argument, nullptr, '2'},
+        {"test-6502", no_argument, nullptr, '6'},
+        {"test-65c02", no_argument, nullptr, 'C'},
         {"boot", no_argument, nullptr, 'b'},
+        {"d1", required_argument, nullptr, '1'},
+        {"d2", required_argument, nullptr, '2'},
         {nullptr, 0, 0, 0}
     };
 
+    const char* disk1 = nullptr;
+    const char* disk2 = nullptr;
+
     int c = 0;
     int option_index = 0;
-    while ((c = getopt_long(argc, argv, "t:b", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, argv, "t:b6C1:2:", long_options, &option_index)) != -1) {
         switch (c) {
             case 't':
                 Linapple_CpuTest(optarg);
                 return 0;
-            case '1':
+            case '6':
                 g_Apple2Type = A2TYPE_APPLE2PLUS;
                 break;
-            case '2':
+            case 'C':
                 g_Apple2Type = A2TYPE_APPLE2EENHANCED;
                 break;
             case 'b':
+                break;
+            case '1':
+                disk1 = optarg;
+                break;
+            case '2':
+                disk2 = optarg;
                 break;
         }
     }
@@ -62,6 +74,13 @@ auto main(int argc, char* argv[]) -> int {
     Linapple_SetVideoCallback(VideoCallback);
     Linapple_SetAudioCallback(AudioCallback);
     Linapple_SetTitleCallback(TitleCallback);
+
+    if (disk1) {
+        DiskInsert(0, disk1, false, false);
+    }
+    if (disk2) {
+        DiskInsert(1, disk2, false, false);
+    }
 
     g_state.mode = MODE_RUNNING;
 

@@ -1,4 +1,5 @@
 #include <cstdint>
+#include "core/Common.h"
 #pragma once
 
 typedef struct tagSS_BaseMemory SS_BaseMemory;

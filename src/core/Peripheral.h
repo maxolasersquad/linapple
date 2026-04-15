@@ -9,15 +9,16 @@
 #ifndef LINAPPLE_PERIPHERAL_H
 #define LINAPPLE_PERIPHERAL_H
 
-#include <cstdint>
-#include <cstddef>
-#include <cstdarg>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-constexpr int LINAPPLE_ABI_VERSION = 1;
+#define LINAPPLE_ABI_VERSION 1
 
 /**
  * @brief Standard return codes for ABI functions.
@@ -52,8 +53,9 @@ typedef struct {
     void (*RegisterIO)(int slot, PeripheralIOHandler readC0, PeripheralIOHandler writeC0, 
                                  PeripheralIOHandler readCx, PeripheralIOHandler writeCx);
     void (*RegisterCxROM)(int slot, uint8_t* rom_ptr);
+    void (*RegisterDirectIO)(void* instance, uint16_t addr, PeripheralIOHandler read, PeripheralIOHandler write);
     uint8_t* (*GetMemPtr)(uint16_t addr);
-    uint64_t (*GetCycles)();
+    uint64_t (*GetCycles)(void);
 } HostInterface_t;
 
 /**
