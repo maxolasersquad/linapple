@@ -180,6 +180,25 @@ auto Linapple_GetTicks() -> uint32_t {
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
 }
 
+static auto ShouldRunFullSpeed() -> bool {
+  bool shouldTurbo = DiskIsSpinning() && enhancedisk && !Spkr_IsActive() && !MB_IsActive();
+
+  static bool s_wasTurbo = false;
+  static uint32_t s_turboStartMs = 0;
+
+  if (shouldTurbo && !s_wasTurbo) {
+    s_turboStartMs = Linapple_GetTicks();
+    Logger::Perf("Full-speed disk mode engaged\n");
+  } else if (!shouldTurbo && s_wasTurbo) {
+    uint32_t elapsed = Linapple_GetTicks() - s_turboStartMs;
+    Logger::Perf("Full-speed disk mode disengaged after %ums\n", elapsed);
+  }
+
+  s_wasTurbo = shouldTurbo;
+  g_bFullSpeed = shouldTurbo;
+  return shouldTurbo;
+}
+
 static int16_t g_spkrBuffer[8192];
 
 void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
@@ -228,6 +247,7 @@ static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
   cyclenum += dwExecutedCycles;
   cumulativecycles = g_nCumulativeCycles;
 
+  DiskUpdatePosition(dwExecutedCycles);
   VideoUpdateVbl(dwExecutedCycles);
   JoyUpdatePosition(dwExecutedCycles);
   SSCFrontend_Update(&sg_SSC, dwExecutedCycles);
@@ -249,7 +269,15 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
     }
 #endif
 
-    uint32_t executed = Internal_RunCycles(cycles);
+    uint32_t executed = 0;
+    if (ShouldRunFullSpeed()) {
+      for (int i = 0; i < 100; i++) {
+        executed += Internal_RunCycles(cycles);
+        if (!DiskIsSpinning()) break;
+      }
+    } else {
+      executed = Internal_RunCycles(cycles);
+    }
     MB_EndOfVideoFrame();
 
     if (g_videoCB && g_bFrameReady) {
