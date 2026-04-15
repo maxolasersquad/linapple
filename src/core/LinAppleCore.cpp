@@ -185,7 +185,16 @@ auto Linapple_GetTicks() -> uint32_t {
 }
 
 static auto ShouldRunFullSpeed() -> bool {
-  bool shouldTurbo = DiskIsSpinning() && enhancedisk && !Spkr_IsActive() && !MB_IsActive();
+  bool spkr_active = false;
+  bool mb_active = false;
+#if defined(ENABLE_PERIPHERAL_SPEAKER)
+  spkr_active = Spkr_IsActive();
+#endif
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
+  mb_active = MB_IsActive();
+#endif
+
+  bool shouldTurbo = DiskIsSpinning() && enhancedisk && !spkr_active && !mb_active;
 
   static bool s_wasTurbo = false;
   static uint32_t s_turboStartMs = 0;
@@ -203,11 +212,14 @@ static auto ShouldRunFullSpeed() -> bool {
   return shouldTurbo;
 }
 
+#if defined(ENABLE_PERIPHERAL_SPEAKER)
 static int16_t g_spkrBuffer[8192];
+#endif
 
 void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
   if (dwExecutedCycles == 0) return;
 
+#if defined(ENABLE_PERIPHERAL_SPEAKER)
   static bool s_lastState = false;
   static double s_nextSampleCycle = 0;
   double clksPerSample = g_fCurrentCLK6502 / SPKR_SAMPLE_RATE;
@@ -242,6 +254,9 @@ void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
         DSUploadBuffer(g_spkrBuffer, numSamples);
     }
   }
+#else
+  (void)dwExecutedCycles;
+#endif
 }
 
 static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
@@ -283,7 +298,10 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
     } else {
       executed = Internal_RunCycles(cycles);
     }
+    
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
     MB_EndOfVideoFrame();
+#endif
 
     if (g_videoCB && g_bFrameReady) {
         uint32_t* output = VideoGetOutputBuffer();

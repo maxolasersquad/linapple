@@ -205,11 +205,19 @@ static auto IOWrite_C02x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, 
 }
 
 static auto IORead_C03x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+#if defined(ENABLE_PERIPHERAL_SPEAKER)
   return SpkrToggle(nullptr, pc, addr, bWrite, d, nCyclesLeft);
+#else
+  return IO_Null(pc, addr, bWrite, d, nCyclesLeft);
+#endif
 }
 
 static auto IOWrite_C03x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+#if defined(ENABLE_PERIPHERAL_SPEAKER)
   return SpkrToggle(nullptr, pc, addr, bWrite, d, nCyclesLeft);
+#else
+  return IO_Null(pc, addr, bWrite, d, nCyclesLeft);
+#endif
 }
 
 static auto IORead_C04x(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {

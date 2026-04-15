@@ -767,7 +767,9 @@ static inline void CheckInterruptSources(uint32_t uExecutedCycles)
 {
   if (g_nIrqCheckTimeout < 0) {
     #ifndef UPDATE_ALL_PER_CYCLE
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
     MB_UpdateCycles(uExecutedCycles);
+#endif
     #endif
     Mouse_SetVBlank(VideoGetVbl(uExecutedCycles));
     g_nIrqCheckTimeout = IRQ_CHECK_TIMEOUT;
@@ -3511,7 +3513,9 @@ auto CpuExecute(uint32_t uCycles) -> uint32_t {
   g_nCyclesSubmitted = uCycles;
   g_nCyclesExecuted = 0;
 
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
   MB_StartOfCpuExecute();
+#endif
 
   if (uCycles == 0) {  // Do single step
     uExecutedCycles = InternalCpuExecute(0);
@@ -3520,7 +3524,9 @@ auto CpuExecute(uint32_t uCycles) -> uint32_t {
   }
 
   #ifndef UPDATE_ALL_PER_CYCLE
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
   MB_UpdateCycles(uExecutedCycles);  // Update 6522s (NB. Do this before updating g_nCumulativeCycles below)
+#endif
   #endif
 
   uint16_t nRemainingCycles = uExecutedCycles - g_nCyclesExecuted;

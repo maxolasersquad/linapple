@@ -4,8 +4,13 @@
 #include "Peripheral.h"
 
 // Forward declarations for migrated peripherals
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
 extern Peripheral_t g_mockingboard_peripheral;
+#endif
+
+#if defined(ENABLE_PERIPHERAL_SPEAKER)
 extern Peripheral_t g_speaker_peripheral;
+#endif
 
 /**
  * @brief Register all built-in peripherals with the manager.

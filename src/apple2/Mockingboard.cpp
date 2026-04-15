@@ -633,42 +633,44 @@ void MB_UpdateCycles(uint32_t uExecutedCycles) {
   }
 
   CpuCalcCycles(uExecutedCycles);
-  uint64_t
-  uCycles = g_nCumulativeCycles - g_uLastCumulativeCycles;
+  uint64_t uCycles = g_nCumulativeCycles - g_uLastCumulativeCycles;
   g_uLastCumulativeCycles = g_nCumulativeCycles;
-  assert(uCycles < 0x10000);
-  auto nClocks = static_cast<uint16_t>(uCycles);
 
-  for (int i = 0; i < NUM_SY6522; i++) {
-    SY6522_AY8910 *pMB = &g_MB[i];
+  while (uCycles > 0) {
+    uint16_t nClocks = (uCycles > 0xFFFF) ? 0xFFFF : static_cast<uint16_t>(uCycles);
+    uCycles -= nClocks;
 
-    uint16_t OldTimer1 = pMB->sy6522.TIMER1_COUNTER.w;
+    for (int i = 0; i < NUM_SY6522; i++) {
+      SY6522_AY8910 *pMB = &g_MB[i];
 
-    pMB->sy6522.TIMER1_COUNTER.w -= nClocks;
-    pMB->sy6522.TIMER2_COUNTER.w -= nClocks;
+      uint16_t OldTimer1 = pMB->sy6522.TIMER1_COUNTER.w;
 
-    // Check for counter underflow
-    bool bTimer1Underflow = (!(OldTimer1 & 0x8000) && (pMB->sy6522.TIMER1_COUNTER.w & 0x8000));
+      pMB->sy6522.TIMER1_COUNTER.w -= nClocks;
+      pMB->sy6522.TIMER2_COUNTER.w -= nClocks;
 
-    if (bTimer1Underflow && (g_nMBTimerDevice == i) && g_bMBTimerIrqActive) {
-      g_uTimer1IrqCount++;  // DEBUG
+      // Check for counter underflow
+      bool bTimer1Underflow = (!(OldTimer1 & 0x8000) && (pMB->sy6522.TIMER1_COUNTER.w & 0x8000));
 
-      pMB->sy6522.IFR |= IxR_TIMER1;
-      UpdateIFR(pMB);
+      if (bTimer1Underflow && (g_nMBTimerDevice == i) && g_bMBTimerIrqActive) {
+        g_uTimer1IrqCount++;  // DEBUG
 
-      if ((pMB->sy6522.ACR & RUNMODE) == RM_ONESHOT) {
-        // One-shot mode
-        StopTimer(pMB);    // Phasor's playback code uses one-shot mode
-      } else {
-        // Free-running mode
-        // - Ultima4/5 change ACCESS_TIMER1 after a couple of IRQs into tune
-        pMB->sy6522.TIMER1_COUNTER.w = pMB->sy6522.TIMER1_LATCH.w;
-        StartTimer(pMB);
+        pMB->sy6522.IFR |= IxR_TIMER1;
+        UpdateIFR(pMB);
+
+        if ((pMB->sy6522.ACR & RUNMODE) == RM_ONESHOT) {
+          // One-shot mode
+          StopTimer(pMB);    // Phasor's playback code uses one-shot mode
+        } else {
+          // Free-running mode
+          // - Ultima4/5 change ACCESS_TIMER1 after a couple of IRQs into tune
+          pMB->sy6522.TIMER1_COUNTER.w = pMB->sy6522.TIMER1_LATCH.w;
+          StartTimer(pMB);
+        }
+
+        if (!g_bFullSpeed) {
+          MB_Update();
+        }
       }
-
-      if (!g_bFullSpeed) {
-        MB_Update();
-}
     }
   }
 }
@@ -782,7 +784,9 @@ static void MB_ABI_Shutdown(void* instance) {
 
 static void MB_ABI_Think(void* instance, uint32_t cycles) {
   (void)instance;
-  MB_UpdateCycles(cycles);
+  (void)cycles;
+  // MB_UpdateCycles is still called directly from the core CPU loop
+  // until full migration is complete.
 }
 
 Peripheral_t g_mockingboard_peripheral = {

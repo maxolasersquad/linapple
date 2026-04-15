@@ -13,6 +13,10 @@ set(FRONTEND "sdl3" CACHE STRING "Frontend to build (sdl3 or headless)")
 option(PROFILING "Enable profiling" OFF)
 option(REGISTRY_WRITEABLE "Enable registry writing" OFF)
 
+# Peripheral Options
+option(PERIPHERAL_SPEAKER "Enable built-in speaker peripheral" ON)
+option(PERIPHERAL_MOCKINGBOARD "Enable Mockingboard peripheral" ON)
+
 # --- Compiler Flags ---
 add_compile_options(-O3 -Wall -Wextra)
 
@@ -106,9 +110,9 @@ set(SOURCES_CORE
     src/core/Peripheral_Internal.cpp
 )
 
+# Mandatory Apple II hardware
 set(SOURCES_A2
     src/apple2/6821.cpp
-    src/apple2/AY8910.cpp
     src/apple2/CPU.cpp
     src/apple2/Clock.cpp
     src/apple2/Disk.cpp
@@ -117,19 +121,29 @@ set(SOURCES_A2
     src/apple2/Joystick.cpp
     src/apple2/Keyboard.cpp
     src/apple2/Memory.cpp
-    src/apple2/Mockingboard.cpp
     src/apple2/MouseInterface.cpp
     src/apple2/ParallelPrinter.cpp
-    src/apple2/Riff.cpp
     src/apple2/SaveState.cpp
     src/apple2/SerialComms.cpp
     src/apple2/SoundCore.cpp
-    src/apple2/Speaker.cpp
     src/apple2/Timer.cpp
     src/apple2/Video.cpp
     src/apple2/ftpparse.cpp
     src/apple2/stretch.cpp
 )
+
+# Optional peripherals
+set(PERIPHERAL_DEFINITIONS "")
+
+if(PERIPHERAL_SPEAKER)
+    list(APPEND SOURCES_A2 src/apple2/Speaker.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_SPEAKER)
+endif()
+
+if(PERIPHERAL_MOCKINGBOARD)
+    list(APPEND SOURCES_A2 src/apple2/Mockingboard.cpp src/apple2/AY8910.cpp src/apple2/Riff.cpp)
+    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_MOCKINGBOARD)
+endif()
 
 set(SOURCES_DBG "")
 if(NOT FRONTEND STREQUAL "headless")
@@ -231,8 +245,11 @@ set(BIN_DIR "${CMAKE_INSTALL_BINDIR}")
 set(DATA_DIR "${CMAKE_INSTALL_DATADIR}/linapple")
 set(CONF_DIR "${CMAKE_INSTALL_SYSCONFDIR}/linapple")
 
-target_compile_definitions(linapple PRIVATE ASSET_DIR="${CMAKE_INSTALL_PREFIX}/${DATA_DIR}")
-target_compile_definitions(linapple PRIVATE SYSCONF_DIR="${CMAKE_INSTALL_PREFIX}/${CONF_DIR}")
+target_compile_definitions(linapple PRIVATE 
+    ASSET_DIR="${CMAKE_INSTALL_PREFIX}/${DATA_DIR}"
+    SYS_DIR="${CMAKE_INSTALL_PREFIX}/${CONF_DIR}"
+    ${PERIPHERAL_DEFINITIONS}
+)
 
 install(TARGETS linapple DESTINATION ${BIN_DIR})
 install(FILES "${RES_DIR}/Master.dsk" DESTINATION ${DATA_DIR})
@@ -245,12 +262,14 @@ enable_testing()
 add_executable(test-integration tests/test_main.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
 add_dependencies(test-integration generate_xpms)
 target_include_directories(test-integration PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-integration PRIVATE ${PERIPHERAL_DEFINITIONS})
 target_link_libraries(test-integration PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
 add_test(NAME test-integration COMMAND test-integration)
 
 # Test SSC
 add_executable(test-ssc tests/test_ssc.cpp src/apple2/SerialComms.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
 target_include_directories(test-ssc PRIVATE src src/core src/apple2 ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-ssc PRIVATE ${PERIPHERAL_DEFINITIONS})
 target_link_libraries(test-ssc PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
 add_test(NAME test-ssc COMMAND test-ssc)
 
@@ -258,6 +277,7 @@ add_test(NAME test-ssc COMMAND test-ssc)
 if(FRONTEND STREQUAL "sdl3")
     add_executable(test-keyboard tests/full_keyboard_test.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
     target_include_directories(test-keyboard PRIVATE src src/core ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+    target_compile_definitions(test-keyboard PRIVATE ${PERIPHERAL_DEFINITIONS})
     target_link_libraries(test-keyboard PRIVATE SDL3::SDL3 ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
     add_test(NAME test-keyboard COMMAND test-keyboard)
 endif()
@@ -266,6 +286,7 @@ endif()
 add_executable(test-abi tests/test_abi.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
 add_dependencies(test-abi generate_xpms)
 target_include_directories(test-abi PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
+target_compile_definitions(test-abi PRIVATE ${PERIPHERAL_DEFINITIONS})
 target_link_libraries(test-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
 add_test(NAME test-abi COMMAND test-abi)
 
@@ -282,6 +303,7 @@ add_executable(test-peripheral-abi
 )
 add_dependencies(test-peripheral-abi generate_xpms)
 target_include_directories(test-peripheral-abi PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
+target_compile_definitions(test-peripheral-abi PRIVATE ${PERIPHERAL_DEFINITIONS})
 target_link_libraries(test-peripheral-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
 add_test(NAME test-peripheral-abi COMMAND test-peripheral-abi)
 
