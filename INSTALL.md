@@ -43,6 +43,7 @@ cmake --build build -j$(nproc)
 
 #### Build Options
 You can pass various options to the `cmake` configuration step:
+- `-DFRONTEND=sdl3` : (Default) Build the emulator with the SDL3-based graphical frontend.
 - `-DFRONTEND=headless` : Build the emulator without GUI or SDL dependencies (useful for automated testing or server environments).
 - `-DREGISTRY_WRITEABLE=ON` : Enable saving emulator configuration settings back to the config file.
 - `-DPROFILING=ON` : Enable `gprof` profiling output.

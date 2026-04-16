@@ -9,7 +9,13 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Options ---
-set(FRONTEND "sdl3" CACHE STRING "Frontend to build (sdl3 or headless)")
+if(NOT FRONTEND)
+    set(FRONTEND "sdl3" CACHE STRING "Frontend to build (sdl3 or headless)")
+endif()
+
+if(NOT FRONTEND STREQUAL "sdl3" AND NOT FRONTEND STREQUAL "headless")
+    message(FATAL_ERROR "Invalid FRONTEND: ${FRONTEND}. Must be 'sdl3' or 'headless'.")
+endif()
 option(PROFILING "Enable profiling" OFF)
 option(REGISTRY_WRITEABLE "Enable registry writing" OFF)
 
