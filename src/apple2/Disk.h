@@ -74,8 +74,6 @@ void DiskUpdatePosition(uint32_t);
 
 bool DiskDriveSwap();
 
-void DiskLoadRom(uint8_t* pCxRomPeripheral, uint32_t uSlot);
-
 uint32_t DiskGetSnapshot(SS_CARD_DISK2 *pSS, uint32_t dwSlot);
 
 uint32_t DiskSetSnapshot(SS_CARD_DISK2 *pSS, uint32_t dwSlot);

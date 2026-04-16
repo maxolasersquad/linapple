@@ -704,6 +704,19 @@ void MB_UpdateCycles(uint32_t uExecutedCycles) {
       }
     }
   }
+
+  if (!g_bMB_RegAccessedFlag) {
+    if (!g_nMB_InActiveCycleCount) {
+      g_nMB_InActiveCycleCount = g_nCumulativeCycles;
+    } else if (g_nCumulativeCycles - g_nMB_InActiveCycleCount > static_cast<uint64_t>(g_fCurrentCLK6502) / 10) {
+      // After 0.1 sec of Apple time with no MB register access, assume MB is inactive
+      g_bMB_Active = false;
+    }
+  } else {
+    g_nMB_InActiveCycleCount = 0;
+    g_bMB_RegAccessedFlag = false;
+    g_bMB_Active = true;
+  }
 }
 
 auto MB_GetSoundcardType() -> eSOUNDCARDTYPE {
