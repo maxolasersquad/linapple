@@ -153,7 +153,7 @@ static void HD_ABI_Shutdown(void* instance) {
 Peripheral_t g_harddisk_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Harddisk",
-    (1u << 7), // Slot 7 by default
+    0xFE, // Slots 1-7
     HD_ABI_Init,
     HD_ABI_Reset,
     HD_ABI_Shutdown,

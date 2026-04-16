@@ -337,7 +337,7 @@ static void Mouse_ABI_Shutdown(void* instance) {
 Peripheral_t g_mouse_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Mouse Interface",
-    (1u << 4), // Slot 4 by default
+    0xFE, // Slots 1-7
     Mouse_ABI_Init,
     Mouse_ABI_Reset,
     Mouse_ABI_Shutdown,

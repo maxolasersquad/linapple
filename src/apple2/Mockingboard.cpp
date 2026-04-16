@@ -439,6 +439,19 @@ static auto SY6522_Read(uint8_t nDevice, uint8_t nReg) -> uint8_t {
 }
 
 void MB_Update() {
+  if (!g_bMB_RegAccessedFlag) {
+    if (!g_nMB_InActiveCycleCount) {
+      g_nMB_InActiveCycleCount = g_nCumulativeCycles;
+    } else if (g_nCumulativeCycles - g_nMB_InActiveCycleCount > static_cast<uint64_t>(g_fCurrentCLK6502) / 10) {
+      // After 0.1 sec of Apple time, assume MB is not active
+      g_bMB_Active = false;
+    }
+  } else {
+    g_nMB_InActiveCycleCount = 0;
+    g_bMB_RegAccessedFlag = false;
+    g_bMB_Active = true;
+  }
+
   #if defined MOCKINGBOARD
   static int nNumSamplesError = 0;
 

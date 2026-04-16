@@ -1084,14 +1084,6 @@ auto MemInitialize() -> int // returns -1 if any error during initialization
   const uint32_t uSlot = 0;
   RegisterIoHandler(uSlot, MemSetPaging, MemSetPaging, nullptr, nullptr, nullptr, nullptr);
 
-  PrintLoadRom(pCxRomPeripheral, 1);        // $C100 : Parallel printer f/w
-  SSC_Initialize(&sg_SSC, pCxRomPeripheral, 2);    // $C200 : SSC
-  if (g_Slot4 == CT_MouseInterface) {
-    Mouse_Initialize(pCxRomPeripheral, 4);  // $C400 : Mouse f/w
-}
-  DiskLoadRom(pCxRomPeripheral, 6);        // $C600 : Disk][ f/w
-  HD_Load_Rom(pCxRomPeripheral, 7);        // $C700 : HDD f/w
-
   MemReset();
   return 0; // all is OK??
 }

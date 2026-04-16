@@ -267,10 +267,10 @@ static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
   cyclenum += dwExecutedCycles;
   cumulativecycles = g_nCumulativeCycles;
 
+  Peripheral_Manager_Think(dwExecutedCycles);
+
   VideoUpdateVbl(dwExecutedCycles);
   JoyUpdatePosition(dwExecutedCycles);
-  
-  Peripheral_Manager_Think(dwExecutedCycles);
   
   SpkrFrontend_Update(dwExecutedCycles);
   Linapple_KeyboardThink(dwExecutedCycles);

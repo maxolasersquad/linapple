@@ -178,12 +178,30 @@ static void Host_RegisterCxROM(int slot, uint8_t* rom_ptr) {
 
   uint8_t* pCxRomPeripheral = MemGetCxRomPeripheral();
   if (pCxRomPeripheral) {
-    // Justification: Peripheral ROMs are mapped into a contiguous memory block 
-    // where each slot has its own page-aligned region.
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    memcpy(pCxRomPeripheral + (static_cast<ptrdiff_t>(slot) *
-                               static_cast<ptrdiff_t>(PAGE_SIZE)),
-           rom_ptr, static_cast<size_t>(PAGE_SIZE));
+    const size_t offset = static_cast<size_t>(slot) * PAGE_SIZE;
+    memcpy(pCxRomPeripheral + offset, rom_ptr, PAGE_SIZE);
+
+    // Also update the physical memory banks at $C100-$C7FF.
+    // This ensures that IORead_Cxxx (which reads from 'mem') sees the new ROM.
+    uint8_t* mmain = MemGetBankPtr(0);
+    if (mmain) {
+      // Justification: Peripheral ROM area in Apple II memory map.
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      memcpy(mmain + 0xC000 + offset, rom_ptr, PAGE_SIZE);
+    }
+    uint8_t* maux = MemGetBankPtr(1);
+    if (maux) {
+      // Justification: Peripheral ROM area in Apple II memory map.
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      memcpy(maux + 0xC000 + offset, rom_ptr, PAGE_SIZE);
+    }
+    
+    // Also update the current active memory bank if it's available.
+    if (mem) {
+      // Justification: Peripheral ROM area in Apple II memory map.
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      memcpy(mem + 0xC000 + offset, rom_ptr, PAGE_SIZE);
+    }
   }
 }
 

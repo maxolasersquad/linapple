@@ -702,8 +702,6 @@ static auto Disk_ABI_Init(int slot, HostInterface_t* host) -> void* {
   g_pDiskHost = host;
   g_nDiskSlot = slot;
   
-  DiskInitialize();
-
   // Load and patch ROM
   uint8_t patched_rom[256];
   memcpy(patched_rom, Disk2_rom, 256);
