@@ -53,24 +53,24 @@ auto Peripheral_Find_Internal(const char* name) -> Peripheral_t* {
 static auto GetDefaultPeripheralForSlot(int slot) -> const char* {
     const int SLOT_PRINTER = 1;
     const int SLOT_SSC = 2;
-    const int SLOT_CLOCK = 3;
-    const int SLOT_DEFAULT_MB_MOUSE = 4;
-    const int SLOT_DEFAULT_MB = 5;
     const int SLOT_DISK = 6;
     const int SLOT_HARDDISK = 7;
 
     switch (slot) {
         case SLOT_PRINTER: return "Parallel Printer";
         case SLOT_SSC: return "Super Serial Card";
-        case SLOT_CLOCK: return "No-Slot Clock";
-        case SLOT_DEFAULT_MB_MOUSE: 
-            if (g_Slot4 == CT_Mockingboard) return "Mockingboard";
-            if (g_Slot4 == CT_MouseInterface) return "Mouse Interface";
-            return nullptr;
-        case SLOT_DEFAULT_MB: return "Mockingboard";
         case SLOT_DISK: return "Disk II";
-        case SLOT_HARDDISK: return "Harddisk";
-        default: return nullptr;
+        case SLOT_HARDDISK: 
+            return hddenabled ? "Harddisk" : nullptr;
+        default:
+            if (static_cast<uint32_t>(slot) == clockslot && clockslot != 0) {
+                return "No-Slot Clock";
+            }
+            if (slot == 4) {
+                if (g_Slot4 == CT_Mockingboard) return "Mockingboard";
+                if (g_Slot4 == CT_MouseInterface) return "Mouse Interface";
+            }
+            return nullptr;
     }
 }
 
