@@ -75,6 +75,16 @@ void Peripheral_Manager_Think(uint32_t cycles);
  */
 int Peripheral_Register(Peripheral_t* api, int slot);
 
+/**
+ * @brief Unregister the peripheral in a specific slot.
+ */
+int Peripheral_Unregister(int slot);
+
+/**
+ * @brief Get information about built-in hardware.
+ */
+void Linapple_ListHardware();
+
 
 // --- Execution Control ---
 

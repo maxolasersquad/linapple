@@ -112,3 +112,23 @@ void Peripheral_Register_Internal() {
         }
     }
 }
+
+void Linapple_ListHardware() {
+    printf("Built-in Peripherals:\n");
+    printf("---------------------\n");
+    for (auto const& p : g_builtin_peripherals) {
+        if (p) {
+            printf("- %-20s (Compatible Slots: ", p->name);
+            bool first = true;
+            for (int i = 0; i < NUM_SLOTS; ++i) {
+                if (p->compatible_slots & (1u << static_cast<uint32_t>(i))) {
+                    if (!first) printf(", ");
+                    printf("%d", i);
+                    first = false;
+                }
+            }
+            printf(")\n");
+        }
+    }
+    printf("\n");
+}

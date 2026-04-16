@@ -385,3 +385,35 @@ auto Peripheral_Register(Peripheral_t* api, int slot) -> int {
   Logger::Info("Registered peripheral '%s' in slot %d\n", api->name, slot);
   return 0;
 }
+
+auto Peripheral_Unregister(int slot) -> int {
+  if (slot < 0 || slot >= NUM_SLOTS) {
+    return -1;
+  }
+
+  ActivePeripheral_t& ap = g_active_peripherals.at(static_cast<size_t>(slot));
+  if (ap.api) {
+    // Justification: Logger uses standard C variadics.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    Logger::Info("Unregistering peripheral '%s' from slot %d\n", ap.api->name,
+                  slot);
+    if (ap.api->shutdown) {
+      ap.api->shutdown(ap.instance);
+    }
+    ap.api = nullptr;
+    ap.instance = nullptr;
+
+    // Clear IO handlers in the core
+    RegisterIoHandler(static_cast<uint32_t>(slot), nullptr, nullptr, nullptr,
+                      nullptr, nullptr, nullptr);
+    
+    // Clear slot-specific properties
+    ap.readC0 = nullptr;
+    ap.writeC0 = nullptr;
+    ap.readCx = nullptr;
+    ap.writeCx = nullptr;
+    ap.expansionRom = nullptr;
+  }
+
+  return 0;
+}

@@ -1,4 +1,5 @@
 #include "core/LinAppleCore.h"
+#include "core/Peripheral_Internal.h"
 #include "core/Common.h"
 #include "core/Common_Globals.h"
 #include "core/Registry.h"
@@ -38,11 +39,15 @@ auto main(int argc, char* argv[]) -> int {
         {"boot", no_argument, nullptr, 'b'},
         {"d1", required_argument, nullptr, '1'},
         {"d2", required_argument, nullptr, '2'},
+        {"list-hardware", no_argument, nullptr, 0x100},
+        {"hardware-info", required_argument, nullptr, 0x101},
         {nullptr, 0, 0, 0}
     };
 
     const char* disk1 = nullptr;
     const char* disk2 = nullptr;
+    const char* hardwareName = nullptr;
+    bool listHardware = false;
 
     int c = 0;
     int option_index = 0;
@@ -65,7 +70,40 @@ auto main(int argc, char* argv[]) -> int {
             case '2':
                 disk2 = optarg;
                 break;
+            case 0x100:
+                listHardware = true;
+                break;
+            case 0x101:
+                hardwareName = optarg;
+                break;
         }
+    }
+
+    if (listHardware) {
+        Linapple_ListHardware();
+        return 0;
+    }
+
+    if (hardwareName) {
+        Peripheral_t* p = Peripheral_Find_Internal(hardwareName);
+        if (p) {
+            printf("Hardware Info: %s\n", p->name);
+            printf("ABI Version: %d\n", p->abi_version);
+            printf("Compatible Slots: ");
+            bool first = true;
+            for (int i = 0; i < NUM_SLOTS; ++i) {
+                if (p->compatible_slots & (1u << static_cast<uint32_t>(i))) {
+                    if (!first) printf(", ");
+                    printf("%d", i);
+                    first = false;
+                }
+            }
+            printf("\n");
+        } else {
+            fprintf(stderr, "Error: Unknown hardware '%s'\n", hardwareName);
+            return 1;
+        }
+        return 0;
     }
 
     std::cout << "Starting LinApple Headless Frontend…" << std::endl;

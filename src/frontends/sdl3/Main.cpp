@@ -15,6 +15,7 @@
 #include "Debugger/Debug.h"
 #include "frontends/sdl3/DiskChoose.h"
 #include "core/LinAppleCore.h"
+#include "core/Peripheral_Internal.h"
 
 #include "apple2/Riff.h"
 
@@ -165,6 +166,8 @@ static void PrintHelp() {
   printf("  -f, --fullscreen     Start in fullscreen mode\n");
   printf("  -p, --pal            Use PAL video timing (default NTSC)\n");
   printf("  -v, --verbose        Enable verbose logging\n");
+  printf("  --list-hardware      List all built-in peripheral hardware\n");
+  printf("  --hardware-info <name> Show detailed information for a peripheral\n");
   printf("  -h, --help           Display this help\n");
 }
 
@@ -175,12 +178,14 @@ auto main(int argc, char* argv[]) -> int {
   const char* szSnapshotFile = nullptr;
   const char* szConfigurationFile = nullptr;
   const char* szTestFile = nullptr;
+  const char* szHardwareName = nullptr;
   bool bBoot = false;
   bool bBenchMark = false;
   bool bSetFullScreen = false;
   bool bLog = false;
   bool bPAL = false;
   bool bTestCpu = false;
+  bool bListHardware = false;
 
   // Justification: Table of command line options for getopt_long.
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
@@ -196,6 +201,8 @@ auto main(int argc, char* argv[]) -> int {
     {"test-65c02",   no_argument,       nullptr, 'C'},
     {"verbose",      no_argument,       nullptr, 'v'},
     {"audio-dump",   required_argument, nullptr, 'A'},
+    {"list-hardware", no_argument,      nullptr, 0x100},
+    {"hardware-info", required_argument, nullptr, 0x101},
     {nullptr, 0, nullptr, 0}
   };
 
@@ -223,10 +230,39 @@ auto main(int argc, char* argv[]) -> int {
       case 'C': g_Apple2Type = A2TYPE_APPLE2EENHANCED; break;
       case 'A': g_pszAudioDumpFile = SDL_strdup(optarg); break;
       case 'h': PrintHelp(); return 0;
+      case 0x100: bListHardware = true; break;
+      case 0x101: szHardwareName = optarg; break;
       default:
         fprintf(stderr, "Check --help for proper usage.\n");
         return 255;
     }
+  }
+
+  if (bListHardware) {
+    Linapple_ListHardware();
+    return 0;
+  }
+
+  if (szHardwareName) {
+    Peripheral_t* p = Peripheral_Find_Internal(szHardwareName);
+    if (p) {
+        printf("Hardware Info: %s\n", p->name);
+        printf("ABI Version: %d\n", p->abi_version);
+        printf("Compatible Slots: ");
+        bool first = true;
+        for (int i = 0; i < NUM_SLOTS; ++i) {
+            if (p->compatible_slots & (1u << static_cast<uint32_t>(i))) {
+                if (!first) printf(", ");
+                printf("%d", i);
+                first = false;
+            }
+        }
+        printf("\n");
+    } else {
+        fprintf(stderr, "Error: Unknown hardware '%s'\n", szHardwareName);
+        return 1;
+    }
+    return 0;
   }
 
   if (SysInit(bLog) != 0) return 1;
