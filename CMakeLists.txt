@@ -270,6 +270,7 @@ target_link_libraries(linapple PRIVATE
     ${CURL_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${LIBZIP_LIBRARIES}
+    ${CMAKE_DL_LIBS}
     Threads::Threads
 )
 
@@ -299,14 +300,14 @@ add_executable(test-integration tests/test_main.cpp ${SOURCES_CORE} ${SOURCES_A2
 add_dependencies(test-integration generate_xpms)
 target_include_directories(test-integration PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
 target_compile_definitions(test-integration PRIVATE ${PERIPHERAL_DEFINITIONS})
-target_link_libraries(test-integration PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+target_link_libraries(test-integration PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-integration COMMAND test-integration)
 
 # Test SSC
 add_executable(test-ssc tests/test_ssc.cpp src/apple2/SerialComms.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
 target_include_directories(test-ssc PRIVATE src src/core src/apple2 ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
 target_compile_definitions(test-ssc PRIVATE ${PERIPHERAL_DEFINITIONS})
-target_link_libraries(test-ssc PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+target_link_libraries(test-ssc PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-ssc COMMAND test-ssc)
 
 # Test Keyboard
@@ -314,7 +315,7 @@ if(FRONTEND STREQUAL "sdl3")
     add_executable(test-keyboard tests/full_keyboard_test.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
     target_include_directories(test-keyboard PRIVATE src src/core ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
     target_compile_definitions(test-keyboard PRIVATE ${PERIPHERAL_DEFINITIONS})
-    target_link_libraries(test-keyboard PRIVATE SDL3::SDL3 ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+    target_link_libraries(test-keyboard PRIVATE SDL3::SDL3 ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
     add_test(NAME test-keyboard COMMAND test-keyboard)
 endif()
 
@@ -323,7 +324,7 @@ add_executable(test-abi tests/test_abi.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURC
 add_dependencies(test-abi generate_xpms)
 target_include_directories(test-abi PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
 target_compile_definitions(test-abi PRIVATE ${PERIPHERAL_DEFINITIONS})
-target_link_libraries(test-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+target_link_libraries(test-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-abi COMMAND test-abi)
 
 # Test Peripheral ABI (C and C++)
@@ -340,7 +341,7 @@ add_executable(test-peripheral-abi
 add_dependencies(test-peripheral-abi generate_xpms)
 target_include_directories(test-peripheral-abi PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
 target_compile_definitions(test-peripheral-abi PRIVATE ${PERIPHERAL_DEFINITIONS})
-target_link_libraries(test-peripheral-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} Threads::Threads)
+target_link_libraries(test-peripheral-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-peripheral-abi COMMAND test-peripheral-abi)
 
 # CPU tests (using the built linapple binary)

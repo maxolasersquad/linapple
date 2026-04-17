@@ -44,6 +44,33 @@ inline auto GetUserConfigDir() -> std::string {
     return GetUserDataDir();
 }
 
+// Returns a list of directories to search for shared object plugins (.so files)
+inline auto GetPluginSearchPaths() -> std::vector<std::string> {
+    std::vector<std::string> paths;
+
+    paths.push_back(GetUserDataDir() + "plugins/");
+
+    // Check $XDG_DATA_HOME (GetUserDataDir usually handles this, but let's be explicit if needed)
+    const char* dataHome = getenv("XDG_DATA_HOME");
+    if (dataHome) {
+        paths.push_back(std::string(dataHome) + "/linapple/plugins/");
+    } else {
+        const char* home = getenv("HOME");
+        if (home) {
+            paths.push_back(std::string(home) + "/.local/share/linapple/plugins/");
+        }
+    }
+
+    // Local project plugins during dev
+    paths.push_back(GetExecutableDir() + "plugins/");
+
+    // System plugin paths
+    paths.push_back("/usr/local/lib/linapple/plugins/");
+    paths.push_back("/usr/lib/linapple/plugins/");
+
+    return paths;
+}
+
 // Returns a list of directories to search for data assets (ROMs, disks, config).
 inline auto GetDataSearchPaths() -> std::vector<std::string> {
     std::vector<std::string> paths;

@@ -143,6 +143,7 @@ void Linapple_Init() {
   VideoInitialize();
   
   Peripheral_Manager_Init();
+  Peripheral_Plugins_Init();
   Peripheral_Register_Internal();
 
   KeybReset();
@@ -158,6 +159,7 @@ void Linapple_Init() {
 
 void Linapple_Shutdown() {
   Peripheral_Manager_Shutdown();
+  Peripheral_Plugins_Shutdown();
   DiskDestroy();
   VideoDestroy();
   MemDestroy();

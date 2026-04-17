@@ -3,8 +3,23 @@
 #include "core/Common_Globals.h"
 #include "apple2/Structs.h"
 #include "core/Log.h"
+#include "core/Util_Path.h"
 #include <cstring>
 #include <array>
+#include <vector>
+#include <string>
+
+#include <dlfcn.h>
+#include <dirent.h>
+
+struct LoadedPlugin {
+    Peripheral_t* p;
+    void* handle;
+    std::string path;
+};
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static std::vector<LoadedPlugin> g_loaded_plugins;
 
 /**
  * Justification: Peripheral Manager requires a static list of built-in hardware 
@@ -42,9 +57,31 @@ static const std::array<Peripheral_t*, 9> g_builtin_peripherals = {{
 auto Peripheral_Find_Internal(const char* name) -> Peripheral_t* {
     if (!name) return nullptr;
     
+    Peripheral_Plugins_Init();
+
     for (auto const& p : g_builtin_peripherals) {
         if (p && strcmp(p->name, name) == 0) {
             return p;
+        }
+    }
+
+    for (auto const& lp : g_loaded_plugins) {
+        if (lp.p && strcmp(lp.p->name, name) == 0) {
+            return lp.p;
+        }
+    }
+
+    return nullptr;
+}
+
+const char* Peripheral_GetPluginPath(const char* name) {
+    if (!name) return nullptr;
+
+    Peripheral_Plugins_Init();
+
+    for (auto const& lp : g_loaded_plugins) {
+        if (lp.p && strcmp(lp.p->name, name) == 0) {
+            return lp.path.c_str();
         }
     }
     return nullptr;
@@ -114,6 +151,8 @@ void Peripheral_Register_Internal() {
 }
 
 void Linapple_ListHardware() {
+    Peripheral_Plugins_Init();
+
     printf("Built-in Peripherals:\n");
     printf("---------------------\n");
     for (auto const& p : g_builtin_peripherals) {
@@ -131,4 +170,74 @@ void Linapple_ListHardware() {
         }
     }
     printf("\n");
+
+    if (!g_loaded_plugins.empty()) {
+        printf("Dynamically Loaded Peripherals:\n");
+        printf("-------------------------------\n");
+        for (auto const& plugin : g_loaded_plugins) {
+            printf("- %-20s (Compatible Slots: ", plugin.p->name);
+            bool first = true;
+            for (int i = 0; i < NUM_SLOTS; ++i) {
+                if (plugin.p->compatible_slots & (1u << static_cast<uint32_t>(i))) {
+                    if (!first) printf(", ");
+                    printf("%d", i);
+                    first = false;
+                }
+            }
+            printf(") [%s]\n", plugin.path.c_str());
+        }
+        printf("\n");
+    }
+}
+
+void Peripheral_Plugins_Init(void) {
+    static bool s_initialized = false;
+    if (s_initialized) return;
+    s_initialized = true;
+
+    auto paths = Path::GetPluginSearchPaths();
+    for (const auto& path : paths) {
+        DIR* dir = opendir(path.c_str());
+        if (!dir) continue;
+
+        struct dirent* ent = nullptr;
+        while ((ent = readdir(dir)) != nullptr) {
+            std::string filename = ent->d_name;
+            if (filename.length() > 3 && filename.substr(filename.length() - 3) == ".so") {
+                std::string fullPath = path + filename;
+                void* handle = dlopen(fullPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+                if (handle) {
+                    auto* p = reinterpret_cast<Peripheral_t*>(dlsym(handle, "linapple_peripheral_descriptor"));
+                    if (p) {
+                        if (p->abi_version == LINAPPLE_ABI_VERSION) {
+                            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+                            Logger::Info("Loaded plugin: %s from %s\n", p->name, fullPath.c_str());
+                            g_loaded_plugins.push_back({p, handle, fullPath});
+                        } else {
+                            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+                            Logger::Warn("Plugin ABI mismatch: %s (expected %d, got %d)\n", fullPath.c_str(), LINAPPLE_ABI_VERSION, p->abi_version);
+                            dlclose(handle);
+                        }
+                    } else {
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+                        Logger::Warn("Invalid plugin (missing linapple_peripheral_descriptor): %s\n", fullPath.c_str());
+                        dlclose(handle);
+                    }
+                } else {
+                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+                    Logger::Warn("Failed to load plugin: %s (%s)\n", fullPath.c_str(), dlerror());
+                }
+            }
+        }
+        closedir(dir);
+    }
+}
+
+void Peripheral_Plugins_Shutdown(void) {
+    for (auto& plugin : g_loaded_plugins) {
+        if (plugin.handle) {
+            dlclose(plugin.handle);
+        }
+    }
+    g_loaded_plugins.clear();
 }

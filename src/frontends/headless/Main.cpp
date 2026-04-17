@@ -97,6 +97,10 @@ auto main(int argc, char* argv[]) -> int {
                 }
             }
             printf("\n");
+            const char* path = Peripheral_GetPluginPath(hardwareName);
+            if (path) {
+                printf("Plugin Path: %s\n", path);
+            }
         } else {
             fprintf(stderr, "Error: Unknown hardware '%s'\n", hardwareName);
             return 1;
