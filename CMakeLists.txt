@@ -351,6 +351,14 @@ target_compile_definitions(test-peripheral-abi PRIVATE ${PERIPHERAL_DEFINITIONS}
 target_link_libraries(test-peripheral-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-peripheral-abi COMMAND test-peripheral-abi)
 
+# Test Disk ABI
+add_executable(test-disk-abi
+    tests/test_disk_abi.cpp
+    tests/test_disk_abi_c.c
+)
+target_include_directories(test-disk-abi PRIVATE src ${DOCTEST_INCLUDE_DIR})
+add_test(NAME test-disk-abi COMMAND test-disk-abi)
+
 # CPU tests (using the built linapple binary)
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")
 set_tests_properties(test-cpu PROPERTIES ENVIRONMENT "EMULATOR=$<TARGET_FILE:linapple>")
