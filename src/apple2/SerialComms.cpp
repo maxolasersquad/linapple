@@ -305,7 +305,9 @@ Peripheral_t g_ssc_peripheral = {
     SSC_ABI_Think,
     nullptr, // on_vblank
     SSC_ABI_SaveState,
-    SSC_ABI_LoadState
+    SSC_ABI_LoadState,
+    nullptr, // command
+    nullptr  // query
 };
 
 #ifdef BUILD_SHARED_PERIPHERAL

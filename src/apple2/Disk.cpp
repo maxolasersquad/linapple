@@ -100,12 +100,12 @@ static auto DiskSetWriteMode(uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t
 bool enhancedisk = true;
 
 const int MAX_DISK_IMAGE_NAME = 15;
-const int MAX_DISK_FULL_NAME = MAX_PATH;
+const int MAX_DISK_FULL_NAME = PATH_MAX_LEN;
 
 struct Disk_t {
   char imagename[MAX_DISK_IMAGE_NAME + 1];
   char fullname[MAX_DISK_FULL_NAME + 1];
-  HIMAGE imagehandle;
+  DiskImagePtr_t imagehandle;
   int track;
   uint8_t* trackimage;
   int phase;
@@ -268,7 +268,7 @@ static void RemoveDisk(int iDrive)
     }
 
     ImageClose(pFloppy->imagehandle);
-    pFloppy->imagehandle = (HIMAGE) nullptr;
+    pFloppy->imagehandle = nullptr;
 
     if (pFloppy->trackimage) {
       free(pFloppy->trackimage);
@@ -388,9 +388,9 @@ void DiskEject(const int iDrive)
   if (IsDriveValid(iDrive)) {
     RemoveDisk(iDrive);
     if (iDrive == 0) {
-      Configuration::Instance().SetString("Preferences", REGVALUE_DISK_IMAGE1, "");
+      Configuration::Instance().SetString("Preferences", "Disk Image 1", "");
     } else {
-      Configuration::Instance().SetString("Preferences", REGVALUE_DISK_IMAGE2, "");
+      Configuration::Instance().SetString("Preferences", "Disk Image 2", "");
     }
     Configuration::Instance().Save();
   }
@@ -534,7 +534,7 @@ auto DiskIsSpinning() -> bool
 
 void DiskNotifyInvalidImage(const char* imageFileName, int error)
 {
-  char buffer[MAX_PATH + 128];
+  char buffer[PATH_MAX_LEN + 128];
 
   switch (error) {
 
@@ -701,7 +701,7 @@ auto Disk_IOWrite(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, ui
 static auto Disk_ABI_Init(int slot, HostInterface_t* host) -> void* {
   g_pDiskHost = host;
   g_nDiskSlot = slot;
-  
+
   // Load and patch ROM
   uint8_t patched_rom[256];
   memcpy(patched_rom, Disk2_rom, 256);
@@ -712,7 +712,7 @@ static auto Disk_ABI_Init(int slot, HostInterface_t* host) -> void* {
   host->RegisterCxROM(slot, patched_rom);
 
   host->RegisterIO(slot, Disk_IORead, Disk_IOWrite, nullptr, nullptr);
-  
+
   return reinterpret_cast<void*>(1); // Dummy instance
 }
 
@@ -761,7 +761,9 @@ Peripheral_t g_disk_peripheral = {
     Disk_ABI_Think,
     nullptr, // on_vblank
     Disk_ABI_SaveState,
-    Disk_ABI_LoadState
+    Disk_ABI_LoadState,
+    nullptr, // command
+    nullptr  // query
 };
 
 #ifdef BUILD_SHARED_PERIPHERAL

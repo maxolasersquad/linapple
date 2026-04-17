@@ -103,6 +103,12 @@ void Peripheral_SaveState(int slot, void* buffer, size_t* size);
  * @brief Load the state of the peripheral in a specific slot.
  */
 void Peripheral_LoadState(int slot, const void* buffer, size_t size);
+
+// Thread-safe; returns PERIPHERAL_ERROR if size > PERIPHERAL_CMD_MAX_DATA or slot is invalid.
+PeripheralStatus Peripheral_Command(int slot, uint32_t cmd_id, const void* data, size_t size);
+
+// Must be called from the emulation thread. Returns PERIPHERAL_ERROR if slot is invalid or has no query handler.
+PeripheralStatus Peripheral_Query(int slot, uint32_t cmd_id, void* out, size_t* out_size);
 #endif
 
 /**

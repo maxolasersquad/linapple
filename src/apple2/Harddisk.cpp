@@ -128,16 +128,16 @@ static HostInterface_t* g_pHDHost = nullptr;
 static auto HD_ABI_Init(int slot, HostInterface_t* host) -> void* {
   g_pHDHost = host;
   g_uSlot = slot;
-  
+
   if (g_bHD_Enabled) {
     uint8_t slot_rom[256];
     memcpy(slot_rom, Hddrvr_dat, 256);
     host->RegisterCxROM(slot, slot_rom);
     g_bHD_RomLoaded = true;
   }
-  
+
   host->RegisterIO(slot, HD_IO_EMUL, HD_IO_EMUL, nullptr, nullptr);
-  
+
   return reinterpret_cast<void*>(1); // Dummy instance
 }
 
@@ -160,7 +160,9 @@ Peripheral_t g_harddisk_peripheral = {
     nullptr, // think
     nullptr, // on_vblank
     nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // load_state
+    nullptr, // command
+    nullptr  // query
 };
 
 #ifdef BUILD_SHARED_PERIPHERAL
@@ -196,9 +198,9 @@ void HD_Eject(const int iDrive) {
   if (g_HardDrive[iDrive].hd_imageloaded) {
     HD_CleanupDrive(iDrive);
     if (iDrive == 0) {
-      Configuration::Instance().SetString("Preferences", REGVALUE_HDD_IMAGE1, "");
+      Configuration::Instance().SetString("Preferences", "Harddisk Image 1", "");
     } else {
-      Configuration::Instance().SetString("Preferences", REGVALUE_HDD_IMAGE2, "");
+      Configuration::Instance().SetString("Preferences", "Harddisk Image 2", "");
     }
     Configuration::Instance().Save();
   }

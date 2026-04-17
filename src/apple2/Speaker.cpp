@@ -158,7 +158,9 @@ Peripheral_t g_speaker_peripheral = {
     Spkr_ABI_Think,
     nullptr, // on_vblank
     Spkr_ABI_SaveState,
-    Spkr_ABI_LoadState
+    Spkr_ABI_LoadState,
+    nullptr, // command
+    nullptr  // query
 };
 
 #ifdef BUILD_SHARED_PERIPHERAL

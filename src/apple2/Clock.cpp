@@ -226,7 +226,9 @@ Peripheral_t g_clock_peripheral = {
     nullptr, // think
     nullptr, // on_vblank
     nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // load_state
+    nullptr, // command
+    nullptr  // query
 };
 
 

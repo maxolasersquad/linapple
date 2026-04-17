@@ -349,7 +349,9 @@ Peripheral_t g_mouse_peripheral = {
     nullptr, // think
     Mouse_ABI_OnVBlank,
     nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // load_state
+    nullptr, // command
+    nullptr  // query
 };
 
 #ifdef BUILD_SHARED_PERIPHERAL

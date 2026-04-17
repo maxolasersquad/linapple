@@ -20,6 +20,8 @@ extern "C" {
 
 #define LINAPPLE_ABI_VERSION 1
 
+enum { PERIPHERAL_CMD_MAX_DATA = 512 };
+
 /**
  * @brief Standard return codes for ABI functions.
  */
@@ -95,6 +97,10 @@ typedef struct {
     void (*on_vblank)(void* instance, bool vblank);
     PeripheralStatus (*save_state)(void* instance, void* buffer, size_t* size);
     PeripheralStatus (*load_state)(void* instance, const void* buffer, size_t size);
+    // NULL if the peripheral does not accept commands; called via Peripheral_Command().
+    PeripheralStatus (*command)(void* instance, uint32_t cmd_id, const void* data, size_t size);
+    // NULL if the peripheral does not support queries; called via Peripheral_Query().
+    PeripheralStatus (*query)(void* instance, uint32_t cmd_id, void* out, size_t* out_size);
 } Peripheral_t;
 
 #define EXPORT_PERIPHERAL(peripheral_struct) \

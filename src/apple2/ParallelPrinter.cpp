@@ -70,7 +70,9 @@ Peripheral_t g_printer_peripheral = {
     Printer_ABI_Think,
     nullptr, // on_vblank
     nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // load_state
+    nullptr, // command
+    nullptr  // query
 };
 
 #ifdef BUILD_SHARED_PERIPHERAL

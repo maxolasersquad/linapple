@@ -867,7 +867,9 @@ Peripheral_t g_mockingboard_peripheral = {
     MB_ABI_Think,
     nullptr, // on_vblank
     MB_ABI_SaveState,
-    MB_ABI_LoadState
+    MB_ABI_LoadState,
+    nullptr, // command
+    nullptr  // query
 };
 
 #ifdef BUILD_SHARED_PERIPHERAL

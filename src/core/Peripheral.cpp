@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <mutex>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -310,9 +312,46 @@ static const HostInterface_t g_host_interface = {
     Host_RequestPreciseTiming,
     RiffInitWriteFile,  RiffFinishWriteFile,       RiffPutSamples};
 
+// --- Command Queue ---
+
+struct QueuedCommand {
+  int slot;
+  uint32_t cmd_id;
+  size_t data_size;
+  uint8_t data[PERIPHERAL_CMD_MAX_DATA];
+};
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static std::queue<QueuedCommand> g_command_queue;
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static std::mutex g_command_queue_mutex;
+
+static void Peripheral_DrainCommandQueue() {
+  std::queue<QueuedCommand> local;
+  {
+    // Swap out under the lock so new commands can be enqueued while we dispatch.
+    std::lock_guard<std::mutex> lock(g_command_queue_mutex);
+    std::swap(local, g_command_queue);
+  }
+  while (!local.empty()) {
+    const QueuedCommand& cmd = local.front();
+    if (cmd.slot >= 0 && cmd.slot < NUM_SLOTS) {
+      ActivePeripheral_t& ap = g_active_peripherals.at(static_cast<size_t>(cmd.slot));
+      if (ap.api && ap.api->command) {
+        ap.api->command(ap.instance, cmd.cmd_id, cmd.data, cmd.data_size);
+      }
+    }
+    local.pop();
+  }
+}
+
 // --- Public Core API ---
 
 void Peripheral_Manager_Init() {
+  {
+    std::lock_guard<std::mutex> lock(g_command_queue_mutex);
+    g_command_queue = {};
+  }
   for (size_t i = 0; i < NUM_SLOTS; ++i) {
     ActivePeripheral_t& ap = g_active_peripherals.at(i);
     ap.api = nullptr;
@@ -350,6 +389,7 @@ void Peripheral_Manager_Shutdown() {
 }
 
 void Peripheral_Manager_Think(uint32_t cycles) {
+  Peripheral_DrainCommandQueue();
   for (size_t i = 0; i < NUM_SLOTS; ++i) {
     ActivePeripheral_t& ap = g_active_peripherals.at(i);
     if (ap.api && ap.api->think) {
@@ -443,6 +483,39 @@ auto Peripheral_Unregister(int slot) -> int {
   }
 
   return 0;
+}
+
+auto Peripheral_Command(int slot, uint32_t cmd_id, const void* data, size_t size) -> PeripheralStatus {
+  if (slot < 0 || slot >= NUM_SLOTS) {
+    return PERIPHERAL_ERROR;
+  }
+  if (size > PERIPHERAL_CMD_MAX_DATA) {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+    Logger::Error("Peripheral_Command: payload %zu exceeds limit %d for slot %d cmd %u",
+                  size, PERIPHERAL_CMD_MAX_DATA, slot, cmd_id);
+    return PERIPHERAL_ERROR;
+  }
+  QueuedCommand cmd{};
+  cmd.slot = slot;
+  cmd.cmd_id = cmd_id;
+  cmd.data_size = size;
+  if (size > 0 && data) {
+    memcpy(cmd.data, data, size);
+  }
+  std::lock_guard<std::mutex> lock(g_command_queue_mutex);
+  g_command_queue.push(cmd);
+  return PERIPHERAL_OK;
+}
+
+auto Peripheral_Query(int slot, uint32_t cmd_id, void* out, size_t* out_size) -> PeripheralStatus {
+  if (slot < 0 || slot >= NUM_SLOTS) {
+    return PERIPHERAL_ERROR;
+  }
+  ActivePeripheral_t& ap = g_active_peripherals.at(static_cast<size_t>(slot));
+  if (!ap.api || !ap.api->query) {
+    return PERIPHERAL_ERROR;
+  }
+  return ap.api->query(ap.instance, cmd_id, out, out_size);
 }
 
 void Peripheral_GetManifest(SS_PERIPHERAL_MANIFEST* manifest) {
