@@ -12,6 +12,11 @@
 #include <cstddef>
 
 #ifdef __cplusplus
+#include "Peripheral.h"
+#include "apple2/Structs.h"
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -24,11 +29,6 @@ extern "C" {
  * It sets up the virtual Apple II hardware, memory, and CPU.
  */
 void Linapple_Init();
-
-/**
- * @brief Register internal peripherals based on configuration.
- */
-void Linapple_RegisterPeripherals();
 
 /**
  * @brief Clean up resources and shut down the emulator core.
@@ -45,8 +45,6 @@ void Linapple_CpuTest(const char* szTestFile);
  */
 auto Linapple_GetTicks() -> uint32_t;
 
-
-#include "Peripheral.h"
 
 // --- Peripheral Management ---
 
@@ -70,6 +68,7 @@ void Peripheral_Manager_Shutdown();
  */
 void Peripheral_Manager_Think(uint32_t cycles);
 
+#ifdef __cplusplus
 /**
  * @brief Register a peripheral in a specific slot.
  */
@@ -79,6 +78,17 @@ int Peripheral_Register(Peripheral_t* api, int slot);
  * @brief Unregister the peripheral in a specific slot.
  */
 int Peripheral_Unregister(int slot);
+
+/**
+ * @brief Get the current peripheral manifest.
+ */
+void Peripheral_GetManifest(SS_PERIPHERAL_MANIFEST* manifest);
+
+/**
+ * @brief Verify a peripheral manifest from a save state.
+ */
+bool Peripheral_VerifyManifest(const SS_PERIPHERAL_MANIFEST* manifest);
+#endif
 
 /**
  * @brief Get information about built-in hardware.

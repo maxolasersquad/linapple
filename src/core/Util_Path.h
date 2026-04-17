@@ -51,6 +51,8 @@ inline auto GetDataSearchPaths() -> std::vector<std::string> {
     paths.push_back(GetUserDataDir());
     paths.push_back(GetUserConfigDir());
     paths.push_back(GetExecutableDir());
+    paths.push_back(GetExecutableDir() + "res/");
+    paths.push_back(GetExecutableDir() + "../res/");
 
     // Relocatable system installation paths
     paths.push_back(GetExecutableDir() + "../share/linapple/");

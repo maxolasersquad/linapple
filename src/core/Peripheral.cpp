@@ -13,6 +13,7 @@
 #include "core/Common.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
+#include "core/Util_Text.h"
 
 // Constants for I/O ranges
 static constexpr uint16_t IO_DIRECT_START = 0xC000;
@@ -416,4 +417,68 @@ auto Peripheral_Unregister(int slot) -> int {
   }
 
   return 0;
+}
+
+void Peripheral_GetManifest(SS_PERIPHERAL_MANIFEST* manifest) {
+  if (!manifest) return;
+  
+  memset(manifest, 0, sizeof(SS_PERIPHERAL_MANIFEST));
+  manifest->UnitHdr.dwLength = sizeof(SS_PERIPHERAL_MANIFEST);
+  manifest->UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
+
+  for (size_t i = 0; i < NUM_SLOTS; ++i) {
+    const ActivePeripheral_t& ap = g_active_peripherals.at(i);
+    if (ap.api) {
+      Util_SafeStrCpy(manifest->Peripherals[i].szName, ap.api->name, MAX_PERIPHERAL_NAME);
+      manifest->Peripherals[i].dwVersion = static_cast<uint32_t>(ap.api->abi_version);
+    } else {
+      manifest->Peripherals[i].szName[0] = '\0';
+      manifest->Peripherals[i].dwVersion = 0;
+    }
+  }
+}
+
+bool Peripheral_VerifyManifest(const SS_PERIPHERAL_MANIFEST* manifest) {
+  if (!manifest) return false;
+
+  for (size_t i = 0; i < NUM_SLOTS; ++i) {
+    const ActivePeripheral_t& ap = g_active_peripherals.at(i);
+    const SS_PERIPHERAL_INFO& pi = manifest->Peripherals[i];
+
+    if (pi.szName[0] == '\0') {
+      if (ap.api) {
+        // Justification: Logger uses standard C variadics.
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+        Logger::Error("Save state mismatch: Slot %d is empty in save state, but contains '%s' in current config.", 
+                      static_cast<int>(i), ap.api->name);
+        return false;
+      }
+      continue;
+    }
+
+    if (!ap.api) {
+      // Justification: Logger uses standard C variadics.
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+      Logger::Error("Save state mismatch: Slot %d contains '%s' in save state, but is empty in current config.", 
+                    static_cast<int>(i), pi.szName);
+      return false;
+    }
+
+    if (strcmp(ap.api->name, pi.szName) != 0) {
+      // Justification: Logger uses standard C variadics.
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+      Logger::Error("Save state mismatch: Slot %d contains '%s' in save state, but '%s' in current config.", 
+                    static_cast<int>(i), pi.szName, ap.api->name);
+      return false;
+    }
+
+    if (static_cast<uint32_t>(ap.api->abi_version) != pi.dwVersion) {
+      // Justification: Logger uses standard C variadics.
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+      Logger::Warn("Save state version mismatch for slot %d (%s): Save state has version %d, current is %d.",
+                   static_cast<int>(i), pi.szName, pi.dwVersion, ap.api->abi_version);
+    }
+  }
+
+  return true;
 }

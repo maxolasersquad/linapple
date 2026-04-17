@@ -52,15 +52,16 @@ auto Snapshot_GetFilename() -> char * {
 }
 
 void Snapshot_SetFilename(const char *pszFilename) {
-  if (*pszFilename) {
+  if (pszFilename && *pszFilename) {
     strcpy(g_szSaveStateFilename, pszFilename);
   } else {
     strcpy(g_szSaveStateFilename, DEFAULT_SNAPSHOT_NAME);
-}
+  }
 }
 
 void Snapshot_LoadState() {
   char szMessage[32 + MAX_PATH];
+  szMessage[0] = '\0';
 
   std::unique_ptr<APPLEWIN_SNAPSHOT> pSS(new APPLEWIN_SNAPSHOT());
 
@@ -95,6 +96,12 @@ void Snapshot_LoadState() {
       throw (0);
     }
 
+    // Verify peripheral manifest
+    if (!Peripheral_VerifyManifest(&pSS->Manifest)) {
+      strcpy(szMessage, "Hardware configuration mismatch - load aborted");
+      throw (0);
+    }
+
     // Reset all sub-systems
     MemReset();
 
@@ -125,7 +132,19 @@ void Snapshot_LoadState() {
 
     // Hmmm. And SLOT 7 (HDD1 and HDD2)? Where are they??? -- beom beotiger ^_^
   } catch (int) {
-    fprintf(stderr, "%s\n", szMessage); // instead of wndzoooe messagebox let's use powerful stderr
+    fprintf(stderr, "ERROR: %s\n", szMessage); // instead of wndzoooe messagebox let's use powerful stderr
+
+    // Ensure system is in a clean state even if load fails
+    if (mem) {
+        MemReset();
+        if (!IS_APPLE2()) {
+            MemResetPaging();
+        }
+    }
+    CpuReset();
+    Peripheral_Manager_Reset();
+    KeybReset();
+    VideoResetState();
   }
 }
 
@@ -141,6 +160,8 @@ void Snapshot_SaveState() {
   // Apple2 uint
   pSS->Apple2Unit.UnitHdr.dwLength = sizeof(SS_APPLE2_Unit);
   pSS->Apple2Unit.UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
+
+  Peripheral_GetManifest(&pSS->Manifest);
 
   CpuGetSnapshot(&pSS->Apple2Unit.CPU6502);
   SSC_GetSnapshot(&sg_SSC, &pSS->Apple2Unit.Comms);
@@ -181,24 +202,30 @@ void Snapshot_SaveState() {
 
   if (hFile) {
     fwrite(pSS.get(), 1, sizeof(APPLEWIN_SNAPSHOT), hFile.get());
+    Logger::Info("Saved state to: %s\n", g_szSaveStateFilename);
+  } else {
+    Logger::Error("Failed to open save state file for writing: %s\n", g_szSaveStateFilename);
   }
 }
 
 void Snapshot_Startup() {
   static bool bDone = false;
 
-  if (!g_bSaveStateOnExit || bDone) {
+  if (bDone) {
     return;
-}
+  }
 
-  Snapshot_LoadState();
+  // If we have a filename, always try to load it. 
+  // If not, only load if Save State On Exit is enabled (uses default filename).
+  if (g_szSaveStateFilename[0] != '\0' || g_bSaveStateOnExit) {
+    Snapshot_LoadState();
+  }
 
   bDone = true;
 }
 
 void Snapshot_Shutdown() {
   static bool bDone = false;
-
   if (!g_bSaveStateOnExit || bDone) {
     return;
   }

@@ -15,6 +15,7 @@
 #include "apple2/Clock.h"
 #include "apple2/SerialComms.h"
 #include "apple2/Joystick.h"
+#include "apple2/SaveState.h"
 #ifndef HEADLESS
 #include "Debugger/Debug.h"
 #endif
@@ -117,6 +118,19 @@ void Linapple_UpdateTitle(const char* title) {
 #include "core/Peripheral_Internal.h"
 
 void Linapple_Init() {
+  // Load globals from configuration
+  LOAD(REGVALUE_COMPUTER_EMULATION, reinterpret_cast<uint32_t*>(&g_Apple2Type));
+  LOAD(REGVALUE_HDD_ENABLED, &hddenabled);
+  LOAD(REGVALUE_CLOCK_SLOT, &clockslot);
+  LOAD(REGVALUE_SAVE_STATE_ON_EXIT, &g_bSaveStateOnExit);
+
+  std::string snapshotName;
+  if (LOAD(REGVALUE_SAVESTATE_FILENAME, &snapshotName) && !snapshotName.empty()) {
+    Snapshot_SetFilename(snapshotName.c_str());
+  } else {
+    Snapshot_SetFilename(""); // Use default
+  }
+
   MemPreInitialize();
   Asset_Init();
   ImageInitialize();
@@ -129,6 +143,7 @@ void Linapple_Init() {
   VideoInitialize();
   
   Peripheral_Manager_Init();
+  Peripheral_Register_Internal();
 
   KeybReset();
   JoyReset();
@@ -139,10 +154,6 @@ void Linapple_Init() {
 #ifndef HEADLESS
   DebugInitialize();
 #endif
-}
-
-void Linapple_RegisterPeripherals() {
-  Peripheral_Register_Internal();
 }
 
 void Linapple_Shutdown() {

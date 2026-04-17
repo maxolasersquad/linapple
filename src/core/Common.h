@@ -149,6 +149,7 @@ inline void SAVE(const char* key, uint32_t value) {
 }
 
 // Configuration
+constexpr const char* REGVALUE_COMPUTER_EMULATION = "Computer Emulation";
 constexpr const char* REGVALUE_APPLE2_TYPE = "Apple2 Type";
 constexpr const char* REGVALUE_SPKR_VOLUME = "Speaker Volume";
 constexpr const char* REGVALUE_MB_VOLUME = "Mockingboard Volume";

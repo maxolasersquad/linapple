@@ -114,6 +114,18 @@ typedef struct {
   SS_AW_CFG Cfg;
 } SS_APPLEWIN_CONFIG;
 
+#define MAX_PERIPHERAL_NAME 32
+
+typedef struct {
+  char szName[MAX_PERIPHERAL_NAME];
+  uint32_t dwVersion;
+} SS_PERIPHERAL_INFO;
+
+typedef struct {
+  SS_UNIT_HDR UnitHdr;
+  SS_PERIPHERAL_INFO Peripherals[8]; // Slots 0-7
+} SS_PERIPHERAL_MANIFEST;
+
 typedef struct {
   SS_UNIT_HDR UnitHdr;
   uint32_t dwType;    // SS_CARDTYPE
@@ -224,6 +236,7 @@ typedef struct tagSS_CARD_MOCKINGBOARD {
 typedef struct {
   SS_FILE_HDR Hdr;
   SS_APPLE2_Unit Apple2Unit;
+  SS_PERIPHERAL_MANIFEST Manifest;
   //  SS_APPLEWIN_CONFIG AppleWinCfg;
   SS_CARD_EMPTY Empty1;        // Slot1
   SS_CARD_EMPTY Empty2;        // Slot2

@@ -107,10 +107,8 @@ auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
 
   if (szSnapshotFile) {
     Snapshot_SetFilename(szSnapshotFile);
-    Snapshot_LoadState();
   }
-
-  Linapple_RegisterPeripherals();
+  Snapshot_Startup();
 
   if (szImageName_drive1) DiskInsert(DRIVE_1, szImageName_drive1, false, false);
   if (szImageName_drive2) DiskInsert(DRIVE_2, szImageName_drive2, false, false);

@@ -2,9 +2,11 @@
 #include "core/Peripheral_Internal.h"
 #include "core/Common.h"
 #include "core/Common_Globals.h"
+#include "core/Log.h"
 #include "core/Registry.h"
 #include "core/Util_Path.h"
 #include "apple2/Disk.h"
+#include "apple2/SaveState.h"
 #include <cstdio>
 #include <iostream>
 #include <getopt.h>
@@ -23,15 +25,6 @@ void TitleCallback(const char* title) {
 }
 
 auto main(int argc, char* argv[]) -> int {
-    std::string configPath = Path::FindDataFile("linapple.conf");
-    if (!configPath.empty()) {
-        Configuration::Instance().Load(configPath);
-    } else {
-        std::string fallbackPath = Path::GetUserConfigDir();
-        Path::EnsureDirExists(fallbackPath);
-        Configuration::Instance().Load(fallbackPath + "linapple.conf");
-    }
-
     static struct option long_options[] = {
         {"test-cpu", required_argument, nullptr, 't'},
         {"test-6502", no_argument, nullptr, '6'},
@@ -39,6 +32,7 @@ auto main(int argc, char* argv[]) -> int {
         {"boot", no_argument, nullptr, 'b'},
         {"d1", required_argument, nullptr, '1'},
         {"d2", required_argument, nullptr, '2'},
+        {"config", required_argument, nullptr, 'c'},
         {"list-hardware", no_argument, nullptr, 0x100},
         {"hardware-info", required_argument, nullptr, 0x101},
         {nullptr, 0, 0, 0}
@@ -47,12 +41,16 @@ auto main(int argc, char* argv[]) -> int {
     const char* disk1 = nullptr;
     const char* disk2 = nullptr;
     const char* hardwareName = nullptr;
+    const char* szConfigurationFile = nullptr;
     bool listHardware = false;
 
     int c = 0;
     int option_index = 0;
-    while ((c = getopt_long(argc, argv, "t:b6C1:2:", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, argv, "t:b6C1:2:c:", long_options, &option_index)) != -1) {
         switch (c) {
+            case 'c':
+                szConfigurationFile = optarg;
+                break;
             case 't':
                 Linapple_CpuTest(optarg);
                 return 0;
@@ -106,9 +104,24 @@ auto main(int argc, char* argv[]) -> int {
         return 0;
     }
 
+    if (szConfigurationFile) {
+        Configuration::Instance().Load(szConfigurationFile);
+    } else {
+        std::string configPath = Path::FindDataFile("linapple.conf");
+        if (!configPath.empty()) {
+            Configuration::Instance().Load(configPath);
+        } else {
+            std::string fallbackPath = Path::GetUserConfigDir();
+            Path::EnsureDirExists(fallbackPath);
+            Configuration::Instance().Load(fallbackPath + "linapple.conf");
+        }
+    }
+
     std::cout << "Starting LinApple Headless Frontend…" << std::endl;
 
+    Logger::Initialize();
     Linapple_Init();
+    Snapshot_Startup();
     Linapple_SetVideoCallback(VideoCallback);
     Linapple_SetAudioCallback(AudioCallback);
     Linapple_SetTitleCallback(TitleCallback);
@@ -119,8 +132,6 @@ auto main(int argc, char* argv[]) -> int {
     if (disk2) {
         DiskInsert(1, disk2, false, false);
     }
-
-    Linapple_RegisterPeripherals();
 
     g_state.mode = MODE_RUNNING;
 
@@ -135,6 +146,7 @@ auto main(int argc, char* argv[]) -> int {
         }
     }
 
+    Snapshot_Shutdown();
     Linapple_Shutdown();
     std::cout << "Headless execution complete." << std::endl;
     return 0;

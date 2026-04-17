@@ -45,7 +45,7 @@ auto Configuration::Load(const std::string& path) -> bool {
     }
 
     std::string line;
-    std::string currentSection = "Default";
+    std::string currentSection = "Configuration";
     while (std::getline(file, line)) {
         line = trim(line);
         if (line.empty() || line[0] == '#') continue;
