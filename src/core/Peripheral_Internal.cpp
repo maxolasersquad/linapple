@@ -215,17 +215,17 @@ void Peripheral_Plugins_Init(void) {
                             g_loaded_plugins.push_back({p, handle, fullPath});
                         } else {
                             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-                            Logger::Warn("Plugin ABI mismatch: %s (expected %d, got %d)\n", fullPath.c_str(), LINAPPLE_ABI_VERSION, p->abi_version);
+                            Logger::Warning("Plugin ABI mismatch: %s (expected %d, got %d)\n", fullPath.c_str(), LINAPPLE_ABI_VERSION, p->abi_version);
                             dlclose(handle);
                         }
                     } else {
                         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-                        Logger::Warn("Invalid plugin (missing linapple_peripheral_descriptor): %s\n", fullPath.c_str());
+                        Logger::Warning("Invalid plugin (missing linapple_peripheral_descriptor): %s\n", fullPath.c_str());
                         dlclose(handle);
                     }
                 } else {
                     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-                    Logger::Warn("Failed to load plugin: %s (%s)\n", fullPath.c_str(), dlerror());
+                    Logger::Warning("Failed to load plugin: %s (%s)\n", fullPath.c_str(), dlerror());
                 }
             }
         }

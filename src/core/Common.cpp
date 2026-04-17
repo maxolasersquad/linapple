@@ -49,7 +49,6 @@ double g_fCurrentCLK6502 = CLOCK_6502;
 int g_nCpuCyclesFeedback = 0;
 uint32_t g_dwCyclesThisFrame = 0;
 
-FilePtr g_fh(nullptr, fclose);
 bool g_bDisableDirectSound = false;
 
 SuperSerialCard sg_SSC;

@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cinttypes>
 #include <chrono>
+#include <array>
 #include "apple2/Keyboard.h"
 #include "apple2/Speaker.h"
 #include "apple2/Disk.h"
@@ -28,18 +29,34 @@
 extern void SSCFrontend_Update(struct SuperSerialCard*, uint32_t);
 extern void PrinterFrontend_Update(uint32_t);
 extern void UpdateDisplay(int);
-extern struct SuperSerialCard sg_SSC;
+// Non-const globals are required for the procedural core bridge architecture.
+extern struct SuperSerialCard sg_SSC; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-static LinappleVideoCallback g_videoCB = nullptr;
-static LinappleAudioCallback g_audioCB = nullptr;
-static LinappleTitleCallback g_titleCB = nullptr;
+static LinappleVideoCallback g_videoCB = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static LinappleAudioCallback g_audioCB = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static LinappleTitleCallback g_titleCB = nullptr; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-static uint8_t g_nRepeatKey = 0;
-static uint32_t g_nRepeatDelayCycles = 0;
-static bool g_bRepeating = false;
+static uint8_t g_nRepeatKey = 0;              // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static uint32_t g_nRepeatDelayCycles = 0;     // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static bool g_bRepeating = false;             // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 const uint32_t KEY_REPEAT_INITIAL_DELAY = 512000;
 const uint32_t KEY_REPEAT_RATE = 68000;
+
+const int JOYSTICK_AXIS_CENTER = 127;
+const int JOYSTICK_AXIS_RANGE = 32768;
+const int JOYSTICK_AXIS_MAX = 255;
+const int JOYSTICK_AXIS_DIVISOR = 65535;
+
+const int APPLE_MEM_SIZE = 65536;
+const uint16_t CPU_TEST_START_PC = 0x0400;
+const uint16_t CPU_TEST_TRAP_PC = 0x3469;
+const uint64_t CPU_TEST_MAX_CYCLES = 100000000;
+
+const int SPKR_BUFFER_SIZE = 8192;
+const int16_t SPKR_SAMPLE_VOLUME = 0x4000;
+
+const int FULL_SPEED_DISK_ITERATIONS = 100;
 
 void Linapple_KeyboardThink(uint32_t dwCycles) {
   if (g_nRepeatKey == 0) return;
@@ -81,10 +98,11 @@ extern "C" void Linapple_SetAppleKey(int apple_key, bool bDown) {
   JoySetRawButton(apple_key, bDown);
 }
 
-extern "C" void Linapple_SetJoystickAxis(int axis, int value) {
-    static int s_joyX = 127;
-    static int s_joyY = 127;
-    int joy_val = ((value + 32768) * 255) / 65535;
+// Axis and Value are ints to maintain compatibility with the public API and various frontends.
+extern "C" void Linapple_SetJoystickAxis(int axis, int value) { // NOLINT(bugprone-easily-swappable-parameters)
+    static int s_joyX = JOYSTICK_AXIS_CENTER;
+    static int s_joyY = JOYSTICK_AXIS_CENTER;
+    int joy_val = ((value + JOYSTICK_AXIS_RANGE) * JOYSTICK_AXIS_MAX) / JOYSTICK_AXIS_DIVISOR;
     if (axis == 0) {
       s_joyX = joy_val;
     } else if (axis == 1) {
@@ -119,7 +137,10 @@ void Linapple_UpdateTitle(const char* title) {
 
 void Linapple_Init() {
   // Load globals from configuration
-  LOAD(REGVALUE_COMPUTER_EMULATION, reinterpret_cast<uint32_t*>(&g_Apple2Type));
+  uint32_t apple2Type = 0;
+  if (LOAD(REGVALUE_COMPUTER_EMULATION, &apple2Type)) {
+    g_Apple2Type = static_cast<eApple2Type>(apple2Type);
+  }
   LOAD(REGVALUE_HDD_ENABLED, &hddenabled);
   LOAD(REGVALUE_CLOCK_SLOT, &clockslot);
   LOAD(REGVALUE_SAVE_STATE_ON_EXIT, &g_bSaveStateOnExit);
@@ -176,15 +197,16 @@ void Linapple_CpuTest(const char* szTestFile) {
   FilePtr f(fopen(szTestFile, "rb"), fclose);
   if (!f) return;
 
-  fread(mem, 1, 65536, f.get());
+  fread(mem, 1, APPLE_MEM_SIZE, f.get());
 
-  regs.pc = 0x0400;
+  regs.pc = CPU_TEST_START_PC;
   uint64_t count = 0;
-  while (count < 100000000) {
+  while (count < CPU_TEST_MAX_CYCLES) {
     uint32_t executed = CpuExecute(1);
     count += executed;
-    if (regs.pc == 0x3469) {
-      Logger::Info("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc,
+    if (regs.pc == CPU_TEST_TRAP_PC) {
+      // C-style varargs are used by the project's established Logger utility.
+      Logger::Info("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc, // NOLINT(cppcoreguidelines-pro-type-vararg)
                    count);
       break;
     }
@@ -215,10 +237,12 @@ static auto ShouldRunFullSpeed() -> bool {
 
   if (shouldTurbo && !s_wasTurbo) {
     s_turboStartMs = Linapple_GetTicks();
-    Logger::Perf("Full-speed disk mode engaged\n");
+    // C-style varargs are used by the project's established Logger utility.
+    Logger::Perf("Full-speed disk mode engaged\n"); // NOLINT(cppcoreguidelines-pro-type-vararg)
   } else if (!shouldTurbo && s_wasTurbo) {
     uint32_t elapsed = Linapple_GetTicks() - s_turboStartMs;
-    Logger::Perf("Full-speed disk mode disengaged after %ums\n", elapsed);
+    // C-style varargs are used by the project's established Logger utility.
+    Logger::Perf("Full-speed disk mode disengaged after %ums\n", elapsed); // NOLINT(cppcoreguidelines-pro-type-vararg)
   }
 
   s_wasTurbo = shouldTurbo;
@@ -227,7 +251,8 @@ static auto ShouldRunFullSpeed() -> bool {
 }
 
 #if defined(ENABLE_PERIPHERAL_SPEAKER)
-static int16_t g_spkrBuffer[8192];
+// Global audio buffer is required for efficient sample accumulation between frames.
+static std::array<int16_t, SPKR_BUFFER_SIZE> g_spkrBuffer; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 #endif
 
 void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
@@ -238,8 +263,8 @@ void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
   static double s_nextSampleCycle = 0;
   double clksPerSample = g_fCurrentCLK6502 / SPKR_SAMPLE_RATE;
 
-  SpkrEvent events[MAX_SPKR_EVENTS];
-  int num_events = SpkrGetEvents(events, MAX_SPKR_EVENTS);
+  std::array<SpkrEvent, MAX_SPKR_EVENTS> events{};
+  int num_events = SpkrGetEvents(events.data(), static_cast<int>(events.size()));
   int event_idx = 0;
 
   uint64_t startCycle = g_nCumulativeCycles - dwExecutedCycles;
@@ -250,22 +275,24 @@ void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
   }
 
   int numSamples = 0;
-  while (s_nextSampleCycle < static_cast<double>(endCycle) && numSamples < 8190) {
-    while (event_idx < num_events && static_cast<double>(events[event_idx].cycle) <= s_nextSampleCycle) {
-      s_lastState = events[event_idx].state;
+  while (s_nextSampleCycle < static_cast<double>(endCycle) && numSamples < (SPKR_BUFFER_SIZE - 2)) {
+    // Direct indexing is used here for performance in the hot emulation loop.
+    while (event_idx < num_events && static_cast<double>(events[static_cast<size_t>(event_idx)].cycle) <= s_nextSampleCycle) { // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+      s_lastState = events[static_cast<size_t>(event_idx)].state; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
       event_idx++;
     }
-    int16_t val = s_lastState ? 0x4000 : -0x4000;
-    g_spkrBuffer[numSamples++] = val; // L
-    g_spkrBuffer[numSamples++] = val; // R
+    int16_t val = s_lastState ? SPKR_SAMPLE_VOLUME : -SPKR_SAMPLE_VOLUME;
+    // Direct indexing is used here for performance in the hot emulation loop.
+    g_spkrBuffer[static_cast<size_t>(numSamples++)] = val; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+    g_spkrBuffer[static_cast<size_t>(numSamples++)] = val; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
     s_nextSampleCycle += clksPerSample;
   }
 
   if (numSamples > 0) {
     if (g_audioCB) {
-        g_audioCB(g_spkrBuffer, numSamples);
+        g_audioCB(g_spkrBuffer.data(), static_cast<size_t>(numSamples));
     } else {
-        DSUploadBuffer(g_spkrBuffer, numSamples);
+        DSUploadBuffer(g_spkrBuffer.data(), numSamples);
     }
   }
 #else
@@ -302,7 +329,7 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
 
     uint32_t executed = 0;
     if (ShouldRunFullSpeed()) {
-      for (int i = 0; i < 100; i++) {
+      for (int i = 0; i < FULL_SPEED_DISK_ITERATIONS; i++) {
         executed += Internal_RunCycles(cycles);
         if (!DiskIsSpinning()) break;
       }
@@ -316,7 +343,7 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
 
     if (g_videoCB && g_bFrameReady) {
         uint32_t* output = VideoGetOutputBuffer();
-        g_videoCB(output, 560, 384, 560 * 4);
+        g_videoCB(output, VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_WIDTH * 4);
         g_bFrameReady = false;
     }
     return executed;

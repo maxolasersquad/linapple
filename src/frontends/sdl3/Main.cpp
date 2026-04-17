@@ -219,7 +219,7 @@ auto main(int argc, char* argv[]) -> int {
       case 'f': bSetFullScreen = true; break;
       case 'l': bLog = true; break;
       case 'p': bPAL = true; break;
-      case 'v': Logger::SetVerbosity(LogLevel::Perf); break;
+      case 'v': Logger::SetVerbosity(LogLevel::kPerf); break;
       case 'x': 
         // Justification: Copying debugger script path.
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)

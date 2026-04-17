@@ -17,7 +17,6 @@ extern SystemState_t g_state;
 extern double g_fCurrentCLK6502;
 extern int g_nCpuCyclesFeedback;
 extern uint32_t g_dwCyclesThisFrame;
-extern FilePtr g_fh;
 extern bool g_bDisableDirectSound;
 extern struct SuperSerialCard sg_SSC;
 extern struct MouseInterface sg_Mouse;

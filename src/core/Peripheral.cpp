@@ -125,7 +125,7 @@ static void Host_Log(void* instance, PeripheralLogLevel level, const char* fmt,
       Logger::Info("%s", final_buffer.data());
       break;
     case LOG_WARN:
-      Logger::Warn("%s", final_buffer.data());
+      Logger::Warning("%s", final_buffer.data());
       break;
     case LOG_ERROR:
       Logger::Error("%s", final_buffer.data());
@@ -485,7 +485,7 @@ bool Peripheral_VerifyManifest(const SS_PERIPHERAL_MANIFEST* manifest) {
     if (static_cast<uint32_t>(ap.api->abi_version) != pi.dwVersion) {
       // Justification: Logger uses standard C variadics.
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-      Logger::Warn("Save state version mismatch for slot %d (%s): Save state has version %d, current is %d.",
+      Logger::Warning("Save state version mismatch for slot %d (%s): Save state has version %d, current is %d.",
                    static_cast<int>(i), pi.szName, pi.dwVersion, ap.api->abi_version);
     }
   }
