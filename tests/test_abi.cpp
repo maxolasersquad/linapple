@@ -11,6 +11,7 @@
 
 static bool g_dummy_reset_called = false;
 static bool g_dummy_shutdown_called = false;
+static HostInterface_t* g_captured_host = nullptr;
 
 using DummyInstance_t = struct {
     uint8_t last_val;
@@ -30,6 +31,7 @@ static auto Dummy_IOWrite(void* instance, uint16_t pc, uint16_t addr, uint8_t wr
 }
 
 static auto Dummy_Init(int slot, HostInterface_t* host) -> void* {
+    g_captured_host = host;
     auto* inst = new DummyInstance_t();
     inst->last_val = 0;
     inst->host = host;
@@ -116,7 +118,7 @@ TEST_CASE("ABI: [ABI-03] Slot Compatibility Validation") {
     slot_specific.compatible_slots = (1 << 4); // Only Slot 4
 
     Peripheral_Manager_Init();
-    
+
     // Register in Slot 2 (Should fail)
     int result = Peripheral_Register(&slot_specific, 2);
     CHECK(result == -1);
@@ -124,6 +126,35 @@ TEST_CASE("ABI: [ABI-03] Slot Compatibility Validation") {
     // Register in Slot 4 (Should succeed)
     result = Peripheral_Register(&slot_specific, 4);
     CHECK(result == 0);
-    
+
+    Peripheral_Manager_Shutdown();
+}
+
+TEST_CASE("ABI: [ABI-04] HostInterface GetConfig stub returns null") {
+    g_Apple2Type = A2TYPE_APPLE2EENHANCED;
+    MemInitialize();
+    Peripheral_Manager_Init();
+    Peripheral_Register(&g_dummy_peripheral, 2);
+
+    REQUIRE(g_captured_host != nullptr);
+    CHECK(g_captured_host->GetConfig("section", "key") == nullptr);
+    CHECK(g_captured_host->GetConfig("", "") == nullptr);
+
+    Peripheral_Manager_Shutdown();
+}
+
+TEST_CASE("ABI: [ABI-05] HostInterface new callbacks are callable without crashing") {
+    g_Apple2Type = A2TYPE_APPLE2EENHANCED;
+    MemInitialize();
+    Peripheral_Manager_Init();
+    Peripheral_Register(&g_dummy_peripheral, 2);
+
+    REQUIRE(g_captured_host != nullptr);
+    g_captured_host->SetConfig("section", "key", "value");
+    g_captured_host->NotifyStatusChanged(2);
+    g_captured_host->NotifyActivityChanged(2, true);
+    g_captured_host->NotifyActivityChanged(2, false);
+    g_captured_host->RequestPreciseTiming();
+
     Peripheral_Manager_Shutdown();
 }

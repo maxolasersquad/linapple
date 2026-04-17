@@ -286,13 +286,29 @@ static auto Host_GetMemPtr(uint16_t addr) -> uint8_t* {
 
 static auto Host_GetCycles() -> uint64_t { return cumulativecycles; }
 
-// Justification: Global immutable dispatch table for services provided to 
+static auto Host_GetConfig(const char* /*section*/, const char* /*key*/) -> const char* {
+  return nullptr;
+}
+
+static void Host_SetConfig(const char* /*section*/, const char* /*key*/,
+                           const char* /*value*/) {}
+
+static void Host_NotifyStatusChanged(int /*slot*/) {}
+
+static void Host_NotifyActivityChanged(int /*slot*/, bool /*active*/) {}
+
+static void Host_RequestPreciseTiming() {}
+
+// Justification: Global immutable dispatch table for services provided to
 // peripherals.
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static const HostInterface_t g_host_interface = {
-    Host_Log,           Host_AssertIrq,        Host_RegisterIO,
-    Host_RegisterCxROM, Host_RegisterExpansionROM, Host_RegisterDirectIO, Host_GetMemPtr,
-    Host_GetCycles, RiffInitWriteFile, RiffFinishWriteFile, RiffPutSamples};
+    Host_Log,           Host_AssertIrq,           Host_RegisterIO,
+    Host_RegisterCxROM, Host_RegisterExpansionROM, Host_RegisterDirectIO,
+    Host_GetMemPtr,     Host_GetCycles,            Host_GetConfig,
+    Host_SetConfig,     Host_NotifyStatusChanged,  Host_NotifyActivityChanged,
+    Host_RequestPreciseTiming,
+    RiffInitWriteFile,  RiffFinishWriteFile,       RiffPutSamples};
 
 // --- Public Core API ---
 

@@ -62,7 +62,19 @@ typedef struct {
     void (*RegisterDirectIO)(void* instance, uint16_t addr, PeripheralIOHandler read, PeripheralIOHandler write);
     uint8_t* (*GetMemPtr)(uint16_t addr);
     uint64_t (*GetCycles)(void);
-    
+
+    // The returned pointer is valid until the next GetConfig call.
+    const char* (*GetConfig)(const char* section, const char* key);
+
+    void (*SetConfig)(const char* section, const char* key, const char* value);
+
+    void (*NotifyStatusChanged)(int slot);
+
+    // Call only on state changes.
+    void (*NotifyActivityChanged)(int slot, bool active);
+
+    void (*RequestPreciseTiming)(void);
+
     // Audio Logging (Riff)
     int (*RiffInitWriteFile)(char *pszFile, uint32_t sample_rate, uint32_t NumChannels);
     int (*RiffFinishWriteFile)(void);
