@@ -114,21 +114,29 @@ void Snapshot_LoadState() {
     VideoResetState();
 
     CpuSetSnapshot(&pSS->Apple2Unit.CPU6502);
-    SSC_SetSnapshot(&sg_SSC, &pSS->Apple2Unit.Comms);
     JoySetSnapshot(&pSS->Apple2Unit.Joystick);
     KeybSetSnapshot(&pSS->Apple2Unit.Keyboard);
-    SpkrSetSnapshot(&pSS->Apple2Unit.Speaker);
     VideoSetSnapshot(&pSS->Apple2Unit.Video);
     MemSetSnapshot(&pSS->Apple2Unit.Memory);
 
-    // Slot4: Mockingboard
-    MB_SetSnapshot(&pSS->Mockingboard1, 4);
-
-    // Slot5: Mockingboard
-    MB_SetSnapshot(&pSS->Mockingboard2, 5);
-
-    // Slot6: Disk][
-    DiskSetSnapshot(&pSS->Disk2, 6);
+    // Slots 0-7
+    for (int i = 0; i < 8; ++i) {
+        void* slot_state = nullptr;
+        size_t slot_size = 0;
+        switch(i) {
+            case 0: slot_state = &pSS->Apple2Unit.Speaker; slot_size = sizeof(pSS->Apple2Unit.Speaker); break;
+            case 1: slot_state = &pSS->Empty1; slot_size = sizeof(pSS->Empty1); break;
+            case 2: slot_state = &pSS->Apple2Unit.Comms; slot_size = sizeof(pSS->Apple2Unit.Comms); break;
+            case 3: slot_state = &pSS->Empty3; slot_size = sizeof(pSS->Empty3); break;
+            case 4: slot_state = &pSS->Mockingboard1; slot_size = sizeof(pSS->Mockingboard1); break;
+            case 5: slot_state = &pSS->Mockingboard2; slot_size = sizeof(pSS->Mockingboard2); break;
+            case 6: slot_state = &pSS->Disk2; slot_size = sizeof(pSS->Disk2); break;
+            case 7: slot_state = &pSS->Empty7; slot_size = sizeof(pSS->Empty7); break;
+        }
+        if (slot_state) {
+            Peripheral_LoadState(i, slot_state, slot_size);
+        }
+    }
 
     // Hmmm. And SLOT 7 (HDD1 and HDD2)? Where are they??? -- beom beotiger ^_^
   } catch (int) {
@@ -164,39 +172,29 @@ void Snapshot_SaveState() {
   Peripheral_GetManifest(&pSS->Manifest);
 
   CpuGetSnapshot(&pSS->Apple2Unit.CPU6502);
-  SSC_GetSnapshot(&sg_SSC, &pSS->Apple2Unit.Comms);
   JoyGetSnapshot(&pSS->Apple2Unit.Joystick);
   KeybGetSnapshot(&pSS->Apple2Unit.Keyboard);
-  SpkrGetSnapshot(&pSS->Apple2Unit.Speaker);
   VideoGetSnapshot(&pSS->Apple2Unit.Video);
   MemGetSnapshot(&pSS->Apple2Unit.Memory);
 
-  // Slot1: Empty
-  pSS->Empty1.Hdr.UnitHdr.dwLength = sizeof(SS_CARD_EMPTY);
-  pSS->Empty1.Hdr.UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
-  pSS->Empty1.Hdr.dwSlot = 1;
-  pSS->Empty1.Hdr.dwType = CT_Empty;
-
-  // Slot2: Empty
-  pSS->Empty2.Hdr.UnitHdr.dwLength = sizeof(SS_CARD_EMPTY);
-  pSS->Empty2.Hdr.UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
-  pSS->Empty2.Hdr.dwSlot = 2;
-  pSS->Empty2.Hdr.dwType = CT_Empty;
-
-  // Slot3: Empty
-  pSS->Empty3.Hdr.UnitHdr.dwLength = sizeof(SS_CARD_EMPTY);
-  pSS->Empty3.Hdr.UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
-  pSS->Empty3.Hdr.dwSlot = 3;
-  pSS->Empty3.Hdr.dwType = CT_Empty;
-
-  // Slot4: Mockingboard
-  MB_GetSnapshot(&pSS->Mockingboard1, 4);
-
-  // Slot5: Mockingboard
-  MB_GetSnapshot(&pSS->Mockingboard2, 5);
-
-  // Slot6: Disk][
-  DiskGetSnapshot(&pSS->Disk2, 6);
+  // Slots 0-7
+  for (int i = 0; i < 8; ++i) {
+      void* slot_state = nullptr;
+      size_t slot_size = 0;
+      switch(i) {
+          case 0: slot_state = &pSS->Apple2Unit.Speaker; slot_size = sizeof(pSS->Apple2Unit.Speaker); break;
+          case 1: slot_state = &pSS->Empty1; slot_size = sizeof(pSS->Empty1); break;
+          case 2: slot_state = &pSS->Apple2Unit.Comms; slot_size = sizeof(pSS->Apple2Unit.Comms); break;
+          case 3: slot_state = &pSS->Empty3; slot_size = sizeof(pSS->Empty3); break;
+          case 4: slot_state = &pSS->Mockingboard1; slot_size = sizeof(pSS->Mockingboard1); break;
+          case 5: slot_state = &pSS->Mockingboard2; slot_size = sizeof(pSS->Mockingboard2); break;
+          case 6: slot_state = &pSS->Disk2; slot_size = sizeof(pSS->Disk2); break;
+          case 7: slot_state = &pSS->Empty7; slot_size = sizeof(pSS->Empty7); break;
+      }
+      if (slot_state) {
+          Peripheral_SaveState(i, slot_state, &slot_size);
+      }
+  }
 
   FilePtr hFile(fopen(g_szSaveStateFilename, "wb"), fclose);
 

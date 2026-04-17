@@ -101,7 +101,6 @@ auto SpkrToggle(void* instance, uint16_t, uint16_t, uint8_t, uint8_t, uint32_t n
 static HostInterface_t* g_pSpkrHost = nullptr;
 
 static constexpr uint16_t ADDR_SPEAKER = 0xC030;
-static constexpr uint32_t ANY_SLOT_MASK = 0xFFFFFFFF;
 
 static auto Spkr_ABI_Init(int slot, HostInterface_t* host) -> void* {
   (void)slot;
@@ -129,17 +128,42 @@ static void Spkr_ABI_Think(void* instance, uint32_t cycles) {
   SpkrUpdate(cycles);
 }
 
+static auto Spkr_ABI_SaveState(void* instance, void* buffer, size_t* size) -> PeripheralStatus {
+  (void)instance;
+  if (!buffer || !size || *size < sizeof(SS_IO_Speaker)) {
+    if (size) *size = sizeof(SS_IO_Speaker);
+    return PERIPHERAL_ERROR;
+  }
+  SpkrGetSnapshot(static_cast<SS_IO_Speaker*>(buffer));
+  *size = sizeof(SS_IO_Speaker);
+  return PERIPHERAL_OK;
+}
+
+static auto Spkr_ABI_LoadState(void* instance, const void* buffer, size_t size) -> PeripheralStatus {
+  (void)instance;
+  if (!buffer || size < sizeof(SS_IO_Speaker)) {
+    return PERIPHERAL_ERROR;
+  }
+  SpkrSetSnapshot(const_cast<SS_IO_Speaker*>(static_cast<const SS_IO_Speaker*>(buffer)));
+  return PERIPHERAL_OK;
+}
+
 Peripheral_t g_speaker_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Speaker",
-    ANY_SLOT_MASK, // Compatible with any "slot"
+    LINAPPLE_ANY_SLOT_MASK, // Compatible with any "slot"
     Spkr_ABI_Init,
     Spkr_ABI_Reset,
     Spkr_ABI_Shutdown,
     Spkr_ABI_Think,
-    nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // on_vblank
+    Spkr_ABI_SaveState,
+    Spkr_ABI_LoadState
 };
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_speaker_peripheral)
+#endif
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 void SpkrUpdate(uint32_t totalcycles) {

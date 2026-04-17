@@ -100,7 +100,6 @@ static const int NUM_DEVS_PER_MB = 2;
 static const int SLOT4 = 4;
 
 #if defined MOCKINGBOARD
-#include "apple2/Riff.h"
 
 typedef struct {
 SY6522 sy6522;
@@ -512,7 +511,9 @@ void MB_Update() {
     DSUploadMockBuffer(g_nMixBuffer, nNumSamples * 2);
 
     #ifndef HEADLESS
-    RiffPutSamples(&g_nMixBuffer[0], nNumSamples);
+    if (g_pMBHost && g_pMBHost->RiffPutSamples) {
+      g_pMBHost->RiffPutSamples(&g_nMixBuffer[0], nNumSamples);
+    }
     #endif
   }
   #endif  // if defined MOCKINGBOARD
@@ -833,9 +834,27 @@ static void MB_ABI_Shutdown(void* instance) {
 
 static void MB_ABI_Think(void* instance, uint32_t cycles) {
   (void)instance;
-  (void)cycles;
-  // MB_UpdateCycles is still called directly from the core CPU loop
-  // until full migration is complete.
+  MB_UpdateCycles(cycles);
+}
+
+static auto MB_ABI_SaveState(void* instance, void* buffer, size_t* size) -> PeripheralStatus {
+  (void)instance;
+  if (!buffer || !size || *size < sizeof(SS_CARD_MOCKINGBOARD)) {
+    if (size) *size = sizeof(SS_CARD_MOCKINGBOARD);
+    return PERIPHERAL_ERROR;
+  }
+  MB_GetSnapshot(static_cast<SS_CARD_MOCKINGBOARD*>(buffer), g_nMB_Slot);
+  *size = sizeof(SS_CARD_MOCKINGBOARD);
+  return PERIPHERAL_OK;
+}
+
+static auto MB_ABI_LoadState(void* instance, const void* buffer, size_t size) -> PeripheralStatus {
+  (void)instance;
+  if (!buffer || size < sizeof(SS_CARD_MOCKINGBOARD)) {
+    return PERIPHERAL_ERROR;
+  }
+  MB_SetSnapshot(const_cast<SS_CARD_MOCKINGBOARD*>(static_cast<const SS_CARD_MOCKINGBOARD*>(buffer)), g_nMB_Slot);
+  return PERIPHERAL_OK;
 }
 
 Peripheral_t g_mockingboard_peripheral = {
@@ -846,7 +865,12 @@ Peripheral_t g_mockingboard_peripheral = {
     MB_ABI_Reset,
     MB_ABI_Shutdown,
     MB_ABI_Think,
-    nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // on_vblank
+    MB_ABI_SaveState,
+    MB_ABI_LoadState
 };
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_mockingboard_peripheral)
+#endif
 #endif

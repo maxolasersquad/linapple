@@ -45,6 +45,7 @@ Peripheral_t g_test_c_peripheral = {
     Test_Reset,
     Test_Shutdown,
     NULL, // think
+    NULL, // on_vblank
     NULL, // save_state
     NULL  // load_state
 };

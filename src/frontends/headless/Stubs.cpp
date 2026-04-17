@@ -35,3 +35,13 @@ void StretchBltMemToFrameDC() {}
 
 void SoundCore_SetFade(int fade) { (void)fade; }
 void PrinterFrontend_Reset() {}
+
+#ifndef ENABLE_RIFF
+int RiffInitWriteFile(char *pszFile, uint32_t sample_rate, uint32_t NumChannels) {
+    (void)pszFile; (void)sample_rate; (void)NumChannels; return 0;
+}
+int RiffFinishWriteFile() { return 0; }
+int RiffPutSamples(short *buf, uint32_t uSamples) {
+    (void)buf; (void)uSamples; return 0;
+}
+#endif

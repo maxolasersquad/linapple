@@ -731,6 +731,26 @@ static void Disk_ABI_Think(void* instance, uint32_t cycles) {
   DiskUpdatePosition(cycles);
 }
 
+static auto Disk_ABI_SaveState(void* instance, void* buffer, size_t* size) -> PeripheralStatus {
+  (void)instance;
+  if (!buffer || !size || *size < sizeof(SS_CARD_DISK2)) {
+    if (size) *size = sizeof(SS_CARD_DISK2);
+    return PERIPHERAL_ERROR;
+  }
+  DiskGetSnapshot(static_cast<SS_CARD_DISK2*>(buffer), 6); // Hardcoded to slot 6 for now to match Structs.h
+  *size = sizeof(SS_CARD_DISK2);
+  return PERIPHERAL_OK;
+}
+
+static auto Disk_ABI_LoadState(void* instance, const void* buffer, size_t size) -> PeripheralStatus {
+  (void)instance;
+  if (!buffer || size < sizeof(SS_CARD_DISK2)) {
+    return PERIPHERAL_ERROR;
+  }
+  DiskSetSnapshot(const_cast<SS_CARD_DISK2*>(static_cast<const SS_CARD_DISK2*>(buffer)), 6);
+  return PERIPHERAL_OK;
+}
+
 Peripheral_t g_disk_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Disk II",
@@ -739,9 +759,14 @@ Peripheral_t g_disk_peripheral = {
     Disk_ABI_Reset,
     Disk_ABI_Shutdown,
     Disk_ABI_Think,
-    nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // on_vblank
+    Disk_ABI_SaveState,
+    Disk_ABI_LoadState
 };
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_disk_peripheral)
+#endif
 
 /*static*/ auto Disk_IORead(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t
 {

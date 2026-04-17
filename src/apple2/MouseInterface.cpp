@@ -334,6 +334,11 @@ static void Mouse_ABI_Shutdown(void* instance) {
   g_pMouseHost = nullptr;
 }
 
+static void Mouse_ABI_OnVBlank(void* instance, bool vblank) {
+  (void)instance;
+  Mouse_SetVBlank(vblank);
+}
+
 Peripheral_t g_mouse_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Mouse Interface",
@@ -342,9 +347,14 @@ Peripheral_t g_mouse_peripheral = {
     Mouse_ABI_Reset,
     Mouse_ABI_Shutdown,
     nullptr, // think
+    Mouse_ABI_OnVBlank,
     nullptr, // save_state
     nullptr  // load_state
 };
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_mouse_peripheral)
+#endif
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 static void Mouse_OnCommand() {

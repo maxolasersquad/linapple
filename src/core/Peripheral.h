@@ -40,6 +40,11 @@ typedef enum {
 } PeripheralLogLevel;
 
 /**
+ * @brief Mask indicating compatibility with any slot (0-7).
+ */
+#define LINAPPLE_ANY_SLOT_MASK 0xFF
+
+/**
  * @brief Standard I/O handler signature.
  */
 typedef uint8_t (*PeripheralIOHandler)(void* instance, uint16_t pc, uint16_t addr, uint8_t write, uint8_t val, uint32_t cycles_left);
@@ -57,6 +62,11 @@ typedef struct {
     void (*RegisterDirectIO)(void* instance, uint16_t addr, PeripheralIOHandler read, PeripheralIOHandler write);
     uint8_t* (*GetMemPtr)(uint16_t addr);
     uint64_t (*GetCycles)(void);
+    
+    // Audio Logging (Riff)
+    int (*RiffInitWriteFile)(char *pszFile, uint32_t sample_rate, uint32_t NumChannels);
+    int (*RiffFinishWriteFile)(void);
+    int (*RiffPutSamples)(short *buf, uint32_t uSamples);
 } HostInterface_t;
 
 /**
@@ -70,9 +80,15 @@ typedef struct {
     void (*reset)(void* instance);
     void (*shutdown)(void* instance);
     void (*think)(void* instance, uint32_t cycles);
+    void (*on_vblank)(void* instance, bool vblank);
     PeripheralStatus (*save_state)(void* instance, void* buffer, size_t* size);
     PeripheralStatus (*load_state)(void* instance, const void* buffer, size_t size);
 } Peripheral_t;
+
+#define EXPORT_PERIPHERAL(peripheral_struct) \
+    extern "C" { \
+        Peripheral_t linapple_peripheral_descriptor = peripheral_struct; \
+    }
 
 #ifdef __cplusplus
 }

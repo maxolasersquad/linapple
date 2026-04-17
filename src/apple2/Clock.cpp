@@ -8,6 +8,7 @@
 #include <array>
 #include "apple2/Clock.h"
 #include "apple2/Memory.h"
+#include "apple2/Structs.h"
 
 
 /*
@@ -218,11 +219,17 @@ static void Clock_ABI_Shutdown(void* instance) {
 Peripheral_t g_clock_peripheral = {
     LINAPPLE_ABI_VERSION,
     "No-Slot Clock",
-    0xFFFFFFFF, // Any slot
+    LINAPPLE_ANY_SLOT_MASK,
     Clock_ABI_Init,
     Clock_ABI_Reset,
     Clock_ABI_Shutdown,
     nullptr, // think
+    nullptr, // on_vblank
     nullptr, // save_state
     nullptr  // load_state
 };
+
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_clock_peripheral)
+#endif

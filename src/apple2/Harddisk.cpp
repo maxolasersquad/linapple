@@ -158,9 +158,14 @@ Peripheral_t g_harddisk_peripheral = {
     HD_ABI_Reset,
     HD_ABI_Shutdown,
     nullptr, // think
+    nullptr, // on_vblank
     nullptr, // save_state
     nullptr  // load_state
 };
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_harddisk_peripheral)
+#endif
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 auto HD_CardIsEnabled() -> bool { return g_bHD_RomLoaded && g_bHD_Enabled; }

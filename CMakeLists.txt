@@ -8,6 +8,11 @@ endif()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options(-ffunction-sections -fdata-sections)
+    add_link_options(-Wl,--gc-sections)
+endif()
+
 # --- Options ---
 if(NOT FRONTEND)
     set(FRONTEND "sdl3" CACHE STRING "Frontend to build (sdl3 or headless)")
@@ -18,6 +23,7 @@ if(NOT FRONTEND STREQUAL "sdl3" AND NOT FRONTEND STREQUAL "headless")
 endif()
 option(PROFILING "Enable profiling" OFF)
 option(REGISTRY_WRITEABLE "Enable registry writing" OFF)
+option(BUILD_SHARED_PERIPHERALS "Build peripherals as shared libraries instead of built-in" OFF)
 
 # Peripheral Options
 option(PERIPHERAL_SPEAKER "Enable built-in speaker peripheral" ON)
@@ -111,6 +117,31 @@ endforeach()
 
 add_custom_target(generate_xpms DEPENDS ${XPM_HEADERS})
 
+# --- Peripheral Helper ---
+set(PERIPHERAL_DEFINITIONS "")
+set(PERIPHERAL_MODULES "")
+
+function(add_peripheral_target name option_name sources extra_libs force_builtin)
+    if(${option_name})
+        if(BUILD_SHARED_PERIPHERALS AND NOT force_builtin)
+            add_library(peripheral-${name} SHARED ${sources})
+            target_compile_definitions(peripheral-${name} PRIVATE BUILD_SHARED_PERIPHERAL)
+            target_include_directories(peripheral-${name} PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR})
+            target_link_libraries(peripheral-${name} PRIVATE ${extra_libs})
+            set_target_properties(peripheral-${name} PROPERTIES PREFIX "" OUTPUT_NAME "${name}")
+            list(APPEND PERIPHERAL_MODULES peripheral-${name})
+            set(PERIPHERAL_MODULES ${PERIPHERAL_MODULES} PARENT_SCOPE)
+        else()
+            list(APPEND SOURCES_A2 ${sources})
+            set(SOURCES_A2 ${SOURCES_A2} PARENT_SCOPE)
+            string(TOUPPER ${name} upper_name)
+            string(REPLACE "-" "_" upper_name ${upper_name})
+            list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_${upper_name})
+            set(PERIPHERAL_DEFINITIONS ${PERIPHERAL_DEFINITIONS} PARENT_SCOPE)
+        endif()
+    endif()
+endfunction()
+
 # --- Source Discovery ---
 set(SOURCES_CORE
     src/core/Common.cpp
@@ -136,50 +167,21 @@ set(SOURCES_A2
     src/apple2/Video.cpp
     src/apple2/ftpparse.cpp
     src/apple2/stretch.cpp
+    src/apple2/Riff.cpp
 )
 
+add_definitions(-DENABLE_RIFF)
+
 # Optional peripherals
-set(PERIPHERAL_DEFINITIONS "")
+add_peripheral_target(speaker PERIPHERAL_SPEAKER "src/apple2/Speaker.cpp" "" TRUE)
+add_peripheral_target(disk PERIPHERAL_DISK "src/apple2/Disk.cpp" "${ZLIB_LIBRARIES};${LIBZIP_LIBRARIES}" TRUE)
+add_peripheral_target(harddisk PERIPHERAL_HARDDISK "src/apple2/Harddisk.cpp" "${ZLIB_LIBRARIES};${LIBZIP_LIBRARIES}" TRUE)
+add_peripheral_target(mouse PERIPHERAL_MOUSE "src/apple2/MouseInterface.cpp" "" TRUE)
+add_peripheral_target(mockingboard PERIPHERAL_MOCKINGBOARD "src/apple2/Mockingboard.cpp;src/apple2/AY8910.cpp" "" TRUE)
+add_peripheral_target(ssc PERIPHERAL_SSC "src/apple2/SerialComms.cpp" "" TRUE)
 
-if(PERIPHERAL_SPEAKER)
-    list(APPEND SOURCES_A2 src/apple2/Speaker.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_SPEAKER)
-endif()
-
-if(PERIPHERAL_MOCKINGBOARD)
-    list(APPEND SOURCES_A2 src/apple2/Mockingboard.cpp src/apple2/AY8910.cpp src/apple2/Riff.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_MOCKINGBOARD)
-endif()
-
-if(PERIPHERAL_DISK)
-    list(APPEND SOURCES_A2 src/apple2/Disk.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_DISK)
-endif()
-
-if(PERIPHERAL_SSC)
-    list(APPEND SOURCES_A2 src/apple2/SerialComms.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_SSC)
-endif()
-
-if(PERIPHERAL_PRINTER)
-    list(APPEND SOURCES_A2 src/apple2/ParallelPrinter.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_PRINTER)
-endif()
-
-if(PERIPHERAL_HARDDISK)
-    list(APPEND SOURCES_A2 src/apple2/Harddisk.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_HARDDISK)
-endif()
-
-if(PERIPHERAL_MOUSE)
-    list(APPEND SOURCES_A2 src/apple2/MouseInterface.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_MOUSE)
-endif()
-
-if(PERIPHERAL_CLOCK)
-    list(APPEND SOURCES_A2 src/apple2/Clock.cpp)
-    list(APPEND PERIPHERAL_DEFINITIONS -DENABLE_PERIPHERAL_CLOCK)
-endif()
+add_peripheral_target(printer PERIPHERAL_PRINTER "src/apple2/ParallelPrinter.cpp" "" FALSE)
+add_peripheral_target(clock PERIPHERAL_CLOCK "src/apple2/Clock.cpp" "" FALSE)
 
 set(SOURCES_DBG "")
 if(NOT FRONTEND STREQUAL "headless")
@@ -245,6 +247,7 @@ set(SOURCES ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} ${SOURCES_FE})
 # --- Target ---
 add_executable(linapple ${SOURCES})
 add_dependencies(linapple generate_xpms)
+set_target_properties(linapple PROPERTIES ENABLE_EXPORTS TRUE)
 
 target_include_directories(linapple PRIVATE
     src
@@ -281,6 +284,7 @@ include(GNUInstallDirs)
 set(BIN_DIR "${CMAKE_INSTALL_BINDIR}")
 set(DATA_DIR "${CMAKE_INSTALL_DATADIR}/linapple")
 set(CONF_DIR "${CMAKE_INSTALL_SYSCONFDIR}/linapple")
+set(PLUGIN_DIR "${CMAKE_INSTALL_LIBDIR}/linapple/plugins")
 
 target_compile_definitions(linapple PRIVATE 
     ASSET_DIR="${CMAKE_INSTALL_PREFIX}/${DATA_DIR}"
@@ -289,6 +293,9 @@ target_compile_definitions(linapple PRIVATE
 )
 
 install(TARGETS linapple DESTINATION ${BIN_DIR})
+if(PERIPHERAL_MODULES)
+    install(TARGETS ${PERIPHERAL_MODULES} DESTINATION ${PLUGIN_DIR})
+endif()
 install(FILES "${RES_DIR}/Master.dsk" DESTINATION ${DATA_DIR})
 install(FILES "${RES_DIR}/linapple.conf" DESTINATION ${CONF_DIR})
 
@@ -347,3 +354,10 @@ add_test(NAME test-peripheral-abi COMMAND test-peripheral-abi)
 # CPU tests (using the built linapple binary)
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")
 set_tests_properties(test-cpu PROPERTIES ENVIRONMENT "EMULATOR=$<TARGET_FILE:linapple>")
+
+# --- Packaging Aliases (Issue #231) ---
+add_custom_target(linapple-core DEPENDS linapple)
+
+if(PERIPHERAL_MODULES)
+    add_custom_target(linapple-peripherals-standard DEPENDS ${PERIPHERAL_MODULES})
+endif()

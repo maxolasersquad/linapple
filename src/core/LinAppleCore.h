@@ -68,6 +68,11 @@ void Peripheral_Manager_Shutdown();
  */
 void Peripheral_Manager_Think(uint32_t cycles);
 
+/**
+ * @brief Notify all peripherals of a vertical blanking signal.
+ */
+void Peripheral_Manager_OnVBlank(bool vblank);
+
 #ifdef __cplusplus
 /**
  * @brief Register a peripheral in a specific slot.
@@ -88,6 +93,16 @@ void Peripheral_GetManifest(SS_PERIPHERAL_MANIFEST* manifest);
  * @brief Verify a peripheral manifest from a save state.
  */
 bool Peripheral_VerifyManifest(const SS_PERIPHERAL_MANIFEST* manifest);
+
+/**
+ * @brief Save the state of the peripheral in a specific slot.
+ */
+void Peripheral_SaveState(int slot, void* buffer, size_t* size);
+
+/**
+ * @brief Load the state of the peripheral in a specific slot.
+ */
+void Peripheral_LoadState(int slot, const void* buffer, size_t size);
 #endif
 
 /**

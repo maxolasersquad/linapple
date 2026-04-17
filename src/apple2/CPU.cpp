@@ -60,6 +60,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "apple2/Mockingboard.h"
 #include "apple2/MouseInterface.h"
 #include "core/Common_Globals.h"
+#include "core/LinAppleCore.h"
 
 enum {
 AF_SIGN =       0x80,
@@ -767,11 +768,9 @@ static inline void CheckInterruptSources(uint32_t uExecutedCycles)
 {
   if (g_nIrqCheckTimeout < 0) {
     #ifndef UPDATE_ALL_PER_CYCLE
-#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
-    MB_UpdateCycles(uExecutedCycles);
-#endif
+    Peripheral_Manager_Think(uExecutedCycles);
     #endif
-    Mouse_SetVBlank(VideoGetVbl(uExecutedCycles));
+    Peripheral_Manager_OnVBlank(VideoGetVbl(uExecutedCycles));
     g_nIrqCheckTimeout = IRQ_CHECK_TIMEOUT;
   }
 }

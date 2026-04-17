@@ -277,6 +277,24 @@ static void SSC_ABI_Think(void* instance, uint32_t cycles) {
   SSCFrontend_Update(static_cast<SuperSerialCard*>(instance), cycles);
 }
 
+static auto SSC_ABI_SaveState(void* instance, void* buffer, size_t* size) -> PeripheralStatus {
+  if (!instance || !buffer || !size || *size < sizeof(SS_IO_Comms)) {
+    if (size) *size = sizeof(SS_IO_Comms);
+    return PERIPHERAL_ERROR;
+  }
+  SSC_GetSnapshot(static_cast<SuperSerialCard*>(instance), static_cast<SS_IO_Comms*>(buffer));
+  *size = sizeof(SS_IO_Comms);
+  return PERIPHERAL_OK;
+}
+
+static auto SSC_ABI_LoadState(void* instance, const void* buffer, size_t size) -> PeripheralStatus {
+  if (!instance || !buffer || size < sizeof(SS_IO_Comms)) {
+    return PERIPHERAL_ERROR;
+  }
+  SSC_SetSnapshot(static_cast<SuperSerialCard*>(instance), const_cast<SS_IO_Comms*>(static_cast<const SS_IO_Comms*>(buffer)));
+  return PERIPHERAL_OK;
+}
+
 Peripheral_t g_ssc_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Super Serial Card",
@@ -285,9 +303,14 @@ Peripheral_t g_ssc_peripheral = {
     SSC_ABI_Reset,
     SSC_ABI_Shutdown,
     SSC_ABI_Think,
-    nullptr, // save_state
-    nullptr  // load_state
+    nullptr, // on_vblank
+    SSC_ABI_SaveState,
+    SSC_ABI_LoadState
 };
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_ssc_peripheral)
+#endif
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 void SSC_Reset(SuperSerialCard* pSSC) {

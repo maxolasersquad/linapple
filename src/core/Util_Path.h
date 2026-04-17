@@ -62,6 +62,7 @@ inline auto GetPluginSearchPaths() -> std::vector<std::string> {
     }
 
     // Local project plugins during dev
+    paths.push_back(GetExecutableDir());
     paths.push_back(GetExecutableDir() + "plugins/");
 
     // System plugin paths

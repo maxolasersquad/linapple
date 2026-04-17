@@ -10,6 +10,7 @@
 #include "LinAppleCore.h"
 #include "apple2/CPU.h"
 #include "apple2/Memory.h"
+#include "apple2/Riff.h"
 #include "core/Common.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
@@ -291,7 +292,7 @@ static auto Host_GetCycles() -> uint64_t { return cumulativecycles; }
 static const HostInterface_t g_host_interface = {
     Host_Log,           Host_AssertIrq,        Host_RegisterIO,
     Host_RegisterCxROM, Host_RegisterExpansionROM, Host_RegisterDirectIO, Host_GetMemPtr,
-    Host_GetCycles};
+    Host_GetCycles, RiffInitWriteFile, RiffFinishWriteFile, RiffPutSamples};
 
 // --- Public Core API ---
 
@@ -337,6 +338,15 @@ void Peripheral_Manager_Think(uint32_t cycles) {
     ActivePeripheral_t& ap = g_active_peripherals.at(i);
     if (ap.api && ap.api->think) {
       ap.api->think(ap.instance, cycles);
+    }
+  }
+}
+
+void Peripheral_Manager_OnVBlank(bool vblank) {
+  for (size_t i = 0; i < NUM_SLOTS; ++i) {
+    ActivePeripheral_t& ap = g_active_peripherals.at(i);
+    if (ap.api && ap.api->on_vblank) {
+      ap.api->on_vblank(ap.instance, vblank);
     }
   }
 }
@@ -481,4 +491,22 @@ bool Peripheral_VerifyManifest(const SS_PERIPHERAL_MANIFEST* manifest) {
   }
 
   return true;
+}
+
+void Peripheral_SaveState(int slot, void* buffer, size_t* size) {
+  if (slot < 0 || slot >= NUM_SLOTS) return;
+  ActivePeripheral_t& ap = g_active_peripherals.at(static_cast<size_t>(slot));
+  if (ap.api && ap.api->save_state) {
+    ap.api->save_state(ap.instance, buffer, size);
+  } else if (size) {
+    *size = 0;
+  }
+}
+
+void Peripheral_LoadState(int slot, const void* buffer, size_t size) {
+  if (slot < 0 || slot >= NUM_SLOTS) return;
+  ActivePeripheral_t& ap = g_active_peripherals.at(static_cast<size_t>(slot));
+  if (ap.api && ap.api->load_state) {
+    ap.api->load_state(ap.instance, buffer, size);
+  }
 }

@@ -68,9 +68,14 @@ Peripheral_t g_printer_peripheral = {
     Printer_ABI_Reset,
     Printer_ABI_Shutdown,
     Printer_ABI_Think,
+    nullptr, // on_vblank
     nullptr, // save_state
     nullptr  // load_state
 };
+
+#ifdef BUILD_SHARED_PERIPHERAL
+EXPORT_PERIPHERAL(g_printer_peripheral)
+#endif
 
 static auto PrintStatus(void* instance, uint16_t, uint16_t, uint8_t, uint8_t, uint32_t) -> uint8_t {
   (void)instance;

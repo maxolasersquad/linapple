@@ -63,6 +63,7 @@ static Peripheral_t g_dummy_peripheral = {
     Dummy_Reset,
     Dummy_Shutdown,
     nullptr, // think
+    nullptr, // on_vblank
     nullptr, // save
     nullptr  // load
 };
