@@ -1,6 +1,7 @@
 #include "core/Common.h"
 #include <cstdio>
 #include <cstring>
+#include <unistd.h>
 #include "apple2/SaveState.h"
 #include "apple2/Structs.h"
 #include "apple2/CPU.h"
@@ -55,7 +56,7 @@ void Snapshot_SetFilename(const char *pszFilename) {
   if (pszFilename && *pszFilename) {
     strcpy(g_szSaveStateFilename, pszFilename);
   } else {
-    strcpy(g_szSaveStateFilename, DEFAULT_SNAPSHOT_NAME);
+    g_szSaveStateFilename[0] = '\0';
   }
 }
 
@@ -196,13 +197,18 @@ void Snapshot_SaveState() {
       }
   }
 
-  FilePtr hFile(fopen(g_szSaveStateFilename, "wb"), fclose);
+  const char* pszFilename = g_szSaveStateFilename;
+  if (pszFilename[0] == '\0') {
+      pszFilename = DEFAULT_SNAPSHOT_NAME;
+  }
+
+  FilePtr hFile(fopen(pszFilename, "wb"), fclose);
 
   if (hFile) {
     fwrite(pSS.get(), 1, sizeof(APPLEWIN_SNAPSHOT), hFile.get());
-    Logger::Info("Saved state to: %s\n", g_szSaveStateFilename);
+    Logger::Info("Saved state to: %s\n", pszFilename);
   } else {
-    Logger::Error("Failed to open save state file for writing: %s\n", g_szSaveStateFilename);
+    Logger::Error("Failed to open save state file for writing: %s\n", pszFilename);
   }
 }
 
@@ -213,10 +219,15 @@ void Snapshot_Startup() {
     return;
   }
 
-  // If we have a filename, always try to load it. 
-  // If not, only load if Save State On Exit is enabled (uses default filename).
-  if (g_szSaveStateFilename[0] != '\0' || g_bSaveStateOnExit) {
+  if (g_szSaveStateFilename[0] != '\0') {
+    // Explicit filename provided (e.g. from CLI)
     Snapshot_LoadState();
+  } else if (g_bSaveStateOnExit) {
+    // Automatic load at startup, only if default file exists
+    if (access(DEFAULT_SNAPSHOT_NAME, F_OK) == 0) {
+      Snapshot_SetFilename(DEFAULT_SNAPSHOT_NAME);
+      Snapshot_LoadState();
+    }
   }
 
   bDone = true;
