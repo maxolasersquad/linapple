@@ -1,0 +1,221 @@
+#include "apple2/DiskLoader.h"
+#include "core/Common.h"
+#include "core/Util_Path.h"
+#include "core/Util_Text.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+#include <zlib.h>
+#include <zip.h>
+#include <strings.h>
+#include <unistd.h>
+
+// For MacBinary
+const int MACBINARY_HEADER_SIZE = 128;
+const int MACBINARY_FILENAME_MAX = 120;
+const int MACBINARY_MAGIC_OFFSET1 = 0x7A;
+const int MACBINARY_MAGIC_OFFSET2 = 0x7B;
+const uint8_t MACBINARY_MAGIC_VALUE = 0x81;
+
+static std::vector<DiskFormatDriver_t*> g_drivers;
+
+// Prototypes for built-in drivers from DiskImage.cpp (will be refactored)
+extern DiskFormatDriver_t g_driver_woz;
+extern DiskFormatDriver_t g_driver_iie;
+extern DiskFormatDriver_t g_driver_nib;
+extern DiskFormatDriver_t g_driver_nb2;
+extern DiskFormatDriver_t g_driver_do;
+extern DiskFormatDriver_t g_driver_po;
+extern DiskFormatDriver_t g_driver_prg;
+extern DiskFormatDriver_t g_driver_apl;
+
+void DiskLoader_Init() {
+  g_drivers.clear();
+  // Register in order of priority: Definitive first, heuristic last.
+  DiskLoader_Register(&g_driver_woz);
+  DiskLoader_Register(&g_driver_iie);
+  DiskLoader_Register(&g_driver_nib);
+  DiskLoader_Register(&g_driver_nb2);
+  DiskLoader_Register(&g_driver_do);
+  DiskLoader_Register(&g_driver_po);
+  DiskLoader_Register(&g_driver_prg);
+  DiskLoader_Register(&g_driver_apl);
+}
+
+void DiskLoader_Shutdown() {
+  g_drivers.clear();
+}
+
+void DiskLoader_Register(DiskFormatDriver_t* driver) {
+  if (driver) {
+    g_drivers.push_back(driver);
+  }
+}
+
+static bool DiskUnGzip(const char* gzname, const char* outname) {
+  gzFile gzF = gzopen(gzname, "rb");
+  if (!gzF) return false;
+
+  FILE* dskF = fopen(outname, "wb");
+  if (!dskF) {
+    gzclose(gzF);
+    return false;
+  }
+
+  char buffer[8192];
+  int len = 0;
+  while ((len = gzread(gzF, buffer, sizeof(buffer))) > 0) {
+    fwrite(buffer, 1, static_cast<size_t>(len), dskF);
+  }
+  gzclose(gzF);
+  fclose(dskF);
+  return true;
+}
+
+static bool DiskUnZip(const char* zipname, const char* outname) {
+  int err = 0;
+  zip* arch = zip_open(zipname, 0, &err);
+  if (!arch) return false;
+
+  zip_file* zf = zip_fopen_index(arch, 0, 0);
+  if (!zf) {
+    zip_close(arch);
+    return false;
+  }
+
+  FILE* dskF = fopen(outname, "wb");
+  if (!dskF) {
+    zip_fclose(zf);
+    zip_close(arch);
+    return false;
+  }
+
+  char buffer[8192];
+  zip_int64_t len = 0;
+  while ((len = zip_fread(zf, buffer, sizeof(buffer))) > 0) {
+    fwrite(buffer, 1, static_cast<size_t>(len), dskF);
+  }
+  zip_fclose(zf);
+  zip_close(arch);
+  fclose(dskF);
+  return true;
+}
+
+static bool IsMacBinary(const uint8_t* header, size_t size) {
+  return (size >= MACBINARY_HEADER_SIZE &&
+          header[0] == 0 &&
+          header[1] > 0 && header[1] <= MACBINARY_FILENAME_MAX &&
+          header[header[1] + 2] == 0 &&
+          header[MACBINARY_MAGIC_OFFSET1] == MACBINARY_MAGIC_VALUE &&
+          header[MACBINARY_MAGIC_OFFSET2] == MACBINARY_MAGIC_VALUE);
+}
+
+DiskError_e DiskLoader_Open(const char* filename, bool bCreateIfNecessary,
+                            bool* pWriteProtected,
+                            DiskFormatDriver_t** out_driver,
+                            void** out_instance) {
+  if (!filename || !out_driver || !out_instance) return DISK_ERR_IO;
+
+  const char* load_path = filename;
+  char temp_path[PATH_MAX_LEN] = {0};
+  bool is_temporary = false;
+
+  size_t name_len = strlen(filename);
+  if (name_len > 3 && strcasecmp(filename + name_len - 3, ".gz") == 0) {
+    // Better use mkstemp if possible
+    // For now use a simpler approach similar to Disk.cpp but safer
+    static int temp_counter = 0;
+    snprintf(temp_path, sizeof(temp_path), "/tmp/linapple_%d_drive%d.dsk", getpid(), temp_counter++ % 2);
+    if (DiskUnGzip(filename, temp_path)) {
+      load_path = temp_path;
+      is_temporary = true;
+      if (pWriteProtected) *pWriteProtected = true;
+    }
+  } else if (name_len > 4 && strcasecmp(filename + name_len - 4, ".zip") == 0) {
+    static int temp_counter = 0;
+    snprintf(temp_path, sizeof(temp_path), "/tmp/linapple_%d_drive%d.dsk", getpid(), temp_counter++ % 2);
+    if (DiskUnZip(filename, temp_path)) {
+      load_path = temp_path;
+      is_temporary = true;
+      if (pWriteProtected) *pWriteProtected = true;
+    }
+  }
+
+  FILE* f = fopen(load_path, "rb");
+  if (!f) {
+    if (bCreateIfNecessary && !is_temporary) {
+      f = fopen(load_path, "wb");
+      if (f) {
+        fclose(f);
+        f = fopen(load_path, "rb");
+      }
+    }
+    if (!f) return DISK_ERR_FILE_NOT_FOUND;
+  }
+
+  fseek(f, 0, SEEK_END);
+  uint32_t file_size = static_cast<uint32_t>(ftell(f));
+  fseek(f, 0, SEEK_SET);
+
+  uint8_t header[4096];
+  size_t header_read = fread(header, 1, sizeof(header), f);
+  fclose(f);
+
+  uint32_t file_offset = 0;
+  if (IsMacBinary(header, header_read)) {
+    file_offset = MACBINARY_HEADER_SIZE;
+  }
+
+  char ext_hint[16] = {0};
+  const char* dot = strrchr(filename, '.');
+  if (dot) {
+    Util_SafeStrCpy(ext_hint, dot, sizeof(ext_hint));
+    for (char* p = ext_hint; *p; ++p) *p = static_cast<char>(tolower(static_cast<uint8_t>(*p)));
+  }
+
+  DiskFormatDriver_t* best_driver = nullptr;
+  DiskFormatDriver_t* possible_driver = nullptr;
+
+  const uint8_t* probe_ptr = header + file_offset;
+  size_t probe_size = (header_read > file_offset) ? (header_read - file_offset) : 0;
+
+  for (auto* driver : g_drivers) {
+    DiskProbe_e result = driver->probe(probe_ptr, probe_size, file_size - file_offset, ext_hint);
+    if (result == DISK_PROBE_DEFINITE) {
+      best_driver = driver;
+      break;
+    } else if (result == DISK_PROBE_POSSIBLE && !possible_driver) {
+      possible_driver = driver;
+    }
+  }
+
+  if (!best_driver) best_driver = possible_driver;
+
+  if (best_driver) {
+    bool os_readonly = false;
+    if (pWriteProtected && !*pWriteProtected) {
+       FILE* test = fopen(load_path, "r+b");
+       if (test) {
+         fclose(test);
+       } else {
+         os_readonly = true;
+       }
+    } else {
+       os_readonly = true;
+    }
+
+    DiskError_e err = best_driver->open(load_path, file_offset, os_readonly, out_instance);
+    if (err == DISK_ERR_NONE) {
+      *out_driver = best_driver;
+      if (pWriteProtected) {
+        *pWriteProtected = os_readonly || best_driver->is_write_protected(*out_instance);
+      }
+      return DISK_ERR_NONE;
+    }
+    return err;
+  }
+
+  return DISK_ERR_UNSUPPORTED_FORMAT;
+}

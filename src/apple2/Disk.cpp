@@ -54,6 +54,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "core/Util_Path.h"
 #include "core/Registry.h"
 #include "core/LinAppleCore.h"
+#include "apple2/DiskLoader.h"
+#include <zlib.h>
+#include <zip.h>
 extern void Linapple_UpdateTitle(const char* title);
 extern void FrameRefreshStatus(int);
 
@@ -368,9 +371,10 @@ static auto DiskControlStepper(uint16_t, uint16_t address, uint8_t, uint8_t, uin
 
 void DiskDestroy()
 {
+  DiskLoader_Shutdown();
   RemoveDisk(0);
   RemoveDisk(1);
-  unlink("drive0.dsk");  // delete temporary un-gzipped (unzipped) images
+  unlink("drive0.dsk");
   unlink("drive1.dsk");
 }
 
@@ -418,107 +422,31 @@ auto DiskGetName(int drive) -> const char*
 
 void DiskInitialize()
 {
+  DiskLoader_Init();
   int loop = DRIVES;
   while (loop--) {
     memset(&g_aFloppyDisk[loop], 0, sizeof(Disk_t));
   }
 }
 
-// Unzip .gz file to drive0.dsk or drive1.dsk (set in fname) into current directory
-auto DiskUnGzip(char *gzname, char *fname) -> bool
-{
-  #define GZBUF  4096
-  gzFile gzF = nullptr;
-  FilePtr dskF(nullptr, fclose);
-  int len = 0;
-  char gzbuf[GZBUF];  // buffer for copied data
-  if ((gzF = gzopen(gzname, "rb")) == nullptr) {
-    return false;
-  }
-  dskF.reset(fopen(fname, "wb"));
-  if (!dskF) {
-    gzclose(gzF);
-    return false;
-  }
-
-  while (!gzeof(gzF)) {
-    len = gzread(gzF, gzbuf, GZBUF);
-    fwrite(gzbuf, 1, len, dskF.get());
-  }
-  gzclose(gzF);
-  return true;
-}
-
-// Unzip .zip file to drive0.dsk or drive1.dsk (set in fname) into current directory
-auto DiskUnZip(char *gzname, char *fname) -> bool
-{
-  #define ZIPBUF  4096
-  struct zip *arch = nullptr;
-  struct zip_file *zip_f = nullptr;
-  FilePtr dskF(nullptr, fclose);
-  int len = 0;
-  char zipbuf[ZIPBUF];  // buffer for copied data
-  // open zip archive
-  if ((arch = zip_open(gzname, 0, nullptr)) == nullptr) {
-    return false;
-  }
-  dskF.reset(fopen(fname, "wb"));
-  if (!dskF) {
-    zip_close(arch);
-    return false;
-  }
-  // try to open first file in zip archive
-  if ((zip_f = zip_fopen_index(arch, 0, 0)) == nullptr) {
-    zip_close(arch);
-    return false;
-  }
-  // read entire file into another file
-  while ((len = zip_fread(zip_f, zipbuf, ZIPBUF)) > 0) {
-    fwrite(zipbuf, 1, len, dskF.get());
-  }
-  zip_fclose(zip_f);
-  zip_close(arch);
-  return true;
-}
-
 auto DiskInsert(int drive, const char* imageFileName, bool writeProtected, bool createIfNecessary) -> int
 {
   Disk_t *fptr = &g_aFloppyDisk[drive];
   char s_title[MAX_DISK_IMAGE_NAME + 32];
-  char *tmp = const_cast<char *>(imageFileName);
-  char tempDisk[12];
+  const char *tmp;
 
   if (fptr->imagehandle) {
     RemoveDisk(drive);
   }
   memset(fptr, 0, sizeof(Disk_t));
 
-  // Let us deal with .gz files
-  int lf = strlen(imageFileName);
-  if (lf > 3 && imageFileName[lf - 1] == 'z' && imageFileName[lf - 2] == 'g' && imageFileName[lf - 3] == '.') {
-    snprintf(tempDisk, 12, "drive%d.dsk", drive);
-    if (DiskUnGzip(const_cast<char *>(imageFileName), tempDisk)) {
-      writeProtected = true;
-      createIfNecessary = false;
-      tmp = tempDisk;
-    }
-  } else if (lf > 4 && imageFileName[lf - 1] == 'p' && imageFileName[lf - 2] == 'i' && imageFileName[lf - 3] == 'z' &&
-             imageFileName[lf - 4] == '.') {
-    snprintf(tempDisk, 12, "drive%d.dsk", drive);
-    if (DiskUnZip(const_cast<char *>(imageFileName), tempDisk)) {
-      writeProtected = true;
-      createIfNecessary = false;
-      tmp = tempDisk;
-    }
-  }
-
   fptr->writeProtected = writeProtected;
-  int error = ImageOpen(tmp, &fptr->imagehandle, &fptr->writeProtected, createIfNecessary);
+  int error = ImageOpen(imageFileName, &fptr->imagehandle, &fptr->writeProtected, createIfNecessary);
   if (error == IMAGE_ERROR_NONE) {
     tmp = GetImageTitle(imageFileName, fptr);
     snprintf(s_title, MAX_DISK_IMAGE_NAME + 32, "%.*s - %.*s", static_cast<int>(strlen(g_pAppTitle)), g_pAppTitle, static_cast<int>(strlen(tmp)), tmp);
     if (drive == 0) {
-      Linapple_UpdateTitle(s_title);// change caption just for drive 0 (leading)
+      Linapple_UpdateTitle(s_title);
     }
     printf("Disk is inserted. Full name = %s\n", imageFileName);
   } else {

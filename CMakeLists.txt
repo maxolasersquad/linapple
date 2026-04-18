@@ -159,6 +159,7 @@ set(SOURCES_A2
     src/apple2/CPU.cpp
     src/apple2/DiskGCR.cpp
     src/apple2/DiskImage.cpp
+    src/apple2/DiskLoader.cpp
     src/apple2/Joystick.cpp
     src/apple2/Keyboard.cpp
     src/apple2/Memory.cpp
