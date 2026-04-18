@@ -12,6 +12,7 @@
 #include <iostream>
 #include <getopt.h>
 #include <cstring>
+#include <cstdlib>
 
 void VideoCallback(const uint32_t* pixels, int width, int height, int pitch) {
     (void)pixels; (void)width; (void)height; (void)pitch;
@@ -28,6 +29,7 @@ void TitleCallback(const char* title) {
 auto main(int argc, char* argv[]) -> int {
     static struct option long_options[] = {
         {"test-cpu", required_argument, nullptr, 't'},
+        {"test-trap", required_argument, nullptr, 'X'},
         {"test-6502", no_argument, nullptr, '6'},
         {"test-65c02", no_argument, nullptr, 'C'},
         {"boot", no_argument, nullptr, 'b'},
@@ -43,18 +45,23 @@ auto main(int argc, char* argv[]) -> int {
     const char* disk2 = nullptr;
     const char* hardwareName = nullptr;
     const char* szConfigurationFile = nullptr;
+    const char* cpuTestFile = nullptr;
+    uint16_t cpuTestTrap = 0x336D; // Default for NMOS
     bool listHardware = false;
 
     int c = 0;
     int option_index = 0;
-    while ((c = getopt_long(argc, argv, "t:b6C1:2:c:", long_options, &option_index)) != -1) {
+    while ((c = getopt_long(argc, argv, "t:b6C1:2:c:X:", long_options, &option_index)) != -1) {
         switch (c) {
             case 'c':
                 szConfigurationFile = optarg;
                 break;
             case 't':
-                Linapple_CpuTest(optarg);
-                return 0;
+                cpuTestFile = optarg;
+                break;
+            case 'X':
+                cpuTestTrap = static_cast<uint16_t>(strtol(optarg, nullptr, 0));
+                break;
             case '6':
                 g_Apple2Type = A2TYPE_APPLE2PLUS;
                 break;
@@ -76,6 +83,11 @@ auto main(int argc, char* argv[]) -> int {
                 hardwareName = optarg;
                 break;
         }
+    }
+
+    if (cpuTestFile) {
+        Linapple_CpuTest(cpuTestFile, cpuTestTrap);
+        return 0;
     }
 
     if (listHardware) {
@@ -147,16 +159,12 @@ auto main(int argc, char* argv[]) -> int {
     // Simulate 60 frames (1 second of emulation)
     for (int i = 0; i < 60; ++i) {
         Linapple_RunFrame(17030);
-
-        if (i == 10) {
-            Linapple_SetKeyState('H', true);
-            Linapple_RunFrame(100);
-            Linapple_SetKeyState('H', false);
-        }
     }
 
     Snapshot_Shutdown();
     Linapple_Shutdown();
+
     std::cout << "Headless execution complete." << std::endl;
+
     return 0;
 }

@@ -145,6 +145,9 @@ typedef struct {
 
 const uint32_t NIBBLES_PER_TRACK = 0x1A00;
 
+// DEPRECATED: SS_CARD_DISK2 and DISK2_Unit are legacy AppleWin snapshot structures.
+// They will be removed in #254. Peripherals should now use their own private
+// state serialization through the save_state/load_state ABI.
 typedef struct {
   char szFileName[PATH_MAX_LEN];
   int track;

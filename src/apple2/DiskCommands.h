@@ -48,21 +48,25 @@ enum {
   DISK_STATUS_PATH_MAX = 512   /* absolute path; silently truncated if longer */
 };
 
+#pragma pack(push, 1)
+
 /* sizeof(DiskInsertCmd_t) == 512; enforced by static_assert in the implementation */
 typedef struct {
-  DiskDrive_e drive;
+  int32_t     drive;                       /* DiskDrive_e */
   char        path[DISK_INSERT_PATH_MAX];  /* absolute path, null-terminated */
-  bool        write_protected;
-  bool        create_if_necessary;
+  uint8_t     write_protected;
+  uint8_t     create_if_necessary;
+  uint8_t     reserved[2];                 /* explicit padding for 512-byte size */
 } DiskInsertCmd_t;
 
 typedef struct {
-  DiskDrive_e drive;
+  int32_t     drive;                       /* DiskDrive_e */
 } DiskEjectCmd_t;
 
 typedef struct {
-  DiskDrive_e drive;
-  bool        write_protected;
+  int32_t     drive;                       /* DiskDrive_e */
+  uint8_t     write_protected;
+  uint8_t     reserved[3];                 /* padding to 4-byte boundary */
 } DiskSetProtectCmd_t;
 
 /*
@@ -71,22 +75,24 @@ typedef struct {
  * All char fields are null-terminated; paths are silently truncated to fit.
  */
 typedef struct {
-  bool        drive0_loaded;
-  bool        drive0_spinning;
-  bool        drive0_writing;
-  bool        drive0_write_protected;
-  DiskError_e drive0_last_error;
+  int32_t     drive0_last_error;           /* DiskError_e */
+  uint8_t     drive0_loaded;
+  uint8_t     drive0_spinning;
+  uint8_t     drive0_writing;
+  uint8_t     drive0_write_protected;
   char        drive0_name[DISK_STATUS_NAME_MAX];
   char        drive0_full_path[DISK_STATUS_PATH_MAX];
 
-  bool        drive1_loaded;
-  bool        drive1_spinning;
-  bool        drive1_writing;
-  bool        drive1_write_protected;
-  DiskError_e drive1_last_error;
+  int32_t     drive1_last_error;           /* DiskError_e */
+  uint8_t     drive1_loaded;
+  uint8_t     drive1_spinning;
+  uint8_t     drive1_writing;
+  uint8_t     drive1_write_protected;
   char        drive1_name[DISK_STATUS_NAME_MAX];
   char        drive1_full_path[DISK_STATUS_PATH_MAX];
 } DiskStatus_t;
+
+#pragma pack(pop)
 
 // NOLINTEND(modernize-deprecated-headers,modernize-use-using,cppcoreguidelines-pro-type-member-init)
 

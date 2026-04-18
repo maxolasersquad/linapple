@@ -18,6 +18,7 @@
 #include <thread>
 #include <unistd.h>
 #include <climits>
+#include <vector>
 
 namespace {
 constexpr int SL6 = 6;
@@ -40,7 +41,6 @@ TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
     auto copy_fix = [](const char* src_p, const char* dst_p, size_t size) {
       FilePtr src(fopen(src_p, "rb"), fclose);
       if (!src) {
-          // Fallback if running from a different relative path
           std::string alt = "tests/fixtures/";
           alt += (strstr(src_p, ".woz") ? "minimal.woz" : "minimal.dsk");
           src.reset(fopen(alt.c_str(), "rb"));
@@ -68,16 +68,22 @@ TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
     Peripheral_Command(SL6, DISK_CMD_INSERT, &cmd, sizeof(cmd));
     Peripheral_Manager_Think(0);
     Peripheral_Query(SL6, DISK_CMD_GET_STATUS, &status, &size);
-    CHECK(status.drive0_write_protected == true);
+    CHECK(status.drive0_loaded != 0);
+    CHECK(strstr(status.drive0_full_path, "user_prot.dsk") != nullptr);
+    CHECK(status.drive0_write_protected != 0);
 
-    // Layer 2: OS Read-Only
-    chmod(f_os, 0444); 
-    Util_SafeStrCpy(cmd.path, f_os, DISK_INSERT_PATH_MAX);
-    cmd.write_protected = false;
-    Peripheral_Command(SL6, DISK_CMD_INSERT, &cmd, sizeof(cmd));
-    Peripheral_Manager_Think(0);
-    Peripheral_Query(SL6, DISK_CMD_GET_STATUS, &status, &size);
-    CHECK(status.drive0_write_protected == true); 
+    // Layer 2: OS Read-Only (Only verifiable if not running as root)
+    if (getuid() != 0) {
+        chmod(f_os, 0444); 
+        Util_SafeStrCpy(cmd.path, f_os, DISK_INSERT_PATH_MAX);
+        cmd.write_protected = false;
+        Peripheral_Command(SL6, DISK_CMD_INSERT, &cmd, sizeof(cmd));
+        Peripheral_Manager_Think(0);
+        Peripheral_Query(SL6, DISK_CMD_GET_STATUS, &status, &size);
+        CHECK(status.drive0_loaded != 0);
+        CHECK(strstr(status.drive0_full_path, "os_prot.dsk") != nullptr);
+        CHECK(status.drive0_write_protected != 0); 
+    }
     
     // Layer 1: Format/Driver Capability (WOZ 2 currently has no write cap)
     Util_SafeStrCpy(cmd.path, f_format, DISK_INSERT_PATH_MAX);
@@ -85,7 +91,9 @@ TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
     Peripheral_Command(SL6, DISK_CMD_INSERT, &cmd, sizeof(cmd));
     Peripheral_Manager_Think(0);
     Peripheral_Query(SL6, DISK_CMD_GET_STATUS, &status, &size);
-    CHECK(status.drive0_write_protected == true); 
+    CHECK(status.drive0_loaded != 0);
+    CHECK(strstr(status.drive0_full_path, "format_prot.woz") != nullptr);
+    CHECK(status.drive0_write_protected != 0); 
 
     // All clear: Writable
     Util_SafeStrCpy(cmd.path, f_rw, DISK_INSERT_PATH_MAX);
@@ -93,7 +101,9 @@ TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
     Peripheral_Command(SL6, DISK_CMD_INSERT, &cmd, sizeof(cmd));
     Peripheral_Manager_Think(0);
     Peripheral_Query(SL6, DISK_CMD_GET_STATUS, &status, &size);
-    CHECK(status.drive0_write_protected == false);
+    CHECK(status.drive0_loaded != 0);
+    CHECK(strstr(status.drive0_full_path, "rw.dsk") != nullptr);
+    CHECK(status.drive0_write_protected == 0);
 
     remove(f_user);
     remove(f_os);

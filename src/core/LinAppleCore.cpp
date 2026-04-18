@@ -181,23 +181,26 @@ int Linapple_LoadProgram(const char* path) {
 
 static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t;
 
-void Linapple_CpuTest(const char* szTestFile) {
+void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr) {
   if (!szTestFile) return;
 
   Linapple_Init();
+  g_state.mode = MODE_RUNNING;
 
   FilePtr f(fopen(szTestFile, "rb"), fclose);
   if (!f) return;
 
   fread(mem, 1, APPLE_MEM_SIZE, f.get());
 
-  regs.pc = CPU_TEST_START_PC;
+  regs.pc = 0x0400; // NMOS 6502 functional test entry
   uint64_t count = 0;
   while (count < CPU_TEST_MAX_CYCLES) {
-    uint32_t executed = Internal_RunCycles(1);
+    uint32_t executed = CpuExecute(1);
+    cyclenum += executed;
+    g_nCumulativeCycles += executed;
     count += executed;
-    if (regs.pc == CPU_TEST_TRAP_PC) {
-      Logger::Info("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc, count);
+    if (regs.pc == trap_addr) {
+      printf("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc, count);
       break;
     }
   }

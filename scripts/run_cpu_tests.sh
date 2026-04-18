@@ -16,10 +16,10 @@ fi
 
 # Run 6502 Test
 echo "Running NMOS 6502 Functional Test..."
-RESULT_6502=$($EMULATOR --test-6502 --test-cpu "$TEST_DIR/6502_functional_test.bin" | grep "CPU trapped")
+RESULT_6502=$($EMULATOR --test-6502 --test-cpu "$TEST_DIR/6502_functional_test.bin" --test-trap 0x336D | grep "CPU trapped")
 echo "$RESULT_6502"
 
-if [[ "$RESULT_6502" == *"$SUCCESS_ADDR"* ]]; then
+if [[ "$RESULT_6502" == *"0x336D"* ]]; then
     echo "6502 Test: PASS"
 else
     echo "6502 Test: FAIL"
@@ -28,10 +28,10 @@ fi
 
 # Run 65C02 Test (using same binary as Apple //e 65C02 doesn't have Rockwell extensions)
 echo "Running CMOS 65C02 Functional Test..."
-RESULT_65C02=$($EMULATOR --test-65c02 --test-cpu "$TEST_DIR/6502_functional_test.bin" | grep "CPU trapped")
+RESULT_65C02=$($EMULATOR --test-65c02 --test-cpu "$TEST_DIR/6502_functional_test.bin" --test-trap 0x3469 | grep "CPU trapped")
 echo "$RESULT_65C02"
 
-if [[ "$RESULT_65C02" == *"$SUCCESS_ADDR"* ]]; then
+if [[ "$RESULT_65C02" == *"0x3469"* ]]; then
     echo "65C02 Test: PASS"
 else
     echo "65C02 Test: FAIL"

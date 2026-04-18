@@ -104,8 +104,6 @@ DiskError_e DiskLoader_Open(const char* filename, bool bCreateIfNecessary,
 
   size_t name_len = strlen(filename);
   if (name_len > 3 && strcasecmp(filename + name_len - 3, ".gz") == 0) {
-    // Better use mkstemp if possible
-    // For now use a simpler approach similar to Disk.cpp but safer
     static int temp_counter = 0;
     snprintf(temp_path, sizeof(temp_path), "/tmp/linapple_%d_drive%d.dsk", getpid(), temp_counter++ % 2);
     unlink(temp_path);

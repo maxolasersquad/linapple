@@ -38,7 +38,7 @@ void Linapple_Shutdown();
 /**
  * @brief Run a headless CPU test from a file.
  */
-void Linapple_CpuTest(const char* szTestFile);
+void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr);
 
 /**
  * @brief Get the number of milliseconds since the emulator started.

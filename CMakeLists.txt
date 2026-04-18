@@ -364,8 +364,16 @@ add_test(NAME test-peripheral-abi COMMAND test-peripheral-abi)
 add_executable(test-disk-abi
     tests/test_disk_abi.cpp
     tests/test_disk_abi_c.c
+    ${SOURCES_CORE}
+    ${SOURCES_A2}
+    ${SOURCES_DBG}
+    src/frontends/headless/Stubs.cpp
+    src/frontends/headless/Headless_Path.cpp
 )
-target_include_directories(test-disk-abi PRIVATE src ${DOCTEST_INCLUDE_DIR})
+add_dependencies(test-disk-abi generate_xpms)
+target_include_directories(test-disk-abi PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-disk-abi PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-disk-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-disk-abi COMMAND test-disk-abi)
 
 # Test Disk GCR
@@ -419,7 +427,7 @@ target_link_libraries(test-program-loader PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRA
 add_test(NAME test-program-loader COMMAND test-program-loader)
 
 # Integration Tests
-foreach(T disk_config;disk_motor;disk_prot;disk_woz)
+foreach(T disk_config;disk_motor;disk_prot;disk_woz;disk_savestate)
     string(REPLACE "_" "-" TEST_NAME ${T})
     add_executable(test-${TEST_NAME}
         tests/test_${T}.cpp
