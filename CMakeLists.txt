@@ -157,6 +157,7 @@ set(SOURCES_CORE
 set(SOURCES_A2
     src/apple2/6821.cpp
     src/apple2/CPU.cpp
+    src/apple2/DiskGCR.cpp
     src/apple2/DiskImage.cpp
     src/apple2/Joystick.cpp
     src/apple2/Keyboard.cpp
@@ -358,6 +359,14 @@ add_executable(test-disk-abi
 )
 target_include_directories(test-disk-abi PRIVATE src ${DOCTEST_INCLUDE_DIR})
 add_test(NAME test-disk-abi COMMAND test-disk-abi)
+
+# Test Disk GCR
+add_executable(test-disk-gcr
+    tests/test_disk_gcr.cpp
+    src/apple2/DiskGCR.cpp
+)
+target_include_directories(test-disk-gcr PRIVATE src ${DOCTEST_INCLUDE_DIR})
+add_test(NAME test-disk-gcr COMMAND test-disk-gcr)
 
 # CPU tests (using the built linapple binary)
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")
