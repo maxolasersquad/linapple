@@ -45,6 +45,13 @@ void Linapple_CpuTest(const char* szTestFile);
  */
 auto Linapple_GetTicks() -> uint32_t;
 
+/**
+ * @brief Attempt to load an APL or PRG program image directly into emulated RAM.
+ *
+ * @param path Path to the program file.
+ * @return 0 on success, non-zero if not a supported program or load failed.
+ */
+int Linapple_LoadProgram(const char* path);
 
 // --- Peripheral Management ---
 

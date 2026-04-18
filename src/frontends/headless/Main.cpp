@@ -1,4 +1,5 @@
 #include "core/LinAppleCore.h"
+#include "core/ProgramLoader.h"
 #include "core/Peripheral_Internal.h"
 #include "core/Common.h"
 #include "core/Common_Globals.h"
@@ -131,10 +132,14 @@ auto main(int argc, char* argv[]) -> int {
     Linapple_SetTitleCallback(TitleCallback);
 
     if (disk1) {
-        DiskInsert(0, disk1, false, false);
+        if (Linapple_LoadProgram(disk1) == PROGRAM_LOAD_NOT_A_PROGRAM) {
+            DiskInsert(0, disk1, false, false);
+        }
     }
     if (disk2) {
-        DiskInsert(1, disk2, false, false);
+        if (Linapple_LoadProgram(disk2) == PROGRAM_LOAD_NOT_A_PROGRAM) {
+            DiskInsert(1, disk2, false, false);
+        }
     }
 
     g_state.mode = MODE_RUNNING;

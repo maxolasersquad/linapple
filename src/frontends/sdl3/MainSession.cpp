@@ -17,6 +17,7 @@
 #include "apple2/Disk.h"
 #include "apple2/SaveState.h"
 #include "core/LinAppleCore.h"
+#include "core/ProgramLoader.h"
 #include "core/Util_Path.h"
 
 using Logger::Error;
@@ -110,8 +111,16 @@ auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
   }
   Snapshot_Startup();
 
-  if (szImageName_drive1) DiskInsert(DRIVE_1, szImageName_drive1, false, false);
-  if (szImageName_drive2) DiskInsert(DRIVE_2, szImageName_drive2, false, false);
+  if (szImageName_drive1) {
+    if (Linapple_LoadProgram(szImageName_drive1) == PROGRAM_LOAD_NOT_A_PROGRAM) {
+      DiskInsert(DRIVE_1, szImageName_drive1, false, false);
+    }
+  }
+  if (szImageName_drive2) {
+    if (Linapple_LoadProgram(szImageName_drive2) == PROGRAM_LOAD_NOT_A_PROGRAM) {
+      DiskInsert(DRIVE_2, szImageName_drive2, false, false);
+    }
+  }
 
   if (bBoot) DiskBoot();
 

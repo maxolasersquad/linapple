@@ -147,6 +147,7 @@ set(SOURCES_CORE
     src/core/Common.cpp
     src/core/LinAppleCore.cpp
     src/core/Log.cpp
+    src/core/ProgramLoader.cpp
     src/core/Registry.cpp
     src/core/asset.cpp
     src/core/Peripheral.cpp
@@ -388,6 +389,34 @@ add_executable(test-disk-drivers
 )
 target_include_directories(test-disk-drivers PRIVATE src ${DOCTEST_INCLUDE_DIR})
 add_test(NAME test-disk-drivers COMMAND test-disk-drivers)
+
+# Test Program Loader
+add_executable(test-program-loader
+    tests/test_program_loader.cpp
+    src/core/ProgramLoader.cpp
+    src/core/Common.cpp
+    src/core/Log.cpp
+    src/apple2/Memory.cpp
+    src/apple2/CPU.cpp
+    src/apple2/Video.cpp
+    src/apple2/stretch.cpp
+    src/apple2/Harddisk.cpp
+    src/apple2/Disk.cpp
+    src/apple2/DiskImage.cpp
+    src/apple2/DiskLoader.cpp
+    src/apple2/DiskGCR.cpp
+    src/apple2/formats/DoDriver.cpp
+    src/apple2/formats/IieDriver.cpp
+    src/apple2/formats/Nb2Driver.cpp
+    src/apple2/formats/NibDriver.cpp
+    src/apple2/formats/PoDriver.cpp
+    src/apple2/formats/Woz2Driver.cpp
+    src/frontends/headless/Headless_Path.cpp
+)
+add_dependencies(test-program-loader generate_xpms)
+target_include_directories(test-program-loader PRIVATE src src/core src/apple2 ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR})
+target_link_libraries(test-program-loader PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME test-program-loader COMMAND test-program-loader)
 
 # CPU tests (using the built linapple binary)
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")

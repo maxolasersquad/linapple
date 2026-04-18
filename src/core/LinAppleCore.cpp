@@ -1,4 +1,5 @@
 #include "LinAppleCore.h"
+#include "core/ProgramLoader.h"
 #include "core/Common.h"
 #include <cstdio>
 #include <cinttypes>
@@ -187,6 +188,10 @@ void Linapple_Shutdown() {
   CpuDestroy();
   SoundCore_Destroy();
   Asset_Quit();
+}
+
+int Linapple_LoadProgram(const char* path) {
+  return static_cast<int>(ProgramLoader_TryLoad(path));
 }
 
 void Linapple_CpuTest(const char* szTestFile) {
