@@ -22,74 +22,70 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #include "core/LinAppleCore.h"
-
-#include <array>
-#include <chrono>
-#include <cinttypes>
+#include "core/ProgramLoader.h"
+#include "core/Common.h"
 #include <cstdio>
-
+#include <cinttypes>
+#include <chrono>
+#include <array>
+#include <vector>
+#include <cstring>
+#include "apple2/Keyboard.h"
+#include "apple2/Speaker.h"
+#include "apple2/Disk.h"
+#include "apple2/Mockingboard.h"
+#include "apple2/SoundCore.h"
+#include "apple2/Video.h"
+#include "apple2/Memory.h"
 #include "apple2/CPU.h"
 #include "apple2/Clock.h"
-#include "apple2/Disk.h"
-#include "apple2/Joystick.h"
-#include "apple2/Keyboard.h"
-#include "apple2/Memory.h"
-#include "apple2/Mockingboard.h"
-#include "apple2/SaveState.h"
 #include "apple2/SerialComms.h"
-#include "apple2/SoundCore.h"
-#include "apple2/Speaker.h"
-#include "apple2/Video.h"
-#include "core/Common.h"
-#include "core/ProgramLoader.h"
+#include "apple2/Joystick.h"
+#include "apple2/SaveState.h"
 #ifndef HEADLESS
 #include "Debugger/Debug.h"
 #endif
-#include "apple2/ParallelPrinter.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
+#include "apple2/ParallelPrinter.h"
 #include "core/asset.h"
+#include "core/Peripheral.h"
+#include "core/Peripheral_Internal.h"
 
-// Forward declarations for coupled frontend functions (to be decoupled in later
-// phases)
-extern void SSCFrontend_Update(struct SuperSerialCard*, uint32_t);
-extern void PrinterFrontend_Update(uint32_t);
-extern void UpdateDisplay(int);
-// Non-const globals are required for the procedural core bridge architecture.
-extern struct SuperSerialCard
-    sg_SSC;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+using Logger::Error;
+using Logger::Info;
 
-static LinappleVideoCallback g_videoCB =
-    nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-static LinappleAudioCallback g_audioCB =
-    nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-static LinappleTitleCallback g_titleCB =
-    nullptr;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+// Constants from original implementation
+const int APPLE_MEM_SIZE = 65536;
+const uint16_t CPU_TEST_START_PC = 0x0800;
+const uint16_t CPU_TEST_TRAP_PC = 0x3469; // Example trap PC
+const uint64_t CPU_TEST_MAX_CYCLES = 100000000;
+const int FULL_SPEED_DISK_ITERATIONS = 100;
 
-static uint8_t g_nRepeatKey =
-    0;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-static uint32_t g_nRepeatDelayCycles =
-    0;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-static bool g_bRepeating =
-    false;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-
+// Repetition logic
+static uint8_t g_nRepeatKey = 0;
+static uint32_t g_nRepeatDelayCycles = 0;
+static bool g_bRepeating = false;
 const uint32_t KEY_REPEAT_INITIAL_DELAY = 512000;
 const uint32_t KEY_REPEAT_RATE = 68000;
 
-const int JOYSTICK_AXIS_CENTER = 127;
-const int JOYSTICK_AXIS_RANGE = 32768;
-const int JOYSTICK_AXIS_MAX = 255;
-const int JOYSTICK_AXIS_DIVISOR = 65535;
+// Callbacks
+static LinappleVideoCallback g_videoCB = nullptr;
+static LinappleAudioCallback g_audioCB = nullptr;
+static LinappleTitleCallback g_titleCB = nullptr;
 
-const int APPLE_MEM_SIZE = 65536;
-const uint16_t CPU_TEST_START_PC = 0x0400;
-const uint16_t CPU_TEST_TRAP_PC = 0x3469;
-const uint64_t CPU_TEST_MAX_CYCLES = 100000000;
+static uint32_t s_turboStartMs = 0;
+static bool s_wasTurbo = false;
 
-const int SPKR_BUFFER_SIZE = 8192;
-const int16_t SPKR_SAMPLE_VOLUME = 0x4000;
+void Linapple_SetVideoCallback(LinappleVideoCallback cb) { g_videoCB = cb; }
+void Linapple_SetAudioCallback(LinappleAudioCallback cb) { g_audioCB = cb; }
+void Linapple_SetTitleCallback(LinappleTitleCallback cb) { g_titleCB = cb; }
 
-const int FULL_SPEED_DISK_ITERATIONS = 100;
+void Linapple_UpdateTitle(const char* title) {
+  if (g_titleCB) {
+    g_titleCB(title);
+  }
+}
 
 void Linapple_KeyboardThink(uint32_t dwCycles) {
   if (g_nRepeatKey == 0) return;
@@ -123,20 +119,18 @@ extern "C" void Linapple_SetKeyState(uint8_t apple_code, bool bDown) {
   }
 }
 
-void Linapple_SetCapsLockState(bool bEnabled) { KeybSetCapsLock(bEnabled); }
+extern "C" void Linapple_SetCapsLockState(bool bEnabled) {
+  KeybSetCapsLock(bEnabled);
+}
 
 extern "C" void Linapple_SetAppleKey(int apple_key, bool bDown) {
   JoySetRawButton(apple_key, bDown);
 }
 
-// Axis and Value are ints to maintain compatibility with the public API and
-// various frontends.
-extern "C" void Linapple_SetJoystickAxis(
-    int axis, int value) {  // NOLINT(bugprone-easily-swappable-parameters)
-  static int s_joyX = JOYSTICK_AXIS_CENTER;
-  static int s_joyY = JOYSTICK_AXIS_CENTER;
-  int joy_val = ((value + JOYSTICK_AXIS_RANGE) * JOYSTICK_AXIS_MAX) /
-                JOYSTICK_AXIS_DIVISOR;
+extern "C" void Linapple_SetJoystickAxis(int axis, int value) {
+  static int s_joyX = 127;
+  static int s_joyY = 127;
+  int joy_val = ((value + 32768) * 255) / 65535;
   if (axis == 0) {
     s_joyX = joy_val;
   } else if (axis == 1) {
@@ -148,20 +142,6 @@ extern "C" void Linapple_SetJoystickAxis(
 extern "C" void Linapple_SetJoystickButton(int button, bool down) {
   JoySetRawButton(button, down);
 }
-
-void Linapple_SetVideoCallback(LinappleVideoCallback cb) { g_videoCB = cb; }
-
-void Linapple_SetAudioCallback(LinappleAudioCallback cb) { g_audioCB = cb; }
-
-void Linapple_SetTitleCallback(LinappleTitleCallback cb) { g_titleCB = cb; }
-
-void Linapple_UpdateTitle(const char* title) {
-  if (g_titleCB) {
-    g_titleCB(title);
-  }
-}
-
-#include "core/Peripheral_Internal.h"
 
 void Linapple_Init() {
   MemPreInitialize();
@@ -182,13 +162,6 @@ void Linapple_Init() {
 
   KeybReset();
   JoyReset();
-
-  uint8_t* pCxRomPeripheral = MemGetAuxPtr(APPLE_SLOT_BEGIN);
-  (void)pCxRomPeripheral;
-
-#ifndef HEADLESS
-  DebugInitialize();
-#endif
 }
 
 void Linapple_Shutdown() {
@@ -224,10 +197,7 @@ void Linapple_CpuTest(const char* szTestFile) {
     uint32_t executed = Internal_RunCycles(1);
     count += executed;
     if (regs.pc == CPU_TEST_TRAP_PC) {
-      // C-style varargs are used by the project's established Logger utility.
-      Logger::Info("CPU trapped at 0x%04X after %" PRIu64 " cycles\n",
-                   regs.pc,  // NOLINT(cppcoreguidelines-pro-type-vararg)
-                   count);
+      Logger::Info("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc, count);
       break;
     }
   }
@@ -235,10 +205,9 @@ void Linapple_CpuTest(const char* szTestFile) {
 }
 
 auto Linapple_GetTicks() -> uint32_t {
-  static auto start_time = std::chrono::steady_clock::now();
-  auto now = std::chrono::steady_clock::now();
-  return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time)
-      .count();
+    static auto start_time = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
 }
 
 static auto ShouldRunFullSpeed() -> bool {
@@ -249,85 +218,17 @@ static auto ShouldRunFullSpeed() -> bool {
 
   bool shouldTurbo = DiskIsSpinning() && enhancedisk && !mb_active;
 
-  static bool s_wasTurbo = false;
-  static uint32_t s_turboStartMs = 0;
-
   if (shouldTurbo && !s_wasTurbo) {
     s_turboStartMs = Linapple_GetTicks();
-    // C-style varargs are used by the project's established Logger utility.
-    Logger::Perf(
-        "Full-speed disk mode engaged\n");  // NOLINT(cppcoreguidelines-pro-type-vararg)
+    Logger::Perf("Full-speed disk mode engaged\n");
   } else if (!shouldTurbo && s_wasTurbo) {
     uint32_t elapsed = Linapple_GetTicks() - s_turboStartMs;
-    // C-style varargs are used by the project's established Logger utility.
-    Logger::Perf("Full-speed disk mode disengaged after %ums\n",
-                 elapsed);  // NOLINT(cppcoreguidelines-pro-type-vararg)
+    Logger::Perf("Full-speed disk mode disengaged after %ums\n", elapsed);
   }
 
   s_wasTurbo = shouldTurbo;
   g_bFullSpeed = shouldTurbo;
   return shouldTurbo;
-}
-
-#if defined(ENABLE_PERIPHERAL_SPEAKER)
-// Global audio buffer is required for efficient sample accumulation between
-// frames.
-static std::array<int16_t, SPKR_BUFFER_SIZE>
-    g_spkrBuffer;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
-#endif
-
-void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
-  if (dwExecutedCycles == 0) return;
-
-#if defined(ENABLE_PERIPHERAL_SPEAKER)
-  static bool s_lastState = false;
-  static double s_nextSampleCycle = 0;
-  double clksPerSample = g_fCurrentCLK6502 / SPKR_SAMPLE_RATE;
-
-  std::array<SpkrEvent, MAX_SPKR_EVENTS> events{};
-  int num_events =
-      SpkrGetEvents(events.data(), static_cast<int>(events.size()));
-  int event_idx = 0;
-
-  uint64_t startCycle = g_nCumulativeCycles - dwExecutedCycles;
-  uint64_t endCycle = g_nCumulativeCycles;
-
-  if (s_nextSampleCycle < static_cast<double>(startCycle)) {
-    s_nextSampleCycle = static_cast<double>(startCycle);
-  }
-
-  int numSamples = 0;
-  while (s_nextSampleCycle < static_cast<double>(endCycle) &&
-         numSamples < (SPKR_BUFFER_SIZE - 2)) {
-    // Direct indexing is used here for performance in the hot emulation loop.
-    while (
-        event_idx < num_events &&
-        static_cast<double>(events[static_cast<size_t>(event_idx)].cycle) <=
-            s_nextSampleCycle) {  // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-      s_lastState =
-          events[static_cast<size_t>(event_idx)]
-              .state;  // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-      event_idx++;
-    }
-    int16_t val = s_lastState ? SPKR_SAMPLE_VOLUME : -SPKR_SAMPLE_VOLUME;
-    // Direct indexing is used here for performance in the hot emulation loop.
-    g_spkrBuffer[static_cast<size_t>(numSamples++)] =
-        val;  // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-    g_spkrBuffer[static_cast<size_t>(numSamples++)] =
-        val;  // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-    s_nextSampleCycle += clksPerSample;
-  }
-
-  if (numSamples > 0) {
-    if (g_audioCB) {
-      g_audioCB(g_spkrBuffer.data(), static_cast<size_t>(numSamples));
-    } else {
-      DSUploadBuffer(g_spkrBuffer.data(), numSamples);
-    }
-  }
-#else
-  (void)dwExecutedCycles;
-#endif
 }
 
 static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
@@ -342,7 +243,7 @@ static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
   VideoUpdateVbl(dwExecutedCycles);
   JoyUpdatePosition(dwExecutedCycles);
 
-  SpkrFrontend_Update(dwExecutedCycles);
+  SpkrUpdate(dwExecutedCycles);
   Linapple_KeyboardThink(dwExecutedCycles);
 
   return dwExecutedCycles;
@@ -359,6 +260,10 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
     } else {
       executed = Internal_RunCycles(cycles);
     }
+
+#if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
+    MB_EndOfVideoFrame();
+#endif
 
     if (g_videoCB && g_bFrameReady) {
       uint32_t* output = VideoGetOutputBuffer();

@@ -59,9 +59,10 @@ typedef struct DiskFormatDriver_t {
                        uint32_t file_size, const char* ext_hint);
 
   /* Called after probe() succeeds. file_offset is non-zero when a MacBinary
-   * wrapper is present. Writes an opaque instance to *out_instance. */
+   * wrapper is present. out_os_readonly is set to true if the file was
+   * opened read-only. Writes an opaque instance to *out_instance. */
   DiskError_e (*open)(const char* path, uint32_t file_offset,
-                      bool os_readonly, void** out_instance);
+                      bool* out_os_readonly, void** out_instance);
 
   /* Must not be NULL. */
   void (*close)(void* instance);

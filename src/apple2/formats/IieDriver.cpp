@@ -26,6 +26,7 @@ struct IieInstance {
   uint8_t header[IIE_HEADER_SIZE]{};
   uint8_t sector_order[SECTORS_PER_TRACK_16]{};
   uint8_t work_buffer[GCR_WORKBUF_SIZE]{};
+  bool os_readonly = false;
 
   IieInstance() = default;
   virtual ~IieInstance() {
@@ -71,14 +72,25 @@ static DiskProbe_e IieProbe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e IieOpen(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
+                           bool* out_os_readonly, void** out_instance) {
   (void)file_offset;
 
   auto* instance = new IieInstance();
-  instance->file = fopen(path, os_readonly ? "rb" : "r+b");
-  if (!instance->file) {
-    delete instance;
-    return DISK_ERR_IO;
+  instance->file = fopen(path, "r+b");
+  if (instance->file != nullptr) {
+    instance->os_readonly = false;
+  } else {
+    instance->file = fopen(path, "rb");
+    if (instance->file != nullptr) {
+      instance->os_readonly = true;
+    } else {
+      delete instance;
+      return DISK_ERR_IO;
+    }
+  }
+
+  if (out_os_readonly != nullptr) {
+    *out_os_readonly = instance->os_readonly;
   }
 
   if (fread(instance->header, 1, IIE_HEADER_SIZE, instance->file) !=

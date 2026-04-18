@@ -100,8 +100,9 @@ TEST_CASE("DiskDrivers: [DRV-04] IIE Sector Order Isolation") {
   create_iie(f2, 0x0F);  // Map all sectors to 15
 
   void *inst1 = nullptr, *inst2 = nullptr;
-  REQUIRE(g_iie_driver.open(f1, 0, true, &inst1) == DISK_ERR_NONE);
-  REQUIRE(g_iie_driver.open(f2, 0, true, &inst2) == DISK_ERR_NONE);
+  bool ro1 = false, ro2 = false;
+  REQUIRE(g_iie_driver.open(f1, 0, &ro1, &inst1) == DISK_ERR_NONE);
+  REQUIRE(g_iie_driver.open(f2, 0, &ro2, &inst2) == DISK_ERR_NONE);
 
   uint8_t b1[6656], b2[6656];
   int n1 = 0, n2 = 0;
@@ -149,7 +150,8 @@ TEST_CASE("DiskDrivers: [DRV-07] NIB Track Round-trip & Verbatim") {
   g_nib_driver.create(tmp_file);
 
   void* instance = nullptr;
-  REQUIRE(g_nib_driver.open(tmp_file, 0, false, &instance) == DISK_ERR_NONE);
+  bool os_ro = false;
+  REQUIRE(g_nib_driver.open(tmp_file, 0, &os_ro, &instance) == DISK_ERR_NONE);
 
   uint8_t original_track[6656];
   for (int i = 0; i < 6656; ++i) original_track[i] = i & 0xFF;
@@ -182,7 +184,8 @@ TEST_CASE("DiskDrivers: [DRV-08] NB2 Track Round-trip") {
   g_nb2_driver.create(tmp_file);
 
   void* instance = nullptr;
-  REQUIRE(g_nb2_driver.open(tmp_file, 0, false, &instance) == DISK_ERR_NONE);
+  bool os_ro = false;
+  REQUIRE(g_nb2_driver.open(tmp_file, 0, &os_ro, &instance) == DISK_ERR_NONE);
 
   uint8_t original_track[6384];
   for (int i = 0; i < 6384; ++i) original_track[i] = (i + 1) & 0xFF;
@@ -225,7 +228,8 @@ TEST_CASE("DiskDrivers: [DRV-10] WOZ 3.5\" Rejection") {
   fclose(f);
 
   void* instance = nullptr;
-  CHECK(g_woz2_driver.open(tmp_file, 0, true, &instance) ==
+  bool os_ro = false;
+  CHECK(g_woz2_driver.open(tmp_file, 0, &os_ro, &instance) ==
         DISK_ERR_UNSUPPORTED_FORMAT);
   remove(tmp_file);
 }
@@ -243,14 +247,15 @@ TEST_CASE("DiskDrivers: [DRV-11] WOZ Write Protect Flag") {
   };
 
   void* instance = nullptr;
+  bool os_ro = false;
 
   create_woz_wp(tmp_file, 1);
-  REQUIRE(g_woz2_driver.open(tmp_file, 0, true, &instance) == DISK_ERR_NONE);
+  REQUIRE(g_woz2_driver.open(tmp_file, 0, &os_ro, &instance) == DISK_ERR_NONE);
   CHECK(g_woz2_driver.is_write_protected(instance) == true);
   g_woz2_driver.close(instance);
 
   create_woz_wp(tmp_file, 0);
-  REQUIRE(g_woz2_driver.open(tmp_file, 0, true, &instance) == DISK_ERR_NONE);
+  REQUIRE(g_woz2_driver.open(tmp_file, 0, &os_ro, &instance) == DISK_ERR_NONE);
   CHECK(g_woz2_driver.is_write_protected(instance) == false);
   g_woz2_driver.close(instance);
 
@@ -268,7 +273,8 @@ TEST_CASE("DiskDrivers: [DRV-12] WOZ Unrecorded Track") {
   fclose(f);
 
   void* instance = nullptr;
-  REQUIRE(g_woz2_driver.open(tmp_file, 0, true, &instance) == DISK_ERR_NONE);
+  bool os_ro = false;
+  REQUIRE(g_woz2_driver.open(tmp_file, 0, &os_ro, &instance) == DISK_ERR_NONE);
 
   uint8_t buffer[6656];
   int count = 0;
@@ -291,9 +297,12 @@ TEST_CASE("DiskDrivers: [DRV-12] WOZ Unrecorded Track") {
 
 TEST_CASE("DiskDrivers: [DRV-13] WOZ Real Fixture Loading") {
   void* instance = nullptr;
-  DiskError_e err = g_woz2_driver.open("tests/fixtures/minimal.woz", 0, true, &instance);
+  bool os_ro = false;
+  DiskError_e err =
+      g_woz2_driver.open("tests/fixtures/minimal.woz", 0, &os_ro, &instance);
   if (err != DISK_ERR_NONE)
-    err = g_woz2_driver.open("../tests/fixtures/minimal.woz", 0, true, &instance);
+    err = g_woz2_driver.open("../tests/fixtures/minimal.woz", 0, &os_ro,
+                             &instance);
   REQUIRE(err == DISK_ERR_NONE);
   CHECK(g_woz2_driver.is_write_protected(instance) == false);
 
@@ -311,7 +320,8 @@ TEST_CASE("DiskDrivers: [DRV-14] DO Track Round-trip") {
   g_do_driver.create(tmp_file);
 
   void* instance = nullptr;
-  REQUIRE(g_do_driver.open(tmp_file, 0, false, &instance) == DISK_ERR_NONE);
+  bool os_ro = false;
+  REQUIRE(g_do_driver.open(tmp_file, 0, &os_ro, &instance) == DISK_ERR_NONE);
 
   uint8_t original_track[4096];
   for (int i = 0; i < 4096; ++i) original_track[i] = i & 0xFF;

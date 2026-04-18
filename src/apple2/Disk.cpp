@@ -151,6 +151,24 @@ void CheckSpinning() {
   }
 }
 
+auto DiskIsEffectivelyWriteProtected(const int iDrive) -> bool {
+  if (iDrive < 0 || iDrive >= DRIVES) return false;
+  Disk_t* fptr = &g_aFloppyDisk[iDrive];
+
+  // User toggle (Layer 3) always wins if set to TRUE.
+  if (fptr->user_write_protected) return true;
+
+  // Otherwise, it's protected if either OS (Layer 2) or Format (Layer 1) says so.
+  if (fptr->os_readonly) return true;
+
+  if (fptr->driver) {
+    if (!(fptr->driver->capabilities & DRIVER_CAP_WRITE)) return true;
+    return fptr->driver->is_write_protected(fptr->driver_instance);
+  }
+
+  return false;
+}
+
 auto GetDriveLightStatus(const int iDrive) -> Disk_Status_e {
   if (IsDriveValid(iDrive)) {
     Disk_t* pFloppy = &g_aFloppyDisk[iDrive];
@@ -162,6 +180,9 @@ auto GetDriveLightStatus(const int iDrive) -> Disk_Status_e {
         return DISK_STATUS_READ;
       }
     } else {
+      if (pFloppy->driver && DiskIsEffectivelyWriteProtected(iDrive)) {
+        return DISK_STATUS_PROT;
+      }
       return DISK_STATUS_OFF;
     }
   }
@@ -405,8 +426,8 @@ void DiskInitialize() {
 }
 
 static auto DiskInsert_Internal(int drive, const char* imageFileName,
-                                       bool writeProtected,
-                                       bool createIfNecessary) -> DiskError_e {
+                                bool writeProtected,
+                                bool createIfNecessary) -> DiskError_e {
   Disk_t* fptr = &g_aFloppyDisk[drive];
 
   if (fptr->driver) {
@@ -415,11 +436,11 @@ static auto DiskInsert_Internal(int drive, const char* imageFileName,
   memset(fptr, 0, sizeof(Disk_t));
 
   fptr->user_write_protected = writeProtected;
+  fptr->os_readonly = false;
   DiskError_e error = DiskLoader_Open(
-      imageFileName, createIfNecessary, &fptr->user_write_protected,
+      imageFileName, createIfNecessary, &fptr->os_readonly,
       const_cast<DiskFormatDriver_t**>(&fptr->driver), &fptr->driver_instance);
   fptr->last_error = error;
-
   if (error == DISK_ERR_NONE) {
     char* tmp = GetImageTitle(imageFileName, fptr);
     char s_title[MAX_DISK_IMAGE_NAME + 32];
@@ -454,28 +475,19 @@ auto DiskIsSpinning() -> bool { return floppymotoron; }
 
 auto DiskGetProtect(const int iDrive) -> bool {
   if (IsDriveValid(iDrive)) {
-    Disk_t* pFloppy = &g_aFloppyDisk[iDrive];
-    if (pFloppy->user_write_protected || pFloppy->os_readonly) {
-      return true;
-    }
-    if (pFloppy->driver) {
-      if (!(pFloppy->driver->capabilities & DRIVER_CAP_WRITE)) return true;
-      return pFloppy->driver->is_write_protected(pFloppy->driver_instance);
-    }
+    return g_aFloppyDisk[iDrive].user_write_protected;
   }
   return false;
 }
 
 void DiskSetProtect(const int iDrive, const bool bWriteProtect) {
   if (IsDriveValid(iDrive)) {
-    Disk_t* pFloppy = &g_aFloppyDisk[iDrive];
-    pFloppy->user_write_protected = bWriteProtect;
+    g_aFloppyDisk[iDrive].user_write_protected = bWriteProtect;
     if (g_pDiskHost) {
       g_pDiskHost->NotifyStatusChanged(g_nDiskSlot);
     }
   }
 }
-
 static auto DiskReadWrite(uint16_t programcounter, uint16_t, uint8_t, uint8_t,
                           uint32_t) -> uint8_t {
   (void)programcounter;
@@ -531,7 +543,7 @@ static auto DiskSetLatchValue(uint16_t, uint16_t, uint8_t write, uint8_t value,
 static auto DiskSetReadMode(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t)
     -> uint8_t {
   floppywritemode = false;
-  return MemReturnRandomData(DiskGetProtect(currdrive));
+  return MemReturnRandomData(DiskIsEffectivelyWriteProtected(currdrive));
 }
 
 static auto DiskSetWriteMode(uint16_t, uint16_t, uint8_t, uint8_t, uint32_t)
@@ -672,7 +684,7 @@ static void PopulateDiskStatus(DiskStatus_t* status) {
   status->drive0_loaded = (d0->driver != nullptr);
   status->drive0_spinning = (d0->spinning > 0);
   status->drive0_writing = (d0->writelight > 0);
-  status->drive0_write_protected = DiskGetProtect(0);
+  status->drive0_write_protected = DiskIsEffectivelyWriteProtected(0);
   status->drive0_last_error = d0->last_error;
   Util_SafeStrCpy(status->drive0_name, d0->imagename, DISK_STATUS_NAME_MAX);
   Util_SafeStrCpy(status->drive0_full_path, d0->fullname, DISK_STATUS_PATH_MAX);
@@ -680,7 +692,7 @@ static void PopulateDiskStatus(DiskStatus_t* status) {
   status->drive1_loaded = (d1->driver != nullptr);
   status->drive1_spinning = (d1->spinning > 0);
   status->drive1_writing = (d1->writelight > 0);
-  status->drive1_write_protected = DiskGetProtect(1);
+  status->drive1_write_protected = DiskIsEffectivelyWriteProtected(1);
   status->drive1_last_error = d1->last_error;
   Util_SafeStrCpy(status->drive1_name, d1->imagename, DISK_STATUS_NAME_MAX);
   Util_SafeStrCpy(status->drive1_full_path, d1->fullname, DISK_STATUS_PATH_MAX);

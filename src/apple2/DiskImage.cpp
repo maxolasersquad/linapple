@@ -65,17 +65,27 @@ static auto Util_GetFileSize(FILE* f) -> size_t {
 }
 
 static DiskError_e GenericOpen(const char* path, uint32_t file_offset,
-                               bool os_readonly, void** out_instance,
+                               bool* out_os_readonly, void** out_instance,
                                DiskFormatDriver_t* driver) {
   auto ptr = std::unique_ptr<imageinforec>(new imageinforec());
   if (!ptr) return DISK_ERR_OUT_OF_MEMORY;
 
-  ptr->file.reset(fopen(path, os_readonly ? "rb" : "r+b"));
-  if (!ptr->file) return DISK_ERR_IO;
+  ptr->file.reset(fopen(path, "r+b"));
+  if (ptr->file) {
+    ptr->writeProtected = false;
+  } else {
+    ptr->file.reset(fopen(path, "rb"));
+    if (ptr->file) {
+      ptr->writeProtected = true;
+    } else {
+      return DISK_ERR_IO;
+    }
+  }
+
+  if (out_os_readonly) *out_os_readonly = ptr->writeProtected;
 
   Util_SafeStrCpy(ptr->filename, path, PATH_MAX_LEN);
   ptr->offset = file_offset;
-  ptr->writeProtected = os_readonly;
   ptr->driver = driver;
 
   size_t size = Util_GetFileSize(ptr->file.get());
@@ -108,9 +118,8 @@ static DiskProbe_e AplProbe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e AplOpen(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
-  return GenericOpen(path, file_offset, os_readonly, out_instance,
-                     &g_driver_apl);
+                           bool* out_os_readonly, void** out_instance) {
+  return GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_apl);
 }
 
 static DiskProbe_e PrgProbe(const uint8_t* header, size_t header_size,
@@ -124,9 +133,8 @@ static DiskProbe_e PrgProbe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e PrgOpen(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
-  return GenericOpen(path, file_offset, os_readonly, out_instance,
-                     &g_driver_prg);
+                           bool* out_os_readonly, void** out_instance) {
+  return GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_prg);
 }
 
 // --- DO Format ---
@@ -153,9 +161,8 @@ static DiskProbe_e DoProbe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e DoOpen(const char* path, uint32_t file_offset,
-                          bool os_readonly, void** out_instance) {
-  return GenericOpen(path, file_offset, os_readonly, out_instance,
-                     &g_driver_do);
+                          bool* out_os_readonly, void** out_instance) {
+  return GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_do);
 }
 
 static void DoReadTrack(void* instance, int track, int phase,
@@ -208,9 +215,8 @@ static DiskProbe_e PoProbe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e PoOpen(const char* path, uint32_t file_offset,
-                          bool os_readonly, void** out_instance) {
-  return GenericOpen(path, file_offset, os_readonly, out_instance,
-                     &g_driver_po);
+                          bool* out_os_readonly, void** out_instance) {
+  return GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_po);
 }
 
 static void PoReadTrack(void* instance, int track, int phase,
@@ -251,9 +257,8 @@ static DiskProbe_e NibProbe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e NibOpen(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
-  return GenericOpen(path, file_offset, os_readonly, out_instance,
-                     &g_driver_nib);
+                           bool* out_os_readonly, void** out_instance) {
+  return GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_nib);
 }
 
 static void NibReadTrack(void* instance, int track, int phase,
@@ -290,9 +295,8 @@ static DiskProbe_e Nb2Probe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e Nb2Open(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
-  return GenericOpen(path, file_offset, os_readonly, out_instance,
-                     &g_driver_nb2);
+                           bool* out_os_readonly, void** out_instance) {
+  return GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_nb2);
 }
 
 static void Nb2ReadTrack(void* instance, int track, int phase,
@@ -352,9 +356,9 @@ static void IieConvertSectorOrder(const uint8_t* sourceorder,
 }
 
 static DiskError_e IieOpen(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
+                           bool* out_os_readonly, void** out_instance) {
   DiskError_e err =
-      GenericOpen(path, file_offset, os_readonly, out_instance, &g_driver_iie);
+      GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_iie);
   if (err != DISK_ERR_NONE) return err;
 
   imageinfoptr ptr = reinterpret_cast<imageinfoptr>(*out_instance);
@@ -412,9 +416,9 @@ static DiskProbe_e WozProbe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e WozOpen(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
+                           bool* out_os_readonly, void** out_instance) {
   DiskError_e err =
-      GenericOpen(path, file_offset, os_readonly, out_instance, &g_driver_woz);
+      GenericOpen(path, file_offset, out_os_readonly, out_instance, &g_driver_woz);
   if (err != DISK_ERR_NONE) return err;
 
   imageinfoptr ptr = reinterpret_cast<imageinfoptr>(*out_instance);

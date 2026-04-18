@@ -33,6 +33,7 @@ struct Woz2Instance {
   FILE* file = nullptr;
   uint8_t header[WOZ2_HEADER_SIZE]{};
   bool format_write_protected = false;
+  bool os_readonly = false;
 
   Woz2Instance() = default;
   virtual ~Woz2Instance() {
@@ -109,12 +110,23 @@ static DiskProbe_e Woz2Probe(const uint8_t* header, size_t header_size,
 }
 
 static DiskError_e Woz2Open(const char* path, uint32_t file_offset,
-                           bool os_readonly, void** out_instance) {
+                            bool* out_os_readonly, void** out_instance) {
   auto* instance = new Woz2Instance();
-  instance->file = fopen(path, os_readonly ? "rb" : "r+b");
-  if (!instance->file) {
-    delete instance;
-    return DISK_ERR_IO;
+  instance->file = fopen(path, "r+b");
+  if (instance->file != nullptr) {
+    instance->os_readonly = false;
+  } else {
+    instance->file = fopen(path, "rb");
+    if (instance->file != nullptr) {
+      instance->os_readonly = true;
+    } else {
+      delete instance;
+      return DISK_ERR_IO;
+    }
+  }
+
+  if (out_os_readonly != nullptr) {
+    *out_os_readonly = instance->os_readonly;
   }
 
   // WOZ2 files are usually not MacBinary-wrapped, but we support the offset

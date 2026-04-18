@@ -107,21 +107,19 @@ DiskError_e DiskLoader_Open(const char* filename, bool bCreateIfNecessary,
     // Better use mkstemp if possible
     // For now use a simpler approach similar to Disk.cpp but safer
     static int temp_counter = 0;
-    snprintf(temp_path, sizeof(temp_path), "/tmp/linapple_%d_drive%d.dsk",
-             getpid(), temp_counter++ % 2);
+    snprintf(temp_path, sizeof(temp_path), "/tmp/linapple_%d_drive%d.dsk", getpid(), temp_counter++ % 2);
+    unlink(temp_path);
     if (DiskUnGzip(filename, temp_path)) {
       load_path = temp_path;
       is_temporary = true;
-      if (pWriteProtected) *pWriteProtected = true;
     }
   } else if (name_len > 4 && strcasecmp(filename + name_len - 4, ".zip") == 0) {
     static int temp_counter = 0;
-    snprintf(temp_path, sizeof(temp_path), "/tmp/linapple_%d_drive%d.dsk",
-             getpid(), temp_counter++ % 2);
+    snprintf(temp_path, sizeof(temp_path), "/tmp/linapple_%d_drive%d.dsk", getpid(), temp_counter++ % 2);
+    unlink(temp_path);
     if (DiskUnZip(filename, temp_path)) {
       load_path = temp_path;
       is_temporary = true;
-      if (pWriteProtected) *pWriteProtected = true;
     }
   }
 
@@ -154,8 +152,9 @@ DiskError_e DiskLoader_Open(const char* filename, bool bCreateIfNecessary,
   const char* dot = strrchr(filename, '.');
   if (dot) {
     Util_SafeStrCpy(ext_hint, dot, sizeof(ext_hint));
-    for (char* p = ext_hint; *p; ++p)
+    for (char* p = ext_hint; *p; ++p) {
       *p = static_cast<char>(tolower(static_cast<uint8_t>(*p)));
+    }
   }
 
   DiskFormatDriver_t* best_driver = nullptr;
@@ -180,24 +179,12 @@ DiskError_e DiskLoader_Open(const char* filename, bool bCreateIfNecessary,
 
   if (best_driver) {
     bool os_readonly = false;
-    if (pWriteProtected && !*pWriteProtected) {
-      FILE* test = fopen(load_path, "r+b");
-      if (test) {
-        fclose(test);
-      } else {
-        os_readonly = true;
-      }
-    } else {
-      os_readonly = true;
-    }
-
     DiskError_e err =
-        best_driver->open(load_path, file_offset, os_readonly, out_instance);
+        best_driver->open(load_path, file_offset, &os_readonly, out_instance);
     if (err == DISK_ERR_NONE) {
       *out_driver = best_driver;
-      if (pWriteProtected) {
-        *pWriteProtected =
-            os_readonly || best_driver->is_write_protected(*out_instance);
+      if (pWriteProtected != nullptr) {
+        *pWriteProtected = os_readonly;
       }
       return DISK_ERR_NONE;
     }
