@@ -160,6 +160,8 @@ set(SOURCES_A2
     src/apple2/DiskGCR.cpp
     src/apple2/DiskImage.cpp
     src/apple2/DiskLoader.cpp
+    src/apple2/formats/DoDriver.cpp
+    src/apple2/formats/PoDriver.cpp
     src/apple2/Joystick.cpp
     src/apple2/Keyboard.cpp
     src/apple2/Memory.cpp
@@ -288,7 +290,7 @@ set(DATA_DIR "${CMAKE_INSTALL_DATADIR}/linapple")
 set(CONF_DIR "${CMAKE_INSTALL_SYSCONFDIR}/linapple")
 set(PLUGIN_DIR "${CMAKE_INSTALL_LIBDIR}/linapple/plugins")
 
-target_compile_definitions(linapple PRIVATE 
+target_compile_definitions(linapple PRIVATE
     ASSET_DIR="${CMAKE_INSTALL_PREFIX}/${DATA_DIR}"
     SYS_DIR="${CMAKE_INSTALL_PREFIX}/${CONF_DIR}"
     ${PERIPHERAL_DEFINITIONS}
@@ -337,14 +339,14 @@ target_link_libraries(test-abi PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIB
 add_test(NAME test-abi COMMAND test-abi)
 
 # Test Peripheral ABI (C and C++)
-add_executable(test-peripheral-abi 
+add_executable(test-peripheral-abi
     tests/test_main.cpp
-    tests/test_peripheral_abi.cpp 
-    tests/test_peripheral_abi_c.c 
-    ${SOURCES_CORE} 
-    ${SOURCES_A2} 
-    ${SOURCES_DBG} 
-    src/frontends/headless/Stubs.cpp 
+    tests/test_peripheral_abi.cpp
+    tests/test_peripheral_abi_c.c
+    ${SOURCES_CORE}
+    ${SOURCES_A2}
+    ${SOURCES_DBG}
+    src/frontends/headless/Stubs.cpp
     src/frontends/headless/Headless_Path.cpp
 )
 add_dependencies(test-peripheral-abi generate_xpms)
@@ -368,6 +370,16 @@ add_executable(test-disk-gcr
 )
 target_include_directories(test-disk-gcr PRIVATE src ${DOCTEST_INCLUDE_DIR})
 add_test(NAME test-disk-gcr COMMAND test-disk-gcr)
+
+# Test Disk Drivers
+add_executable(test-disk-drivers
+    tests/test_disk_drivers.cpp
+    src/apple2/formats/DoDriver.cpp
+    src/apple2/formats/PoDriver.cpp
+    src/apple2/DiskGCR.cpp
+)
+target_include_directories(test-disk-drivers PRIVATE src ${DOCTEST_INCLUDE_DIR})
+add_test(NAME test-disk-drivers COMMAND test-disk-drivers)
 
 # CPU tests (using the built linapple binary)
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")
