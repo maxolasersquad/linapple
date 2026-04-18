@@ -5,6 +5,8 @@
 
 #include "apple2/DiskGCR.h"
 #include "apple2/formats/DoDriver.h"
+#include "apple2/formats/Nb2Driver.h"
+#include "apple2/formats/NibDriver.h"
 #include "apple2/formats/PoDriver.h"
 #include "doctest.h"
 
@@ -55,7 +57,85 @@ TEST_CASE("DiskDrivers: [DRV-02] PO Driver Probing") {
         DISK_PROBE_DEFINITE);
 }
 
-TEST_CASE("DiskDrivers: [DRV-03] DO Track Round-trip") {
+TEST_CASE("DiskDrivers: [DRV-03] NIB Driver Probing") {
+  std::vector<uint8_t> buffer(232960, 0);
+  CHECK(g_nib_driver.probe(buffer.data(), buffer.size(), 232960, ".nib") ==
+        DISK_PROBE_DEFINITE);
+  CHECK(g_nib_driver.probe(buffer.data(), buffer.size(), 232961, ".nib") ==
+        DISK_PROBE_NO);
+  CHECK(g_nib_driver.probe(buffer.data(), buffer.size(), 232959, ".nib") ==
+        DISK_PROBE_NO);
+  CHECK(g_nib_driver.probe(buffer.data(), buffer.size(), 143360, ".nib") ==
+        DISK_PROBE_NO);
+}
+
+TEST_CASE("DiskDrivers: [DRV-04] NB2 Driver Probing") {
+  std::vector<uint8_t> buffer(223440, 0);
+  CHECK(g_nb2_driver.probe(buffer.data(), buffer.size(), 223440, ".nb2") ==
+        DISK_PROBE_DEFINITE);
+  CHECK(g_nb2_driver.probe(buffer.data(), buffer.size(), 223441, ".nb2") ==
+        DISK_PROBE_NO);
+  CHECK(g_nb2_driver.probe(buffer.data(), buffer.size(), 223439, ".nb2") ==
+        DISK_PROBE_NO);
+}
+
+TEST_CASE("DiskDrivers: [DRV-05] NIB Track Round-trip & Verbatim") {
+  const char* tmp_file = "test_roundtrip.nib";
+  g_nib_driver.create(tmp_file);
+
+  void* instance = nullptr;
+  REQUIRE(g_nib_driver.open(tmp_file, 0, false, &instance) == DISK_ERR_NONE);
+
+  uint8_t original_track[6656];
+  for (int i = 0; i < 6656; ++i) original_track[i] = i & 0xFF;
+
+  // Track 5 starts at 5 * 6656 = 33280
+  g_nib_driver.write_track(instance, 5, 0, original_track, 6656);
+
+  uint8_t read_track[6656];
+  int read_count = 0;
+  g_nib_driver.read_track(instance, 5, 0, read_track, &read_count);
+
+  CHECK(read_count == 6656);
+  CHECK(memcmp(original_track, read_track, 6656) == 0);
+
+  g_nib_driver.close(instance);
+
+  // Verbatim check: read directly from file at offset
+  FILE* f = fopen(tmp_file, "rb");
+  fseek(f, 5 * 6656, SEEK_SET);
+  uint8_t file_bytes[6656];
+  fread(file_bytes, 1, 6656, f);
+  fclose(f);
+  CHECK(memcmp(original_track, file_bytes, 6656) == 0);
+
+  remove(tmp_file);
+}
+
+TEST_CASE("DiskDrivers: [DRV-06] NB2 Track Round-trip") {
+  const char* tmp_file = "test_roundtrip.nb2";
+  g_nb2_driver.create(tmp_file);
+
+  void* instance = nullptr;
+  REQUIRE(g_nb2_driver.open(tmp_file, 0, false, &instance) == DISK_ERR_NONE);
+
+  uint8_t original_track[6384];
+  for (int i = 0; i < 6384; ++i) original_track[i] = (i + 1) & 0xFF;
+
+  g_nb2_driver.write_track(instance, 10, 0, original_track, 6384);
+
+  uint8_t read_track[6656]; // Buffer is always hardware-sized
+  int read_count = 0;
+  g_nb2_driver.read_track(instance, 10, 0, read_track, &read_count);
+
+  CHECK(read_count == 6384);
+  CHECK(memcmp(original_track, read_track, 6384) == 0);
+
+  g_nb2_driver.close(instance);
+  remove(tmp_file);
+}
+
+TEST_CASE("DiskDrivers: [DRV-07] DO Track Round-trip") {
   const char* tmp_file = "test_roundtrip.dsk";
   g_do_driver.create(tmp_file);
 

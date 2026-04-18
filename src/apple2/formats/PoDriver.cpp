@@ -23,7 +23,6 @@ constexpr int DOS_TRACK_SIZE = 4096;
 constexpr int VTOC_OFFSET = 0x11000;
 constexpr int PAGE_SIZE = 0x0100;
 constexpr int PRODOS_BLOCK_SIZE = 512;
-constexpr uint32_t NIBBLES_PER_TRACK = 0x1A00;
 
 struct PoInstance {
   FILE* file = nullptr;
