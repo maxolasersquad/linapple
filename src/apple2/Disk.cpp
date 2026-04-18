@@ -73,17 +73,17 @@ static DiskError_e DiskInsert_Internal(int drive, const char* imageFileName,
                                        bool writeProtected,
                                        bool createIfNecessary);
 
-static PeripheralStatus Disk_ABI_Command(void* instance, uint32_t cmd,
-                                         const void* data, size_t size);
+static auto Disk_ABI_Command(void* instance, uint32_t cmd,
+                                         const void* data, size_t size) -> PeripheralStatus;
 
-static PeripheralStatus Disk_ABI_Query(void* instance, uint32_t cmd, void* data,
-                                       size_t* size);
+static auto Disk_ABI_Query(void* instance, uint32_t cmd, void* data,
+                                       size_t* size) -> PeripheralStatus;
 
-static PeripheralStatus Disk_ABI_SaveState(void* instance, void* buffer,
-                                           size_t* size);
+static auto Disk_ABI_SaveState(void* instance, void* buffer,
+                                           size_t* size) -> PeripheralStatus;
 
-static PeripheralStatus Disk_ABI_LoadState(void* instance, const void* buffer,
-                                           size_t size);
+static auto Disk_ABI_LoadState(void* instance, const void* buffer,
+                                           size_t size) -> PeripheralStatus;
 
 #define DISK_STATE_VERSION 1
 
@@ -474,7 +474,7 @@ static auto DiskInsert_Internal(int drive, const char* imageFileName,
                                 bool createIfNecessary) -> DiskError_e {
   Disk_t* fptr = &g_aFloppyDisk[drive];
 
-  if (fptr->driver) {
+  if (fptr->driver != nullptr) {
     RemoveDisk(drive);
   }
   memset(fptr, 0, sizeof(Disk_t));
@@ -484,7 +484,10 @@ static auto DiskInsert_Internal(int drive, const char* imageFileName,
   DiskError_e error = DiskLoader_Open(
       imageFileName, createIfNecessary, &fptr->os_readonly,
       const_cast<DiskFormatDriver_t**>(&fptr->driver), &fptr->driver_instance);
+
+  // Set last_error immediately so any following Query sees it.
   fptr->last_error = error;
+
   if (error == DISK_ERR_NONE) {
     char* tmp = GetImageTitle(imageFileName, fptr);
     char s_title[MAX_DISK_IMAGE_NAME + 32];
@@ -495,20 +498,20 @@ static auto DiskInsert_Internal(int drive, const char* imageFileName,
       Linapple_UpdateTitle(s_title);
     }
 
-    if (g_pDiskHost) {
+    if (g_pDiskHost != nullptr) {
       const char* key =
           (drive == 0) ? REGVALUE_DISK_IMAGE1 : REGVALUE_DISK_IMAGE2;
       g_pDiskHost->SetConfig("Slots", key, imageFileName);
       g_pDiskHost->NotifyStatusChanged(g_nDiskSlot);
     }
   } else {
-    if (g_pDiskHost) {
+    // Report empty drive on failure, but preserve the error code.
+    if (g_pDiskHost != nullptr) {
       g_pDiskHost->NotifyStatusChanged(g_nDiskSlot);
     }
   }
   return error;
 }
-
 auto DiskInsert(int drive, const char* imageFileName, bool writeProtected,
                 bool createIfNecessary) -> int {
   return static_cast<int>(DiskInsert_Internal(

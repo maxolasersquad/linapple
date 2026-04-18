@@ -427,7 +427,7 @@ target_link_libraries(test-program-loader PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRA
 add_test(NAME test-program-loader COMMAND test-program-loader)
 
 # Integration Tests
-foreach(T disk_config;disk_motor;disk_prot;disk_woz;disk_savestate)
+foreach(T disk_config;disk_motor;disk_prot;disk_woz;disk_savestate;disk_errors)
     string(REPLACE "_" "-" TEST_NAME ${T})
     add_executable(test-${TEST_NAME}
         tests/test_${T}.cpp

@@ -137,7 +137,7 @@ static DiskError_e Woz2Open(const char* path, uint32_t file_offset,
     fclose(instance->file);
     instance->file = nullptr;
     delete instance;
-    return DISK_ERR_IO;
+    return DISK_ERR_CORRUPT;
   }
 
   // Parse INFO chunk (starts at offset 12)
