@@ -161,6 +161,7 @@ set(SOURCES_A2
     src/apple2/DiskImage.cpp
     src/apple2/DiskLoader.cpp
     src/apple2/formats/DoDriver.cpp
+    src/apple2/formats/IieDriver.cpp
     src/apple2/formats/Nb2Driver.cpp
     src/apple2/formats/NibDriver.cpp
     src/apple2/formats/PoDriver.cpp
@@ -377,6 +378,7 @@ add_test(NAME test-disk-gcr COMMAND test-disk-gcr)
 add_executable(test-disk-drivers
     tests/test_disk_drivers.cpp
     src/apple2/formats/DoDriver.cpp
+    src/apple2/formats/IieDriver.cpp
     src/apple2/formats/Nb2Driver.cpp
     src/apple2/formats/NibDriver.cpp
     src/apple2/formats/PoDriver.cpp
