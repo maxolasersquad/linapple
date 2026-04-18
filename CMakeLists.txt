@@ -165,6 +165,7 @@ set(SOURCES_A2
     src/apple2/formats/Nb2Driver.cpp
     src/apple2/formats/NibDriver.cpp
     src/apple2/formats/PoDriver.cpp
+    src/apple2/formats/Woz2Driver.cpp
     src/apple2/Joystick.cpp
     src/apple2/Keyboard.cpp
     src/apple2/Memory.cpp
@@ -382,6 +383,7 @@ add_executable(test-disk-drivers
     src/apple2/formats/Nb2Driver.cpp
     src/apple2/formats/NibDriver.cpp
     src/apple2/formats/PoDriver.cpp
+    src/apple2/formats/Woz2Driver.cpp
     src/apple2/DiskGCR.cpp
 )
 target_include_directories(test-disk-drivers PRIVATE src ${DOCTEST_INCLUDE_DIR})

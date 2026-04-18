@@ -9,6 +9,7 @@
 #include "apple2/formats/Nb2Driver.h"
 #include "apple2/formats/NibDriver.h"
 #include "apple2/formats/PoDriver.h"
+#include "apple2/formats/Woz2Driver.h"
 #include "doctest.h"
 
 // Mock for enhancedisk
@@ -199,7 +200,113 @@ TEST_CASE("DiskDrivers: [DRV-08] NB2 Track Round-trip") {
   remove(tmp_file);
 }
 
-TEST_CASE("DiskDrivers: [DRV-09] DO Track Round-trip") {
+TEST_CASE("DiskDrivers: [DRV-09] WOZ 2 Driver Probing") {
+  FILE* f = fopen("tests/fixtures/minimal.woz", "rb");
+  if (!f) f = fopen("../tests/fixtures/minimal.woz", "rb");
+  REQUIRE(f != nullptr);
+  uint8_t header[1536];
+  fread(header, 1, 1536, f);
+  fclose(f);
+
+  CHECK(g_woz2_driver.probe(header, 1536, 1536, ".woz") == DISK_PROBE_DEFINITE);
+  CHECK(g_woz2_driver.probe(header, 1536, 1535, ".woz") == DISK_PROBE_NO);
+
+  memcpy(header, "WOZ1\xFF\n\r\n", 8);
+  CHECK(g_woz2_driver.probe(header, 1536, 1536, ".woz") == DISK_PROBE_NO);
+}
+
+TEST_CASE("DiskDrivers: [DRV-10] WOZ 3.5\" Rejection") {
+  const char* tmp_file = "test_35.woz";
+  FILE* f = fopen(tmp_file, "wb");
+  uint8_t header[1536]{};
+  memcpy(header, "WOZ2\xFF\n\r\n", 8);
+  header[21] = 2;  // 3.5" disk type
+  fwrite(header, 1, 1536, f);
+  fclose(f);
+
+  void* instance = nullptr;
+  CHECK(g_woz2_driver.open(tmp_file, 0, true, &instance) ==
+        DISK_ERR_UNSUPPORTED_FORMAT);
+  remove(tmp_file);
+}
+
+TEST_CASE("DiskDrivers: [DRV-11] WOZ Write Protect Flag") {
+  const char* tmp_file = "test_wp.woz";
+  auto create_woz_wp = [](const char* path, uint8_t wp_byte) {
+    FILE* f = fopen(path, "wb");
+    uint8_t h[1536]{};
+    memcpy(h, "WOZ2\xFF\n\r\n", 8);
+    h[21] = 1;        // 5.25"
+    h[22] = wp_byte;  // write protect
+    fwrite(h, 1, 1536, f);
+    fclose(f);
+  };
+
+  void* instance = nullptr;
+
+  create_woz_wp(tmp_file, 1);
+  REQUIRE(g_woz2_driver.open(tmp_file, 0, true, &instance) == DISK_ERR_NONE);
+  CHECK(g_woz2_driver.is_write_protected(instance) == true);
+  g_woz2_driver.close(instance);
+
+  create_woz_wp(tmp_file, 0);
+  REQUIRE(g_woz2_driver.open(tmp_file, 0, true, &instance) == DISK_ERR_NONE);
+  CHECK(g_woz2_driver.is_write_protected(instance) == false);
+  g_woz2_driver.close(instance);
+
+  remove(tmp_file);
+}
+
+TEST_CASE("DiskDrivers: [DRV-12] WOZ Unrecorded Track") {
+  const char* tmp_file = "test_unrec.woz";
+  FILE* f = fopen(tmp_file, "wb");
+  uint8_t h[1536]{};
+  memcpy(h, "WOZ2\xFF\n\r\n", 8);
+  h[21] = 1;
+  memset(h + 88, 0xFF, 160);  // TMAP: all unrecorded
+  fwrite(h, 1, 1536, f);
+  fclose(f);
+
+  void* instance = nullptr;
+  REQUIRE(g_woz2_driver.open(tmp_file, 0, true, &instance) == DISK_ERR_NONE);
+
+  uint8_t buffer[6656];
+  int count = 0;
+  g_woz2_driver.read_track(instance, 0, 0, buffer, &count);
+
+  CHECK(count == 6656);
+  // rand() should have filled it, very unlikely to be all zeros
+  bool all_zeros = true;
+  for (int i = 0; i < 100; ++i) {
+    if (buffer[i] != 0) {
+      all_zeros = false;
+      break;
+    }
+  }
+  CHECK(all_zeros == false);
+
+  g_woz2_driver.close(instance);
+  remove(tmp_file);
+}
+
+TEST_CASE("DiskDrivers: [DRV-13] WOZ Real Fixture Loading") {
+  void* instance = nullptr;
+  DiskError_e err = g_woz2_driver.open("tests/fixtures/minimal.woz", 0, true, &instance);
+  if (err != DISK_ERR_NONE)
+    err = g_woz2_driver.open("../tests/fixtures/minimal.woz", 0, true, &instance);
+  REQUIRE(err == DISK_ERR_NONE);
+  CHECK(g_woz2_driver.is_write_protected(instance) == false);
+
+  uint8_t buffer[6656];
+  int count = 0;
+  // All tracks are unrecorded in minimal.woz
+  g_woz2_driver.read_track(instance, 0, 0, buffer, &count);
+  CHECK(count == 6656);
+
+  g_woz2_driver.close(instance);
+}
+
+TEST_CASE("DiskDrivers: [DRV-14] DO Track Round-trip") {
   const char* tmp_file = "test_roundtrip.dsk";
   g_do_driver.create(tmp_file);
 
