@@ -6,12 +6,13 @@
 #include "apple2/Memory.h"
 #include "apple2/CPU.h"
 
-namespace {
-constexpr uint32_t PRG_MAGIC = 0x214C470A;
 constexpr uint16_t IO_REGION_END = 0xCFFF;
 constexpr uint32_t PRG_HEADER_SIZE = 128;
 constexpr uint32_t APL_HEADER_SIZE = 4;
 constexpr uint8_t MEM_FILL_VALUE = 0xFF;
+
+namespace {
+constexpr uint32_t PRG_MAGIC = 0x214C470A;
 
 enum class ProgramType {
   None,
@@ -22,19 +23,27 @@ enum class ProgramType {
 struct ProgramHeader {
   ProgramType type;
   uint16_t load_addr;
-  uint16_t length;
+  uint32_t length;
   uint32_t offset;
 };
 
 static auto DetectProgram(const char* path, ProgramHeader* out_header)
-    -> ProgramType {
+    -> ProgramLoadResult_e {
   FILE* f = fopen(path, "rb");
   if (f == nullptr) {
-    return ProgramType::None;
+    return PROGRAM_LOAD_FILE_ERROR;
   }
 
-  fseek(f, 0, SEEK_END);
-  uint32_t file_size = static_cast<uint32_t>(ftell(f));
+  if (fseek(f, 0, SEEK_END) != 0) {
+    fclose(f);
+    return PROGRAM_LOAD_FILE_ERROR;
+  }
+  long ftell_res = ftell(f);
+  if (ftell_res < 0) {
+    fclose(f);
+    return PROGRAM_LOAD_FILE_ERROR;
+  }
+  uint32_t file_size = static_cast<uint32_t>(ftell_res);
   fseek(f, 0, SEEK_SET);
 
   uint8_t buffer[PRG_HEADER_SIZE];
@@ -42,21 +51,24 @@ static auto DetectProgram(const char* path, ProgramHeader* out_header)
   fclose(f);
 
   if (read < 8) {
-    return ProgramType::None;
+    return PROGRAM_LOAD_NOT_A_PROGRAM;
   }
 
-  // PRG Check
-  if (*reinterpret_cast<uint32_t*>(buffer) == PRG_MAGIC) {
+  uint32_t magic = 0;
+  memcpy(&magic, buffer, 4);
+  if (magic == PRG_MAGIC) {
+    uint16_t word_len = 0;
     out_header->type = ProgramType::Prg;
-    out_header->load_addr = *reinterpret_cast<uint16_t*>(buffer + 5);
-    out_header->length =
-        static_cast<uint16_t>(*reinterpret_cast<uint16_t*>(buffer + 7) << 1);
+    memcpy(&out_header->load_addr, buffer + 5, 2);
+    memcpy(&word_len, buffer + 7, 2);
+    out_header->length = static_cast<uint32_t>(word_len) << 1;
     out_header->offset = PRG_HEADER_SIZE;
-    return ProgramType::Prg;
+    return PROGRAM_LOAD_OK;
   }
 
   // APL Check (heuristic)
-  uint16_t apl_len = *reinterpret_cast<uint16_t*>(buffer + 2);
+  uint16_t apl_len = 0;
+  memcpy(&apl_len, buffer + 2, 2);
   bool size_match =
       ((static_cast<uint32_t>(apl_len) + APL_HEADER_SIZE) == file_size) ||
       ((static_cast<uint32_t>(apl_len) + APL_HEADER_SIZE +
@@ -64,29 +76,30 @@ static auto DetectProgram(const char* path, ProgramHeader* out_header)
 
   if (size_match) {
     out_header->type = ProgramType::Apl;
-    out_header->load_addr = *reinterpret_cast<uint16_t*>(buffer);
+    memcpy(&out_header->load_addr, buffer, 2);
     out_header->length = apl_len;
     out_header->offset = APL_HEADER_SIZE;
-    return ProgramType::Apl;
+    return PROGRAM_LOAD_OK;
   }
 
-  return ProgramType::None;
+  return PROGRAM_LOAD_NOT_A_PROGRAM;
 }
 } // namespace
 
 auto ProgramLoader_TryLoad(const char* path) -> ProgramLoadResult_e {
   ProgramHeader header = { ProgramType::None, 0, 0, 0 };
-  ProgramType type = DetectProgram(path, &header);
+  ProgramLoadResult_e res = DetectProgram(path, &header);
 
-  if (type == ProgramType::None) {
-    return PROGRAM_LOAD_NOT_A_PROGRAM;
+  if (res != PROGRAM_LOAD_OK) {
+    return res;
   }
 
   // Range check: reject I/O region $C000-$CFFF
   if (header.load_addr >= IO_REGION_START && header.load_addr <= IO_REGION_END) {
     return PROGRAM_LOAD_INVALID;
   }
-  if (static_cast<uint32_t>(header.load_addr) + header.length > IO_REGION_START) {
+  // Reject if program ends in or past I/O region
+  if (static_cast<uint64_t>(header.load_addr) + header.length > IO_REGION_START) {
     return PROGRAM_LOAD_INVALID;
   }
 
@@ -95,14 +108,16 @@ auto ProgramLoader_TryLoad(const char* path) -> ProgramLoadResult_e {
     return PROGRAM_LOAD_FILE_ERROR;
   }
 
-  fseek(f, static_cast<int64_t>(header.offset), SEEK_SET);
+  if (fseek(f, static_cast<long>(header.offset), SEEK_SET) != 0) {
+    fclose(f);
+    return PROGRAM_LOAD_FILE_ERROR;
+  }
   if (fread(mem + header.load_addr, 1, header.length, f) != header.length) {
     fclose(f);
     return PROGRAM_LOAD_FILE_ERROR;
   }
   fclose(f);
 
-  // Set CPU state
   memset(memdirty, MEM_FILL_VALUE, NUM_PAGES_48K);
   regs.pc = header.load_addr;
 
