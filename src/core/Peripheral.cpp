@@ -36,10 +36,13 @@ using ActivePeripheral_t = struct {
   uint8_t* expansionRom;
 };
 
-// Justification: Peripheral Manager requires global state to track registered 
+// Justification: Peripheral Manager requires global state to track registered
 // hardware and dispatch I/O through static core callbacks.
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::array<ActivePeripheral_t, NUM_SLOTS> g_active_peripherals;
+
+// Track active status for each slot
+static std::array<bool, NUM_SLOTS> g_peripheral_activity_state;
 
 // --- I/O Proxy Functions ---
 
@@ -88,7 +91,7 @@ static auto Peripheral_Cx_Proxy(uint16_t pc, uint16_t addr, uint8_t write,
 
 // --- Host Interface Implementation ---
 
-// Justification: The stable Peripheral ABI provides a C-style variadic logging 
+// Justification: The stable Peripheral ABI provides a C-style variadic logging
 // interface to simplify implementation for third-party modules.
 // NOLINTNEXTLINE(modernize-avoid-variadic-functions)
 static void Host_Log(void* instance, PeripheralLogLevel level, const char* fmt,
@@ -103,7 +106,7 @@ static void Host_Log(void* instance, PeripheralLogLevel level, const char* fmt,
     }
   }
 
-  // Justification: Standard C variadic handling and local buffer management 
+  // Justification: Standard C variadic handling and local buffer management
   // required to bridge the ABI and internal Logger.
   // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,
   // cppcoreguidelines-pro-bounds-array-to-pointer-decay)
@@ -199,7 +202,7 @@ static void Host_RegisterCxROM(int slot, uint8_t* rom_ptr) {
       // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
       memcpy(maux + 0xC000 + offset, rom_ptr, PAGE_SIZE);
     }
-    
+
     // Also update the current active memory bank if it's available.
     if (mem) {
       // Justification: Peripheral ROM area in Apple II memory map.
@@ -233,7 +236,7 @@ using DirectIO_t = struct {
   PeripheralIOHandler write;
 };
 
-// Justification: Global state required for rapid I/O dispatching outside of 
+// Justification: Global state required for rapid I/O dispatching outside of
 // standard slot address ranges (e.g., $C030 speaker).
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::array<DirectIO_t, IO_DIRECT_COUNT> g_direct_io_handlers;
@@ -280,7 +283,7 @@ static void Host_RegisterDirectIO(void* instance, uint16_t addr,
 }
 
 static auto Host_GetMemPtr(uint16_t addr) -> uint8_t* {
-  // Justification: Raw pointer access to core emulator memory required for 
+  // Justification: Raw pointer access to core emulator memory required for
   // high-performance peripheral interaction.
   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   return mem + static_cast<ptrdiff_t>(addr);
@@ -288,29 +291,49 @@ static auto Host_GetMemPtr(uint16_t addr) -> uint8_t* {
 
 static auto Host_GetCycles() -> uint64_t { return cumulativecycles; }
 
-static auto Host_GetConfig(const char* /*section*/, const char* /*key*/) -> const char* {
-  return nullptr;
+#include "core/Registry.h"
+
+static auto Host_GetConfig(const char* section, const char* key) -> const
+    char* {
+  static std::string s_buffer;
+  s_buffer = Configuration::Instance().GetString(section, key);
+  return s_buffer.empty() ? nullptr : s_buffer.c_str();
 }
 
-static void Host_SetConfig(const char* /*section*/, const char* /*key*/,
-                           const char* /*value*/) {}
+static void Host_SetConfig(const char* section, const char* key,
+                           const char* value) {
+  Configuration::Instance().SetString(section, key, value);
+}
 
 static void Host_NotifyStatusChanged(int /*slot*/) {}
 
-static void Host_NotifyActivityChanged(int /*slot*/, bool /*active*/) {}
+static void Host_NotifyActivityChanged(int slot, bool active) {
+  if (slot >= 0 && slot < NUM_SLOTS) {
+    g_peripheral_activity_state.at(static_cast<size_t>(slot)) = active;
+  }
+}
 
 static void Host_RequestPreciseTiming() {}
 
 // Justification: Global immutable dispatch table for services provided to
 // peripherals.
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static const HostInterface_t g_host_interface = {
-    Host_Log,           Host_AssertIrq,           Host_RegisterIO,
-    Host_RegisterCxROM, Host_RegisterExpansionROM, Host_RegisterDirectIO,
-    Host_GetMemPtr,     Host_GetCycles,            Host_GetConfig,
-    Host_SetConfig,     Host_NotifyStatusChanged,  Host_NotifyActivityChanged,
-    Host_RequestPreciseTiming,
-    RiffInitWriteFile,  RiffFinishWriteFile,       RiffPutSamples};
+static const HostInterface_t g_host_interface = {Host_Log,
+                                                 Host_AssertIrq,
+                                                 Host_RegisterIO,
+                                                 Host_RegisterCxROM,
+                                                 Host_RegisterExpansionROM,
+                                                 Host_RegisterDirectIO,
+                                                 Host_GetMemPtr,
+                                                 Host_GetCycles,
+                                                 Host_GetConfig,
+                                                 Host_SetConfig,
+                                                 Host_NotifyStatusChanged,
+                                                 Host_NotifyActivityChanged,
+                                                 Host_RequestPreciseTiming,
+                                                 RiffInitWriteFile,
+                                                 RiffFinishWriteFile,
+                                                 RiffPutSamples};
 
 // --- Command Queue ---
 
@@ -329,14 +352,16 @@ static std::mutex g_command_queue_mutex;
 static void Peripheral_DrainCommandQueue() {
   std::queue<QueuedCommand> local;
   {
-    // Swap out under the lock so new commands can be enqueued while we dispatch.
+    // Swap out under the lock so new commands can be enqueued while we
+    // dispatch.
     std::lock_guard<std::mutex> lock(g_command_queue_mutex);
     std::swap(local, g_command_queue);
   }
   while (!local.empty()) {
     const QueuedCommand& cmd = local.front();
     if (cmd.slot >= 0 && cmd.slot < NUM_SLOTS) {
-      ActivePeripheral_t& ap = g_active_peripherals.at(static_cast<size_t>(cmd.slot));
+      ActivePeripheral_t& ap =
+          g_active_peripherals.at(static_cast<size_t>(cmd.slot));
       if (ap.api && ap.api->command) {
         ap.api->command(ap.instance, cmd.cmd_id, cmd.data, cmd.data_size);
       }
@@ -353,6 +378,7 @@ void Peripheral_Manager_Init() {
     g_command_queue = {};
   }
   for (size_t i = 0; i < NUM_SLOTS; ++i) {
+    g_peripheral_activity_state.at(i) = false;
     ActivePeripheral_t& ap = g_active_peripherals.at(i);
     ap.api = nullptr;
     ap.instance = nullptr;
@@ -379,6 +405,7 @@ void Peripheral_Manager_Reset() {
 
 void Peripheral_Manager_Shutdown() {
   for (size_t i = 0; i < NUM_SLOTS; ++i) {
+    g_peripheral_activity_state.at(i) = false;
     ActivePeripheral_t& ap = g_active_peripherals.at(i);
     if (ap.api && ap.api->shutdown) {
       ap.api->shutdown(ap.instance);
@@ -407,6 +434,13 @@ void Peripheral_Manager_OnVBlank(bool vblank) {
   }
 }
 
+bool Peripheral_IsAnyActive() {
+  for (bool active : g_peripheral_activity_state) {
+    if (active) return true;
+  }
+  return false;
+}
+
 auto Peripheral_Register(Peripheral_t* api, int slot) -> int {
   if (!api || slot < 0 || slot >= NUM_SLOTS) {
     return -1;
@@ -429,11 +463,12 @@ auto Peripheral_Register(Peripheral_t* api, int slot) -> int {
     return -1;
   }
 
-  // Justification: The Peripheral ABI is a C interface; the HostInterface must 
-  // be passed as a non-const pointer to allow peripherals to store it, but we 
+  // Justification: The Peripheral ABI is a C interface; the HostInterface must
+  // be passed as a non-const pointer to allow peripherals to store it, but we
   // provide a central const implementation.
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-  void* instance = api->init(slot, const_cast<HostInterface_t*>(&g_host_interface));
+  void* instance =
+      api->init(slot, const_cast<HostInterface_t*>(&g_host_interface));
   if (!instance) {
     // Justification: Logger uses standard C variadics.
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
@@ -463,7 +498,7 @@ auto Peripheral_Unregister(int slot) -> int {
     // Justification: Logger uses standard C variadics.
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
     Logger::Info("Unregistering peripheral '%s' from slot %d\n", ap.api->name,
-                  slot);
+                 slot);
     if (ap.api->shutdown) {
       ap.api->shutdown(ap.instance);
     }
@@ -473,7 +508,7 @@ auto Peripheral_Unregister(int slot) -> int {
     // Clear IO handlers in the core
     RegisterIoHandler(static_cast<uint32_t>(slot), nullptr, nullptr, nullptr,
                       nullptr, nullptr, nullptr);
-    
+
     // Clear slot-specific properties
     ap.readC0 = nullptr;
     ap.writeC0 = nullptr;
@@ -485,14 +520,16 @@ auto Peripheral_Unregister(int slot) -> int {
   return 0;
 }
 
-auto Peripheral_Command(int slot, uint32_t cmd_id, const void* data, size_t size) -> PeripheralStatus {
+auto Peripheral_Command(int slot, uint32_t cmd_id, const void* data,
+                        size_t size) -> PeripheralStatus {
   if (slot < 0 || slot >= NUM_SLOTS) {
     return PERIPHERAL_ERROR;
   }
   if (size > PERIPHERAL_CMD_MAX_DATA) {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-    Logger::Error("Peripheral_Command: payload %zu exceeds limit %d for slot %d cmd %u",
-                  size, PERIPHERAL_CMD_MAX_DATA, slot, cmd_id);
+    Logger::Error(
+        "Peripheral_Command: payload %zu exceeds limit %d for slot %d cmd %u",
+        size, PERIPHERAL_CMD_MAX_DATA, slot, cmd_id);
     return PERIPHERAL_ERROR;
   }
   QueuedCommand cmd{};
@@ -507,7 +544,8 @@ auto Peripheral_Command(int slot, uint32_t cmd_id, const void* data, size_t size
   return PERIPHERAL_OK;
 }
 
-auto Peripheral_Query(int slot, uint32_t cmd_id, void* out, size_t* out_size) -> PeripheralStatus {
+auto Peripheral_Query(int slot, uint32_t cmd_id, void* out, size_t* out_size)
+    -> PeripheralStatus {
   if (slot < 0 || slot >= NUM_SLOTS) {
     return PERIPHERAL_ERROR;
   }
@@ -520,7 +558,7 @@ auto Peripheral_Query(int slot, uint32_t cmd_id, void* out, size_t* out_size) ->
 
 void Peripheral_GetManifest(SS_PERIPHERAL_MANIFEST* manifest) {
   if (!manifest) return;
-  
+
   memset(manifest, 0, sizeof(SS_PERIPHERAL_MANIFEST));
   manifest->UnitHdr.dwLength = sizeof(SS_PERIPHERAL_MANIFEST);
   manifest->UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
@@ -528,8 +566,10 @@ void Peripheral_GetManifest(SS_PERIPHERAL_MANIFEST* manifest) {
   for (size_t i = 0; i < NUM_SLOTS; ++i) {
     const ActivePeripheral_t& ap = g_active_peripherals.at(i);
     if (ap.api) {
-      Util_SafeStrCpy(manifest->Peripherals[i].szName, ap.api->name, MAX_PERIPHERAL_NAME);
-      manifest->Peripherals[i].dwVersion = static_cast<uint32_t>(ap.api->abi_version);
+      Util_SafeStrCpy(manifest->Peripherals[i].szName, ap.api->name,
+                      MAX_PERIPHERAL_NAME);
+      manifest->Peripherals[i].dwVersion =
+          static_cast<uint32_t>(ap.api->abi_version);
     } else {
       manifest->Peripherals[i].szName[0] = '\0';
       manifest->Peripherals[i].dwVersion = 0;
@@ -548,8 +588,10 @@ bool Peripheral_VerifyManifest(const SS_PERIPHERAL_MANIFEST* manifest) {
       if (ap.api) {
         // Justification: Logger uses standard C variadics.
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-        Logger::Error("Save state mismatch: Slot %d is empty in save state, but contains '%s' in current config.", 
-                      static_cast<int>(i), ap.api->name);
+        Logger::Error(
+            "Save state mismatch: Slot %d is empty in save state, but contains "
+            "'%s' in current config.",
+            static_cast<int>(i), ap.api->name);
         return false;
       }
       continue;
@@ -558,24 +600,30 @@ bool Peripheral_VerifyManifest(const SS_PERIPHERAL_MANIFEST* manifest) {
     if (!ap.api) {
       // Justification: Logger uses standard C variadics.
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-      Logger::Error("Save state mismatch: Slot %d contains '%s' in save state, but is empty in current config.", 
-                    static_cast<int>(i), pi.szName);
+      Logger::Error(
+          "Save state mismatch: Slot %d contains '%s' in save state, but is "
+          "empty in current config.",
+          static_cast<int>(i), pi.szName);
       return false;
     }
 
     if (strcmp(ap.api->name, pi.szName) != 0) {
       // Justification: Logger uses standard C variadics.
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-      Logger::Error("Save state mismatch: Slot %d contains '%s' in save state, but '%s' in current config.", 
-                    static_cast<int>(i), pi.szName, ap.api->name);
+      Logger::Error(
+          "Save state mismatch: Slot %d contains '%s' in save state, but '%s' "
+          "in current config.",
+          static_cast<int>(i), pi.szName, ap.api->name);
       return false;
     }
 
     if (static_cast<uint32_t>(ap.api->abi_version) != pi.dwVersion) {
       // Justification: Logger uses standard C variadics.
       // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-      Logger::Warning("Save state version mismatch for slot %d (%s): Save state has version %d, current is %d.",
-                   static_cast<int>(i), pi.szName, pi.dwVersion, ap.api->abi_version);
+      Logger::Warning(
+          "Save state version mismatch for slot %d (%s): Save state has "
+          "version %d, current is %d.",
+          static_cast<int>(i), pi.szName, pi.dwVersion, ap.api->abi_version);
     }
   }
 

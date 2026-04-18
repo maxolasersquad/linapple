@@ -24,27 +24,8 @@ const uint8_t MACBINARY_MAGIC_VALUE = 0x81;
 
 static std::vector<DiskFormatDriver_t*> g_drivers;
 
-// Prototypes for built-in drivers from DiskImage.cpp (will be refactored)
-extern DiskFormatDriver_t g_driver_woz;
-extern DiskFormatDriver_t g_driver_iie;
-extern DiskFormatDriver_t g_driver_nib;
-extern DiskFormatDriver_t g_driver_nb2;
-extern DiskFormatDriver_t g_driver_do;
-extern DiskFormatDriver_t g_driver_po;
-extern DiskFormatDriver_t g_driver_prg;
-extern DiskFormatDriver_t g_driver_apl;
-
 void DiskLoader_Init() {
   g_drivers.clear();
-  // Register in order of priority: Definitive first, heuristic last.
-  DiskLoader_Register(&g_driver_woz);
-  DiskLoader_Register(&g_driver_iie);
-  DiskLoader_Register(&g_driver_nib);
-  DiskLoader_Register(&g_driver_nb2);
-  DiskLoader_Register(&g_driver_do);
-  DiskLoader_Register(&g_driver_po);
-  DiskLoader_Register(&g_driver_prg);
-  DiskLoader_Register(&g_driver_apl);
 }
 
 void DiskLoader_Shutdown() { g_drivers.clear(); }

@@ -76,7 +76,7 @@ void DiskSelectImage(int drive, char* pszFilename) {
     }
     Configuration::Instance().Save();
   } else {
-    DiskNotifyInvalidImage(filename.c_str(), error); // show error on the screen (or in console for our case)
+    // Error is notified via status changed
   }
   backdx = fileIndex;  //store cursor position
   DrawFrameWindow();
@@ -158,7 +158,7 @@ void Disk_FTP_SelectImage(int drive) { // select a disk image using FTP
     error = DiskInsert(drive, localPath.c_str(), false, true);// try to insert downloaded file as a disk image
     if (!error) {
     } else {
-      DiskNotifyInvalidImage(filename.c_str(), error); // show error on the screen (or in console for our case)
+      // Error is notified via status changed
     }
   } else {
     printf("Error downloading file %s\n", localPath.c_str());

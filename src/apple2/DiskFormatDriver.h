@@ -11,9 +11,10 @@
 // Rationale: intentional C99 ABI header. <cstdint> and friends and 'using'
 // are C++ only and cannot appear in a C99-compatible interface.
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include "apple2/DiskError.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,26 +24,16 @@ enum { LINAPPLE_DISK_ABI_VERSION = 0 };
 
 /* OR together to set DiskFormatDriver_t.capabilities */
 typedef enum {
-  DRIVER_CAP_WRITE        = 0x01,
-  DRIVER_CAP_FLUX         = 0x02,  /* reserved — see read_flux_bit */
+  DRIVER_CAP_WRITE = 0x01,
+  DRIVER_CAP_FLUX = 0x02, /* reserved — see read_flux_bit */
   DRIVER_CAP_DOUBLE_SIDED = 0x04
 } DiskDriverCap_e;
 
 typedef enum {
-  DISK_PROBE_NO       = 0,
-  DISK_PROBE_POSSIBLE = 1,  /* use only if no DEFINITE driver claims the image */
+  DISK_PROBE_NO = 0,
+  DISK_PROBE_POSSIBLE = 1, /* use only if no DEFINITE driver claims the image */
   DISK_PROBE_DEFINITE = 2
 } DiskProbe_e;
-
-typedef enum {
-  DISK_ERR_NONE               = 0,
-  DISK_ERR_FILE_NOT_FOUND     = 1,
-  DISK_ERR_UNSUPPORTED_FORMAT = 2,
-  DISK_ERR_CORRUPT            = 3,
-  DISK_ERR_WRITE_PROTECTED    = 4,
-  DISK_ERR_OUT_OF_MEMORY      = 5,
-  DISK_ERR_IO                 = 6
-} DiskError_e;
 
 /* Opaque type reserved for future flux-accurate timing. Never dereference. */
 typedef struct FluxBit_s FluxBit_t;

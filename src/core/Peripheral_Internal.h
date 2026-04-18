@@ -65,4 +65,10 @@ Peripheral_t* Peripheral_Find_Internal(const char* name);
  */
 const char* Peripheral_GetPluginPath(const char* name);
 
-#endif // LINAPPLE_PERIPHERAL_INTERNAL_H
+/**
+ * @brief Check if any peripheral is currently active (e.g. activity LED on).
+ * @return true if any peripheral has reported activity.
+ */
+bool Peripheral_IsAnyActive(void);
+
+#endif  // LINAPPLE_PERIPHERAL_INTERNAL_H
