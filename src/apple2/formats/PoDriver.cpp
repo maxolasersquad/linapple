@@ -31,11 +31,16 @@ struct PoInstance {
   uint8_t work_buffer[GCR_WORKBUF_SIZE]{};
 
   PoInstance() = default;
-  ~PoInstance() {
+  virtual ~PoInstance() {
     if (file) {
       fclose(file);
     }
   }
+
+  PoInstance(const PoInstance&) = delete;
+  PoInstance& operator=(const PoInstance&) = delete;
+  PoInstance(PoInstance&&) = delete;
+  PoInstance& operator=(PoInstance&&) = delete;
 };
 }  // namespace
 

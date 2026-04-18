@@ -16,11 +16,16 @@ struct Nb2Instance {
   bool os_readonly = false;
 
   Nb2Instance() = default;
-  ~Nb2Instance() {
+  virtual ~Nb2Instance() {
     if (file) {
       fclose(file);
     }
   }
+
+  Nb2Instance(const Nb2Instance&) = delete;
+  Nb2Instance& operator=(const Nb2Instance&) = delete;
+  Nb2Instance(Nb2Instance&&) = delete;
+  Nb2Instance& operator=(Nb2Instance&&) = delete;
 };
 }  // namespace
 

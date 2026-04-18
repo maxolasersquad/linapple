@@ -32,11 +32,16 @@ struct DoInstance {
   uint8_t work_buffer[GCR_WORKBUF_SIZE]{};
 
   DoInstance() = default;
-  ~DoInstance() {
+  virtual ~DoInstance() {
     if (file) {
       fclose(file);
     }
   }
+
+  DoInstance(const DoInstance&) = delete;
+  DoInstance& operator=(const DoInstance&) = delete;
+  DoInstance(DoInstance&&) = delete;
+  DoInstance& operator=(DoInstance&&) = delete;
 };
 }  // namespace
 

@@ -28,11 +28,16 @@ struct IieInstance {
   uint8_t work_buffer[GCR_WORKBUF_SIZE]{};
 
   IieInstance() = default;
-  ~IieInstance() {
+  virtual ~IieInstance() {
     if (file) {
       fclose(file);
     }
   }
+
+  IieInstance(const IieInstance&) = delete;
+  IieInstance& operator=(const IieInstance&) = delete;
+  IieInstance(IieInstance&&) = delete;
+  IieInstance& operator=(IieInstance&&) = delete;
 };
 
 static void IieConvertSectorOrder(const uint8_t* sourceorder, uint8_t* sector_order) {

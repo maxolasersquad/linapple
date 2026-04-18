@@ -16,11 +16,16 @@ struct NibInstance {
   bool os_readonly = false;
 
   NibInstance() = default;
-  ~NibInstance() {
+  virtual ~NibInstance() {
     if (file) {
       fclose(file);
     }
   }
+
+  NibInstance(const NibInstance&) = delete;
+  NibInstance& operator=(const NibInstance&) = delete;
+  NibInstance(NibInstance&&) = delete;
+  NibInstance& operator=(NibInstance&&) = delete;
 };
 }  // namespace
 
