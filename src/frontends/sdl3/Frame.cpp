@@ -365,7 +365,7 @@ void FrameShowHelpScreen(int sx, int sy) {
 void FrameQuickState(int num, int mod) {
   // quick load or save state with number num, if Shift is pressed, state is
   // being saved, otherwise - being loaded
-  std::array<char, MAX_PATH> fpath;
+  std::array<char, PATH_MAX_LEN> fpath;
   snprintf(fpath.data(), fpath.size(), "%.*s/SaveState%d.aws",
            static_cast<int>(strlen(g_state.sSaveStateDir)),
            g_state.sSaveStateDir, num);
@@ -481,7 +481,7 @@ auto PSP_SaveStateSelectImage(bool saveit) -> bool {
   }
   strcpy(g_state.sSaveStateDir, fullPath.c_str());
   Configuration::Instance().SetString(
-      "Preferences", REGVALUE_PREF_SAVESTATE_DIR, g_state.sSaveStateDir);
+      "Preferences", "Save State Directory", g_state.sSaveStateDir);
   Configuration::Instance().Save();
 
   backdx = fileIndex;

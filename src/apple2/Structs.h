@@ -102,7 +102,7 @@ typedef struct {
 } SS_AW_CFG;
 
 typedef struct {
-  char StartingDir[MAX_PATH];
+  char StartingDir[PATH_MAX_LEN];
   uint32_t dwWindowXpos;
   uint32_t dwWindowYpos;
 } SS_AW_PREFS;
@@ -146,7 +146,7 @@ typedef struct {
 const uint32_t NIBBLES_PER_TRACK = 0x1A00;
 
 typedef struct {
-  char szFileName[MAX_PATH];
+  char szFileName[PATH_MAX_LEN];
   int track;
   int phase;
   int byte;

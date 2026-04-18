@@ -34,8 +34,8 @@ DEBUG_FORCE_DISPLAY = 0
 VideoSurface *g_hDebugScreen = nullptr;
 VideoSurface *g_hDebugCharset = nullptr;
 
-uint32_t g_hConsoleBrushFG = WHITE;
-uint32_t g_hConsoleBrushBG = BLACK;
+ColorRef_t g_hConsoleBrushFG = WHITE;
+ColorRef_t g_hConsoleBrushBG = BLACK;
 
 FontConfig_t g_aFontConfig[ NUM_FONTS ];
 char g_aDebuggerVirtualTextScreen[DEBUG_VIRTUAL_TEXT_HEIGHT][DEBUG_VIRTUAL_TEXT_WIDTH];
@@ -115,19 +115,19 @@ void GetDebugViewPortScale(float *x, float *y)
 }
 
 // Font: Apple Text
-void DebuggerSetColorFG( uint32_t nRGB )
+void DebuggerSetColorFG( ColorRef_t nRGB )
 {
 	g_hConsoleBrushFG = nRGB;
 }
 
 // Font: GDI/Console
-void DebuggerSetColorBG( uint32_t nRGB, bool bTransparent )
+void DebuggerSetColorBG( ColorRef_t nRGB, bool bTransparent )
 {
 	(void) bTransparent;
 	g_hConsoleBrushBG = nRGB;
 }
 
-void FillRect(const RECT *r, int Brush)
+void FillRect(const Rect_t *r, int Brush)
 {
   if (!g_hDebugScreen || !r) {
     return;
@@ -250,7 +250,7 @@ auto CanDrawDebugger() -> bool
     return (g_state.mode == MODE_DEBUG) || (g_state.mode == MODE_STEPPING);
 }
 
-auto PrintText ( const char * pText, RECT & rRect ) -> int
+auto PrintText ( const char * pText, Rect_t & rRect ) -> int
 {
     if (!pText) return 0;
     int nLen = strlen( pText );
@@ -263,7 +263,7 @@ auto PrintText ( const char * pText, RECT & rRect ) -> int
     return nLen;
 }
 
-void PrintTextColor ( const conchar_t *pText, RECT & rRect )
+void PrintTextColor ( const conchar_t *pText, Rect_t & rRect )
 {
     if (!pText) return;
 #if !DEBUG_FONT_NO_BACKGROUND_TEXT
@@ -273,7 +273,7 @@ void PrintTextColor ( const conchar_t *pText, RECT & rRect )
     DebuggerPrintColor( rRect.left, rRect.top, pText );
 }
 
-auto PrintTextCursorX ( const char * pText, RECT & rRect ) -> int
+auto PrintTextCursorX ( const char * pText, Rect_t & rRect ) -> int
 {
     int nChars = 0;
     if (pText)
@@ -285,7 +285,7 @@ auto PrintTextCursorX ( const char * pText, RECT & rRect ) -> int
     return nChars;
 }
 
-auto PrintTextCursorY ( const char * pText, RECT & rRect ) -> int
+auto PrintTextCursorY ( const char * pText, Rect_t & rRect ) -> int
 {
     int nChars = PrintText( pText, rRect );
     rRect.top    += CONSOLE_FONT_HEIGHT;

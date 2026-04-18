@@ -28,6 +28,13 @@ void MB_UpdateCycles(uint32_t uExecutedCycles);
 
 void MB_Update();
 
+enum eSOUNDCARDTYPE {
+  SC_UNINIT = 0,
+  SC_NONE,
+  SC_MOCKINGBOARD,
+  SC_PHASOR
+};  // Apple soundcard type
+
 eSOUNDCARDTYPE MB_GetSoundcardType();
 
 void MB_SetSoundcardType(eSOUNDCARDTYPE NewSoundcardType);

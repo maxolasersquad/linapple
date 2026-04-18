@@ -26,8 +26,8 @@
 		CONSOLE_FONT_HEIGHT = 8,
 	};
 
-	extern uint32_t g_hConsoleBrushFG;
-	extern uint32_t g_hConsoleBrushBG;
+	extern ColorRef_t g_hConsoleBrushFG;
+	extern ColorRef_t g_hConsoleBrushBG;
 
 	enum
 	{
@@ -39,15 +39,15 @@
 
 	extern FontConfig_t g_aFontConfig[ NUM_FONTS  ];
 
-	void DebuggerSetColorFG( uint32_t nRGB );
-	void DebuggerSetColorBG( uint32_t nRGB, bool bTransparent = false );
+	void DebuggerSetColorFG( ColorRef_t nRGB );
+	void DebuggerSetColorBG( ColorRef_t nRGB, bool bTransparent = false );
 
 	void PrintGlyph      ( const int x, const int y, const int iChar );
-	int  PrintText       ( const char * pText, RECT & rRect );
-	int  PrintTextCursorX( const char * pText, RECT & rRect );
-	int  PrintTextCursorY( const char * pText, RECT & rRect );
+	int  PrintText       ( const char * pText, Rect_t & rRect );
+	int  PrintTextCursorX( const char * pText, Rect_t & rRect );
+	int  PrintTextCursorY( const char * pText, Rect_t & rRect );
 
-	void PrintTextColor  ( const conchar_t * pText, RECT & rRect );
+	void PrintTextColor  ( const conchar_t * pText, Rect_t & rRect );
 
 	void GetDebugViewPortScale  (float *x, float *y);
 
@@ -100,7 +100,7 @@
 	void DrawWindow_Symbols     (Update_t bUpdate);
 	void DrawWindow_ZeroPage    (Update_t bUpdate);
 
-	void DrawSourceLine(int iSourceLine, RECT & rect);
+	void DrawSourceLine(int iSourceLine, Rect_t & rect);
 
 	char ColorizeSpecialChar(char * sText, uint8_t nData, const MemoryView_e iView,
 		const int iAsciBackground = BG_INFO, const int iTextForeground = FG_DISASM_CHAR,
@@ -116,7 +116,7 @@
 	void DrawSubWindow_Source(Update_t bUpdate);
 	void DrawSubWindow_Source2(Update_t bUpdate);
 	void DrawSubWindow_IO(Update_t bUpdate);
-	void FillRect(const RECT *r, int Brush);
+	void FillRect(const Rect_t *r, int Brush);
 	void DrawSubWindow_Symbols(Update_t bUpdate);
 	void DrawSubWindow_ZeroPage(Update_t bUpdate);
 	void DrawSubWindow_Console(Update_t bUpdate);

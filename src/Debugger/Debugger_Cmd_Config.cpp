@@ -170,7 +170,7 @@ auto CmdConfigLoad (int nArgs) -> Update_t
 {
   // TODO: CmdConfigRun( gaFileNameConfig )
 
-//  char sFileNameConfig[ MAX_PATH ];
+//  char sFileNameConfig[ PATH_MAX_LEN ];
   if (! nArgs)
   {
 

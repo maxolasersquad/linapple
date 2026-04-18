@@ -138,9 +138,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 		G8,   // FG_VIDEOSCANNER_VISIBLE
 	};
 
-auto DebuggerGetColor( int iColor ) -> uint32_t
+auto DebuggerGetColor( int iColor ) -> ColorRef_t
 {
-	uint32_t nColor = 1;// 0xFFFF00; // Hot Pink! -- so we notice errors. Not that there is anything wrong with pink...
+	ColorRef_t nColor = 1;// 0xFFFF00; // Hot Pink! -- so we notice errors. Not that there is anything wrong with pink...
 
 	if ((g_iColorScheme < NUM_COLOR_SCHEMES) && (iColor < NUM_DEBUG_COLORS))
 	{
@@ -151,7 +151,7 @@ auto DebuggerGetColor( int iColor ) -> uint32_t
 }
 
 
-auto DebuggerSetColor( const int iScheme, const int iColor, const uint32_t nColor ) -> bool
+auto DebuggerSetColor( const int iScheme, const int iColor, const ColorRef_t nColor ) -> bool
 {
 	(void) iScheme; (void) iColor; (void) nColor;
 	// color schemes ignored for Linux
@@ -180,7 +180,7 @@ static void _SetupColorRamp(const int iPrimary, int & iColor_)
 		int nR = bR ? nC : 0;
 		int nG = bG ? nC : 0;
 		int nB = bB ? nC : 0;
-		uint32_t nColor = RGB(nR, nG, nB);
+		ColorRef_t nColor = RGB(nR, nG, nB);
 		g_aColorPalette[iColor_] = nColor;
 #if DEBUG_COLOR_RAMP
 		wsprintf(sText, "RGB(%3d,%3d,%3d, ", nR, nG, nB);
@@ -212,7 +212,7 @@ void ConfigColorsReset()
 	int iColor;
 	for (iColor = 0; iColor < NUM_DEBUG_COLORS; iColor++)
 	{
-		uint32_t nColor = g_aColorPalette[g_aColorIndex[iColor]];
+		ColorRef_t nColor = g_aColorPalette[g_aColorIndex[iColor]];
 
 		int R = (nColor >> 0) & 0xFF;
 		int G = (nColor >> 8) & 0xFF;
@@ -240,7 +240,7 @@ void ConfigColorsReset()
 #endif
 }
 
-void _ColorPrint( int iColor, uint32_t nColor )
+void _ColorPrint( int iColor, ColorRef_t nColor )
 {
 	int R = (nColor >>  0) & 0xFF;
 	int G = (nColor >>  8) & 0xFF;
@@ -256,7 +256,7 @@ void _CmdColorGet( const int iScheme, const int iColor )
 	if (iColor < NUM_DEBUG_COLORS)
 	{
 		auto eColor = static_cast<DebugColors_e>( iColor );
-		uint32_t nColor = DebuggerGetColor( eColor );
+		ColorRef_t nColor = DebuggerGetColor( eColor );
 		_ColorPrint( iColor, nColor );
 	}
 	else

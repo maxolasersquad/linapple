@@ -1,12 +1,9 @@
 #ifndef DISKIMAGE_H
 #define DISKIMAGE_H
 
-#include <cstdint>
+#include "core/Common.h"
 
 #pragma once
-
-typedef void* DiskImagePtr_t;
-typedef DiskImagePtr_t HIMAGE;
 
 constexpr int IMAGETYPES           = 8;
 constexpr int WOZ2_HEADER_SIZE     = 1536; /* three 512-byte blocks */

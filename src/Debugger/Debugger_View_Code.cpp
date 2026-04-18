@@ -131,7 +131,7 @@ auto DrawDisassemblyLine(int iLine, const uint16_t nBaseAddress) -> uint16_t
 
   int nFontHeight = g_aFontConfig[FONT_DISASM_DEFAULT]._nLineHeight;
 
-  RECT linerect;
+  Rect_t linerect;
   linerect.left = 0;
   linerect.top = iLine * nFontHeight;
   linerect.right = DISPLAY_DISASM_RIGHT;
@@ -428,7 +428,7 @@ void DrawFlags(int line, uint16_t nRegFlags, char* pFlagNames_)
 
   char sFlagNames[_6502_NUM_FLAGS + 1] = "";
   char sText[8] = "?";
-  RECT rect;
+  Rect_t rect;
 
   int nFontWidth = g_aFontConfig[FONT_INFO]._nFontWidthAvg;
   int nSpacerWidth = nFontWidth;
@@ -517,7 +517,7 @@ void DrawStack(int line)
   while (iStack < MAX_DISPLAY_STACK_LINES)
   {
     nAddress++;
-    RECT rect;
+    Rect_t rect;
     rect.left = DISPLAY_STACK_COLUMN;
     rect.top = (iStack + line) * g_nFontHeight;
     rect.right = rect.left + (10 * nFontWidth) + 1;
@@ -541,7 +541,7 @@ void DrawStack(int line)
   }
 }
 
-void DrawSourceLine(int iSourceLine, RECT &rect)
+void DrawSourceLine(int iSourceLine, Rect_t &rect)
 {
   char sLine[CONSOLE_WIDTH];
   memset(sLine, 0, CONSOLE_WIDTH);
@@ -585,7 +585,7 @@ void DrawSubWindow_Source(Update_t bUpdate)
   (void)bUpdate;
   int nLines = g_nDisasmWinHeight;
 
-  RECT rect;
+  Rect_t rect;
   rect.left = 0;
   rect.top = 0;
   rect.right = DISPLAY_DISASM_RIGHT;

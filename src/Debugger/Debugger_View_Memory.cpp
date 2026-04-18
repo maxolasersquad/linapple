@@ -73,13 +73,13 @@ void DrawMemory(int line, int iMemDump)
     MB_GetSnapshot(&SS_MB, 4 + (nAddr >> 1));
 }
 
-  RECT rect;
+  Rect_t rect;
   rect.left = DISPLAY_MINIMEM_COLUMN;
   rect.top = (line * g_nFontHeight);
   rect.right = DISPLAY_WIDTH;
   rect.bottom = rect.top + g_nFontHeight;
 
-  RECT rect2;
+  Rect_t rect2;
   rect2 = rect;
 
   const int MAX_MEM_VIEW_TXT = 16;
@@ -226,7 +226,7 @@ void DrawRegister(int line, const char* name, const int nBytes, const uint16_t n
 
   int nFontWidth = g_aFontConfig[FONT_INFO]._nFontWidthAvg;
 
-  RECT rect;
+  Rect_t rect;
   rect.top = line * g_nFontHeight;
   rect.bottom = rect.top + g_nFontHeight;
   rect.left = DISPLAY_REGS_COLUMN;
@@ -275,7 +275,7 @@ void DrawRegisters(int line)
   printf("DrawRegisters: end\n");
 }
 
-void DrawSoftSwitchHighlight(RECT & temp, bool bSet, const char *sOn, const char *sOff, int bg = BG_INFO)
+void DrawSoftSwitchHighlight(Rect_t & temp, bool bSet, const char *sOn, const char *sOff, int bg = BG_INFO)
 {
   ColorizeFlags(bSet, bg);
   PrintTextCursorX(sOn, temp);
@@ -288,7 +288,7 @@ void DrawSoftSwitchHighlight(RECT & temp, bool bSet, const char *sOn, const char
   PrintTextCursorX(sOff, temp);
 }
 
-void DrawSoftSwitchAddress(RECT & rect, int nAddress, int bg_default = BG_INFO)
+void DrawSoftSwitchAddress(Rect_t & rect, int nAddress, int bg_default = BG_INFO)
 {
   char sText[4] = "";
 
@@ -301,9 +301,9 @@ void DrawSoftSwitchAddress(RECT & rect, int nAddress, int bg_default = BG_INFO)
   PrintTextCursorX(":", rect);
 }
 
-void DrawSoftSwitch(RECT & rect, int nAddress, bool bSet, const char *sPrefix, const char *sOn, const char *sOff, const char *sSuffix = nullptr, int bg_default = BG_INFO)
+void DrawSoftSwitch(Rect_t & rect, int nAddress, bool bSet, const char *sPrefix, const char *sOn, const char *sOff, const char *sSuffix = nullptr, int bg_default = BG_INFO)
 {
-  RECT temp = rect;
+  Rect_t temp = rect;
 
   DrawSoftSwitchAddress(temp, nAddress, bg_default);
 
@@ -325,7 +325,7 @@ void DrawSoftSwitch(RECT & rect, int nAddress, bool bSet, const char *sPrefix, c
   rect.bottom += g_nFontHeight;
 }
 
-void DrawTriStateSoftSwitch(RECT & rect, int nAddress, const int iBankDisplay, int iActive, char *sPrefix, char *sOn, char *sOff, const char *sSuffix = nullptr, int bg_default = BG_INFO)
+void DrawTriStateSoftSwitch(Rect_t & rect, int nAddress, const int iBankDisplay, int iActive, char *sPrefix, char *sOn, char *sOff, const char *sSuffix = nullptr, int bg_default = BG_INFO)
 {
   (void)sPrefix;
   (void)sSuffix;
@@ -335,7 +335,7 @@ void DrawTriStateSoftSwitch(RECT & rect, int nAddress, const int iBankDisplay, i
     DrawSoftSwitch(rect, nAddress, bSet, nullptr, sOn, sOff, " ", bg_default);
   } else
   {
-    RECT temp = rect;
+    Rect_t temp = rect;
     int iBank = (GetMemMode() & MF_HRAM_BANK2)
       ? 2
       : 1
@@ -367,7 +367,7 @@ void DrawTriStateSoftSwitch(RECT & rect, int nAddress, const int iBankDisplay, i
   }
 }
 
-void DrawSoftSwitchLanguageCardBank(RECT & rect, const int iBankDisplay, int bg_default = BG_INFO)
+void DrawSoftSwitchLanguageCardBank(Rect_t & rect, const int iBankDisplay, int bg_default = BG_INFO)
 {
   const int w = g_aFontConfig[FONT_DISASM_DEFAULT]._nFontWidthAvg;
   const int dx80 = 7 * w;
@@ -440,9 +440,9 @@ void DrawSoftSwitchLanguageCardBank(RECT & rect, const int iBankDisplay, int bg_
   rect.bottom += g_nFontHeight;
 }
 
-void DrawSoftSwitchMainAuxBanks(RECT & rect)
+void DrawSoftSwitchMainAuxBanks(Rect_t & rect)
 {
-  RECT temp = rect;
+  Rect_t temp = rect;
   rect.top += g_nFontHeight;
   rect.bottom += g_nFontHeight;
 
@@ -467,7 +467,7 @@ void DrawSoftSwitchMainAuxBanks(RECT & rect)
 
 void DrawSoftSwitches(int iSoftSwitch)
 {
-  RECT rect;
+  Rect_t rect;
   int nFontWidth = g_aFontConfig[FONT_INFO]._nFontWidthAvg;
 
   rect.left = DISPLAY_SOFTSWITCH_COLUMN;
@@ -533,7 +533,7 @@ void DrawTargets(int line)
 
   aTarget[1] = aTarget[2];
 
-  RECT rect;
+  Rect_t rect;
   int nFontWidth = g_aFontConfig[FONT_INFO]._nFontWidthAvg;
 
   int iAddress = MAX_DISPLAY_TARGET_PTR_LINES;
@@ -574,7 +574,7 @@ void DrawWatches(int line)
     return;
 }
 
-  RECT rect;
+  Rect_t rect;
   rect.left = DISPLAY_WATCHES_COLUMN;
   rect.top = (line * g_nFontHeight);
   rect.right = DISPLAY_WIDTH;
@@ -589,7 +589,7 @@ void DrawWatches(int line)
   {
     if (g_aWatches[iWatch].bEnabled)
     {
-      RECT rect2 = rect;
+      Rect_t rect2 = rect;
 
       DebuggerSetColorBG(DebuggerGetColor(BG_INFO_WATCH));
       DebuggerSetColorFG(DebuggerGetColor(FG_INFO_TITLE));
@@ -667,7 +667,7 @@ void DrawZeroPagePointers(int line)
 
   int nFontWidth = g_aFontConfig[FONT_INFO]._nFontWidthAvg;
 
-  RECT rect;
+  Rect_t rect;
   rect.top = line * g_nFontHeight;
   rect.bottom = rect.top + g_nFontHeight;
   rect.left = DISPLAY_ZEROPAGE_COLUMN;
@@ -680,7 +680,7 @@ void DrawZeroPagePointers(int line)
 
   for (int iZP = 0; iZP < MAX_ZEROPAGE_POINTERS; iZP++)
   {
-    RECT rect2 = rect;
+    Rect_t rect2 = rect;
 
     Breakpoint_t *pZP = &g_aZeroPagePointers[iZP];
     bool bEnabled = pZP->bEnabled;
@@ -777,7 +777,7 @@ void DrawSubWindow_Data(Update_t bUpdate)
   MemoryDump_t* pMD = &g_aMemDump[iMemDump];
   uint16_t       nAddress = pMD->nAddress;
 
-  RECT rect;
+  Rect_t rect;
   rect.top = 0 + 0;
 
   int  iByte = 0;
@@ -911,7 +911,7 @@ void DrawVideoScannerValue(int line, int vert, int horz, bool isVisible)
   const int gapWidth = 1;   // 1 space
   const int totalWidth = (nameWidth + numberWidth) * 2 + gapWidth;
 
-  RECT rect;
+  Rect_t rect;
   rect.top = line * g_nFontHeight;
   rect.bottom = rect.top + g_nFontHeight;
   rect.left = DISPLAY_VIDEO_SCANNER_COLUMN;

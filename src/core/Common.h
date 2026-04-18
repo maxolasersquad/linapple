@@ -64,7 +64,7 @@ enum AppMode_e {
   MODE_EXIT,         // Application is exiting
 };
 
-constexpr int MAX_PATH = 260;
+constexpr int PATH_MAX_LEN = 260;
 
 #define SCREEN_WIDTH  560
 #define SCREEN_HEIGHT  384
@@ -83,16 +83,16 @@ using SystemState_t = struct SystemState_tag {
   uint32_t ScreenHeight;
   bool bResetTiming;
   uint32_t needsprecision;
-  char sProgramDir[MAX_PATH];
-  char sCurrentDir[MAX_PATH];
-  char sHDDDir[MAX_PATH];
-  char sSaveStateDir[MAX_PATH];
-  char sParallelPrinterFile[MAX_PATH];
-  char sFTPLocalDir[MAX_PATH];
-  char sFTPServer[MAX_PATH];
-  char sFTPServerHDD[MAX_PATH];
+  char sProgramDir[PATH_MAX_LEN];
+  char sCurrentDir[PATH_MAX_LEN];
+  char sHDDDir[PATH_MAX_LEN];
+  char sSaveStateDir[PATH_MAX_LEN];
+  char sParallelPrinterFile[PATH_MAX_LEN];
+  char sFTPLocalDir[PATH_MAX_LEN];
+  char sFTPServer[PATH_MAX_LEN];
+  char sFTPServerHDD[PATH_MAX_LEN];
   char sFTPUserPass[512];
-  char sDebuggerScript[MAX_PATH];
+  char sDebuggerScript[PATH_MAX_LEN];
   bool bVideoScannerNTSC;
   uint32_t dwClksPerFrame;
 };
@@ -107,21 +107,6 @@ constexpr uint32_t DRAW_BACKGROUND = 1;
 constexpr uint32_t DRAW_LEDS = 2;
 constexpr uint32_t DRAW_TITLE = 4;
 constexpr uint32_t DRAW_BUTTON_DRIVES = 8;
-
-// Function Keys F1 - F12
-constexpr int BTN_HELP = 0;
-constexpr int BTN_RUN = 1;
-constexpr int BTN_DRIVE1 = 2;
-constexpr int BTN_DRIVE2 = 3;
-constexpr int BTN_DRIVESWAP = 4;
-constexpr int BTN_FULLSCR = 5;
-constexpr int BTN_DEBUG = 6;
-constexpr int BTN_SETUP = 7;
-constexpr int BTN_CYCLE = 8;
-constexpr int BTN_QUIT = 11;
-// BTN_SAVEST and BTN_LOADST
-constexpr int BTN_SAVEST = 10;
-constexpr int BTN_LOADST = 9;
 
 constexpr const char* TITLE_APPLE_2 = "Apple ][ Emulator";
 constexpr const char* TITLE_APPLE_2_PLUS = "Apple ][+ Emulator";
@@ -188,32 +173,28 @@ constexpr const char* REGVALUE_FTP_HDD_DIR = "FTP ServerHDD";
 constexpr const char* REGVALUE_FTP_LOCAL_DIR = "FTP Local Dir";
 constexpr const char* REGVALUE_FTP_USERPASS = "FTP UserPass";
 
-// Win32 compatibility types
-using HANDLE = void*;
-using COLORREF = uint32_t;
+// Native compatibility types
+using ColorRef_t = uint32_t;
 
-using POINT = struct tagPOINT {
+using Point_t = struct Point_tag {
   int32_t x;
   int32_t y;
 };
 
-using RECT = struct tagRECT {
+using Rect_t = struct Rect_tag {
   int32_t left;
   int32_t top;
   int32_t right;
   int32_t bottom;
 };
 
+typedef struct DiskImage_tag {
+  int unused;
+}* DiskImagePtr_t;
+
 static inline auto IsCharLower(char ch) -> bool { return (ch >= 'a' && ch <= 'z'); }
 
 static inline auto IsCharUpper(char ch) -> bool { return (ch >= 'A' && ch <= 'Z'); }
-
-enum eSOUNDCARDTYPE {
-  SC_UNINIT = 0,
-  SC_NONE,
-  SC_MOCKINGBOARD,
-  SC_PHASOR
-};  // Apple soundcard type
 
 #ifdef __cplusplus
 extern "C" {
@@ -226,10 +207,6 @@ typedef uint8_t (*iofunction)(uint16_t nPC,
 #ifdef __cplusplus
 }
 #endif
-
-typedef struct _IMAGE__ {
-  int unused;
-}* HIMAGE;
 
 constexpr uint8_t APPLE2E_MASK = 0x10;
 constexpr uint8_t APPLE2C_MASK = 0x20;

@@ -35,9 +35,9 @@ auto getstat(const char *catalog, const char *fname, uintmax_t *size) -> int
   // gets file status and returns: 0 - special or error, 1 - file is a directory, 2 - file is a normal file
   // In: catalog - working directory, fname - file name
   struct stat info{};
-  char tempname[MAX_PATH];
+  char tempname[PATH_MAX_LEN];
 
-  snprintf(tempname, MAX_PATH, "%s/%s", catalog, fname);
+  snprintf(tempname, PATH_MAX_LEN, "%s/%s", catalog, fname);
   if (stat(tempname, &info) == -1) {
     return 0;
   }

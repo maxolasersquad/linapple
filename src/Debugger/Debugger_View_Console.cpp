@@ -62,7 +62,7 @@ void DrawWindowBackground_Main(int iWindow)
   DebuggerSetColorBG(DebuggerGetColor(BG_DISASM_1));
 
 #if !DEBUG_FONT_NO_BACKGROUND_FILL_MAIN
-  RECT rect;
+  Rect_t rect;
   rect.left = 0;
   rect.top = 0;
   rect.right = DISPLAY_DISASM_RIGHT;
@@ -78,7 +78,7 @@ void DrawWindowBackground_Info(int iWindow)
   DebuggerSetColorBG(DebuggerGetColor(BG_INFO));
 
 #if !DEBUG_FONT_NO_BACKGROUND_FILL_INFO
-  RECT rect;
+  Rect_t rect;
   rect.top = 0;
   rect.left = DISPLAY_DISASM_RIGHT;
   rect.right = DISPLAY_WIDTH;

@@ -336,7 +336,7 @@ auto CmdConfigGetDebugDir(int nArgs) -> Update_t {
     return Help_Arg_1(CMD_CONFIG_GET_DEBUG_DIR);
   }
 
-  char sPath[MAX_PATH + 8];
+  char sPath[PATH_MAX_LEN + 8];
   // TODO: debugger dir has no ` CONSOLE_COLOR_ESCAPE_CHAR ?!?!
   ConsoleBufferPushFormat(sPath, "Path: %s", g_state.sCurrentDir);
 
@@ -402,7 +402,7 @@ Update_t CmdMemoryLoad (int nArgs)
     if (g_aArgs[ iArgComma1 ].eToken != TOKEN_COMMA)
       return Help_Arg_1( CMD_MEMORY_SAVE );
 
-    char sLoadSaveFilePath[ MAX_PATH ];
+    char sLoadSaveFilePath[ PATH_MAX_LEN ];
     strcpy( sLoadSaveFilePath, g_state.sCurrentDir ); // TODO: g_sDebugDir
 
     uint16_t nAddressStart;
@@ -470,7 +470,7 @@ Update_t CmdMemoryLoad (int nArgs)
 
       CmdConfigGetDebugDir( 0 );
 
-      char sFile[ MAX_PATH + 8 ];
+      char sFile[ PATH_MAX_LEN + 8 ];
       ConsoleBufferPushFormat( sFile, "File: %s", g_sMemoryLoadSaveFileName );
     }
 
@@ -667,7 +667,7 @@ auto CmdMemoryLoad(int nArgs) -> Update_t {
 
     CmdConfigGetDebugDir(0);
 
-    char sFile[MAX_PATH + 8];
+    char sFile[PATH_MAX_LEN + 8];
     ConsoleBufferPushFormat(sFile, "File: ", g_sMemoryLoadSaveFileName.c_str());
   }
 
@@ -786,7 +786,7 @@ Update_t CmdMemorySave (int nArgs)
 //      (g_aArgs[ iArgComma2 ].eToken != TOKEN_COLON))
 //      return Help_Arg_1( CMD_MEMORY_SAVE );
 
-    char sLoadSaveFilePath[ MAX_PATH ];
+    char sLoadSaveFilePath[ PATH_MAX_LEN ];
     strcpy( sLoadSaveFilePath, g_state.sCurrentDir ); // g_state.sProgramDir
 
     RangeType_t eRange;
@@ -953,7 +953,7 @@ auto CmdMemorySave(int nArgs) -> Update_t {
 
     if ((nAddressLen) && (nAddressEnd <= _6502_MEM_END)) {
       if (!bHaveFileName) {
-        char sMemoryLoadSaveFileName[MAX_PATH];
+        char sMemoryLoadSaveFileName[PATH_MAX_LEN];
         if (!bBankSpecified) {
           sprintf(sMemoryLoadSaveFileName, "%04X.%04X.bin", nAddressStart,
                   nAddressLen);

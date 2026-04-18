@@ -223,7 +223,7 @@ auto main(int argc, char* argv[]) -> int {
       case 'x': 
         // Justification: Copying debugger script path.
         // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
-        Util_SafeStrCpy(g_state.sDebuggerScript, optarg, MAX_PATH); 
+        Util_SafeStrCpy(g_state.sDebuggerScript, optarg, PATH_MAX_LEN); 
         break;
       case 'T': bTestCpu = true; szTestFile = optarg; break;
       case '6': g_Apple2Type = A2TYPE_APPLE2PLUS; break;

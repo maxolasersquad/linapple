@@ -47,5 +47,7 @@ Peripheral_t g_test_c_peripheral = {
     NULL, // think
     NULL, // on_vblank
     NULL, // save_state
-    NULL  // load_state
+    NULL, // load_state
+    NULL, // command
+    NULL  // query
 };

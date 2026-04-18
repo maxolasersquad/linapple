@@ -138,15 +138,15 @@ void Linapple_UpdateTitle(const char* title) {
 void Linapple_Init() {
   // Load globals from configuration
   uint32_t apple2Type = 0;
-  if (LOAD(REGVALUE_COMPUTER_EMULATION, &apple2Type)) {
+  if (LOAD("Computer Emulation", &apple2Type)) {
     g_Apple2Type = static_cast<eApple2Type>(apple2Type);
   }
-  LOAD(REGVALUE_HDD_ENABLED, &hddenabled);
-  LOAD(REGVALUE_CLOCK_SLOT, &clockslot);
-  LOAD(REGVALUE_SAVE_STATE_ON_EXIT, &g_bSaveStateOnExit);
+  LOAD("Harddisk Enable", &hddenabled);
+  LOAD("Clock Enable", &clockslot);
+  LOAD("Save State On Exit", &g_bSaveStateOnExit);
 
   std::string snapshotName;
-  if (LOAD(REGVALUE_SAVESTATE_FILENAME, &snapshotName) && !snapshotName.empty()) {
+  if (LOAD("Save State Filename", &snapshotName) && !snapshotName.empty()) {
     Snapshot_SetFilename(snapshotName.c_str());
   } else {
     Snapshot_SetFilename(""); // Use default
@@ -162,7 +162,7 @@ void Linapple_Init() {
   MemInitialize();
   CpuInitialize();
   VideoInitialize();
-  
+
   Peripheral_Manager_Init();
   Peripheral_Plugins_Init();
   Peripheral_Register_Internal();
@@ -311,7 +311,7 @@ static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
 
   VideoUpdateVbl(dwExecutedCycles);
   JoyUpdatePosition(dwExecutedCycles);
-  
+
   SpkrFrontend_Update(dwExecutedCycles);
   Linapple_KeyboardThink(dwExecutedCycles);
 
@@ -336,7 +336,7 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
     } else {
       executed = Internal_RunCycles(cycles);
     }
-    
+
 #if defined(ENABLE_PERIPHERAL_MOCKINGBOARD)
     MB_EndOfVideoFrame();
 #endif

@@ -63,7 +63,7 @@ const int PDL_SMAX = 127;
 const int PDL_SCENTRAL = 0;
 const int PDL_SMIN = -127;
 
-static std::array<POINT, 9> keyvalue = {{
+static std::array<Point_t, 9> keyvalue = {{
   {PDL_SMIN,     PDL_SMAX},
   {PDL_SCENTRAL, PDL_SMAX},
   {PDL_SMAX,     PDL_SMAX},
