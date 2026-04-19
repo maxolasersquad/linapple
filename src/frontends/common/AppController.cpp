@@ -10,11 +10,15 @@
 #include "core/Util_Text.h"
 #include "apple2/SaveState.h"
 #include "apple2/Video.h"
+#include "apple2/DiskCommands.h"
+#include "apple2/Disk.h"
+#include "apple2/CPU.h"
+#include "core/Peripheral.h"
 #include <cstdio>
 
 static bool s_initialized = false;
 
-int AppController_Initialize(AppConfig* config) {
+auto AppController_Initialize(AppConfig* config) -> int {
     if (!config) return -1;
     
     // Idempotency: ensure we start from a clean state if called multiple times
@@ -82,28 +86,9 @@ int AppController_Initialize(AppConfig* config) {
     }
     Snapshot_Startup();
 
-    // 5. Load Disks into Registry (for Peripherals)
-    if (config->szDiskPath[0][0] != '\0') {
-        // We use Linapple_LoadProgram for disks because it checks if it's a program first
-        if (Linapple_LoadProgram(config->szDiskPath[0]) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-            Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE1, config->szDiskPath[0]);
-        }
-    }
-    if (config->szDiskPath[1][0] != '\0') {
-        if (Linapple_LoadProgram(config->szDiskPath[1]) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-            Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE2, config->szDiskPath[1]);
-        }
-    }
-
     // 6. Register Peripherals
+    Peripheral_Manager_Init();
     Linapple_RegisterPeripherals();
-
-    // 7. Load Program
-    if (config->szProgramPath[0] != '\0') {
-        if (Linapple_LoadProgram(config->szProgramPath) != 0) {
-            fprintf(stderr, "Error: Could not load program '%s'\n", config->szProgramPath);
-        }
-    }
 
     if (config->szDebuggerScript[0] != '\0') {
         Util_SafeStrCpy(g_state.sDebuggerScript, config->szDebuggerScript, PATH_MAX_LEN);
@@ -116,6 +101,41 @@ int AppController_Initialize(AppConfig* config) {
     return 0;
 }
 
+void AppController_LoadInitialMedia(const AppConfig* config) {
+    if (!config) return;
+
+    // 1. Load Disks or Programs via probing
+    for (int i = 0; i < 2; ++i) {
+        const char* path = (i == 0) ? config->szDiskPath[0] : config->szDiskPath[1];
+        if (path[0] != '\0') {
+            int res = Linapple_LoadProgram(path);
+            if (res == PROGRAM_LOAD_NOT_A_PROGRAM) {
+                // It's a disk image (or at least not a program)
+                DiskInsertCmd_t cmd = {};
+                cmd.drive = static_cast<uint8_t>(i);
+                Util_SafeStrCpy(cmd.path, path, DISK_INSERT_PATH_MAX);
+                Peripheral_Command(DISK_DEFAULT_SLOT, DISK_CMD_INSERT, &cmd, sizeof(cmd));
+            }
+        }
+    }
+
+    // 2. Load explicit program path
+    if (config->szProgramPath[0] != '\0') {
+        if (Linapple_LoadProgram(config->szProgramPath) != 0) {
+            fprintf(stderr, "Error: Could not load program '%s'\n", config->szProgramPath);
+        }
+    }
+
+    // 3. Handle Boot
+    if (config->bBoot) {
+        // Reset the system to boot from disk
+        CpuReset();
+        Peripheral_Manager_Reset();
+        // Redraw to clear splash
+        VideoRedrawScreen();
+    }
+}
+
 void AppController_Shutdown() {
     if (!s_initialized) return;
     
@@ -126,7 +146,7 @@ void AppController_Shutdown() {
     s_initialized = false;
 }
 
-bool AppController_ShouldRestart() {
+auto AppController_ShouldRestart() -> bool {
     return g_state.restart;
 }
 

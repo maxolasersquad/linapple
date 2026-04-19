@@ -13,7 +13,7 @@
  *
  * @return 0 on success, non-zero on error.
  */
-int AppController_Initialize(AppConfig* config);
+auto AppController_Initialize(AppConfig* config) -> int;
 
 /**
  * Shut down all core subsystems in the correct order.
@@ -23,9 +23,15 @@ void AppController_Shutdown();
 /**
  * Check if the application has been marked for restart.
  */
-bool AppController_ShouldRestart();
+auto AppController_ShouldRestart() -> bool;
 
 /**
  * Set or clear the restart flag.
  */
 void AppController_SetRestart(bool restart);
+
+/**
+ * Perform initial media loading and optionally boot the machine.
+ * Should be called after Initialize but before the main loop.
+ */
+void AppController_LoadInitialMedia(const AppConfig* config);

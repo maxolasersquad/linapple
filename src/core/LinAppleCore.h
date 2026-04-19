@@ -48,10 +48,16 @@ void Linapple_Shutdown();
  */
 void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /**
  * @brief Get the number of milliseconds since the emulator started.
  */
 auto Linapple_GetTicks() -> uint32_t;
+#ifdef __cplusplus
+}
+#endif
 
 /**
  * @brief Attempt to load an APL or PRG program image directly into emulated
@@ -90,6 +96,22 @@ void Peripheral_Manager_Think(uint32_t cycles);
 void Peripheral_Manager_OnVBlank(bool vblank);
 
 #ifdef __cplusplus
+extern "C" {
+#endif
+// Thread-safe; returns PERIPHERAL_ERROR if size > PERIPHERAL_CMD_MAX_DATA or
+// slot is invalid.
+PeripheralStatus Peripheral_Command(int slot, uint32_t cmd_id, const void* data,
+                                    size_t size);
+
+// Must be called from the emulation thread. Returns PERIPHERAL_ERROR if slot is
+// invalid or has no query handler.
+PeripheralStatus Peripheral_Query(int slot, uint32_t cmd_id, void* out,
+                                  size_t* out_size);
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
 /**
  * @brief Register a peripheral in a specific slot.
  */
@@ -119,16 +141,6 @@ void Peripheral_SaveState(int slot, void* buffer, size_t* size);
  * @brief Load the state of the peripheral in a specific slot.
  */
 void Peripheral_LoadState(int slot, const void* buffer, size_t size);
-
-// Thread-safe; returns PERIPHERAL_ERROR if size > PERIPHERAL_CMD_MAX_DATA or
-// slot is invalid.
-PeripheralStatus Peripheral_Command(int slot, uint32_t cmd_id, const void* data,
-                                    size_t size);
-
-// Must be called from the emulation thread. Returns PERIPHERAL_ERROR if slot is
-// invalid or has no query handler.
-PeripheralStatus Peripheral_Query(int slot, uint32_t cmd_id, void* out,
-                                  size_t* out_size);
 #endif
 
 /**

@@ -1,12 +1,20 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include "core/LinAppleCore.h"
 #include "frontends/common/AppController.h"
+#include "frontends/common/AppEnvironment.h"
+#include "frontends/common/AppArgs.h"
 #include "core/Common_Globals.h"
+#include "core/Util_Text.h"
+#include "apple2/Disk.h"
+#include "core/Registry.h"
+#include <fstream>
 
 TEST_CASE("AppController: Initialize and Shutdown") {
     AppConfig config = {};
     AppConfig_Default(&config);
     
+    AppEnv_ResolvePaths(&config);
     // Test initialization
     int result = AppController_Initialize(&config);
     CHECK(result == 0);
@@ -15,3 +23,35 @@ TEST_CASE("AppController: Initialize and Shutdown") {
     // Test shutdown
     AppController_Shutdown();
 }
+
+TEST_CASE("AppController: Media Loading") {
+    {
+        std::ofstream tmp_conf("test_media.conf");
+        tmp_conf << "[Slots]\nDisk Image 1=../res/Master.dsk\n";
+    }
+
+    AppConfig config = {};
+    AppConfig_Default(&config);
+    Util_SafeStrCpy(config.szConfigPath, "test_media.conf", PATH_MAX_LEN);
+
+    AppEnv_ResolvePaths(&config);
+    AppController_Initialize(&config);
+    AppController_LoadInitialMedia(&config);
+
+    // Explicitly think a bit to process commands from LoadInitialMedia
+    for (int i = 0; i < 500; ++i) {
+        Peripheral_Manager_Think(100);
+    }
+
+    // Check if disk was loaded
+    DiskStatus_t status = {};
+    size_t status_size = sizeof(status);
+    PeripheralStatus res = Peripheral_Query(DISK_DEFAULT_SLOT, DISK_CMD_GET_STATUS, &status, &status_size);
+
+    CHECK(res == PERIPHERAL_OK);
+    CHECK(status.drive0_loaded == 1);
+
+    AppController_Shutdown();
+    remove("test_media.conf");
+}
+
