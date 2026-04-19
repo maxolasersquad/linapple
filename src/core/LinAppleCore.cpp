@@ -32,7 +32,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include <cstring>
 #include "apple2/Keyboard.h"
 #include "apple2/Speaker.h"
-#include "apple2/Disk.h"
 #include "apple2/Mockingboard.h"
 #include "apple2/SoundCore.h"
 #include "apple2/Video.h"
@@ -146,7 +145,6 @@ extern "C" void Linapple_SetJoystickButton(int button, bool down) {
 void Linapple_Init() {
   MemPreInitialize();
   Asset_Init();
-  DiskInitialize();
   CreateColorMixMap();
   SoundCore_Initialize();
 
@@ -167,7 +165,6 @@ void Linapple_Init() {
 void Linapple_Shutdown() {
   Peripheral_Manager_Shutdown();
   Peripheral_Plugins_Shutdown();
-  DiskDestroy();
   VideoDestroy();
   MemDestroy();
   CpuDestroy();
@@ -219,7 +216,11 @@ static auto ShouldRunFullSpeed() -> bool {
   mb_active = MB_IsActive();
 #endif
 
-  bool shouldTurbo = DiskIsSpinning() && enhancedisk && !mb_active;
+  bool spkr_active = Spkr_IsActive();
+  bool peripheral_active = Peripheral_IsAnyActive();
+
+  bool shouldTurbo =
+      peripheral_active && (g_state.needsprecision == 0) && !mb_active && !spkr_active;
 
   if (shouldTurbo && !s_wasTurbo) {
     s_turboStartMs = Linapple_GetTicks();
@@ -258,7 +259,7 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
     if (ShouldRunFullSpeed()) {
       for (int i = 0; i < FULL_SPEED_DISK_ITERATIONS; i++) {
         executed += Internal_RunCycles(cycles);
-        if (!DiskIsSpinning()) break;
+        if (!Peripheral_IsAnyActive()) break;
       }
     } else {
       executed = Internal_RunCycles(cycles);

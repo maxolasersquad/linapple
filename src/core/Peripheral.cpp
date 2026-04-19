@@ -445,8 +445,10 @@ void Peripheral_Manager_OnVBlank(bool vblank) {
 }
 
 bool Peripheral_IsAnyActive() {
-  for (bool active : g_peripheral_activity_state) {
-    if (active) return true;
+  for (size_t i = 0; i < NUM_SLOTS; ++i) {
+    if (g_peripheral_activity_state.at(i)) {
+      return true;
+    }
   }
   return false;
 }

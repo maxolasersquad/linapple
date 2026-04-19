@@ -7,6 +7,7 @@
 #include "core/Util_Text.h"
 #include "apple2/DiskCommands.h"
 #include "apple2/Memory.h"
+#include "apple2/CPU.h"
 #include "apple2/Disk.h"
 #include <cstring>
 
@@ -31,6 +32,14 @@ void run_cycles(uint64_t cycles) {
 
 TEST_CASE("DiskIntegration: [INT-03] Motor Activity Notification") {
     Linapple_Init();
+    
+    // Set PC to a safe loop: $0000: 4C 00 00 (JMP $0000)
+    uint8_t* m = MemGetBankPtr(0);
+    m[0] = 0x4C;
+    m[1] = 0x00;
+    m[2] = 0x00;
+    regs.pc = 0x0000;
+    g_state.mode = MODE_RUNNING;
     
     DiskInsertCmd_t cmd{};
     cmd.drive = DISK_DRIVE_0;
