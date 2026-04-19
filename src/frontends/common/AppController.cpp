@@ -29,47 +29,6 @@ auto AppController_Initialize(AppConfig* config) -> int {
     // 1. Resolve paths and init Registry/Logger
     AppEnv_ResolvePaths(config);
 
-    if (config->intent == INTENT_HELP) {
-        AppArgs_PrintHelp();
-        return 0;
-    }
-
-    if (config->intent == INTENT_DIAGNOSTIC) {
-        if (config->bListHardware) {
-            Linapple_ListHardware();
-            return 0;
-        }
-        if (config->szHardwareInfoName[0] != '\0') {
-            Peripheral_t* p = Peripheral_Find_Internal(config->szHardwareInfoName);
-            if (p) {
-                printf("Hardware Info: %s\n", p->name);
-                printf("ABI Version: %d\n", p->abi_version);
-                printf("Compatible Slots: ");
-                bool first = true;
-                for (int i = 0; i < NUM_SLOTS; ++i) {
-                  if (p->compatible_slots & (1u << static_cast<uint32_t>(i))) {
-                    if (!first) printf(", ");
-                    printf("%d", i);
-                    first = false;
-                  }
-                }
-                printf("\n");
-                const char* path = Peripheral_GetPluginPath(config->szHardwareInfoName);
-                if (path) {
-                    printf("Plugin Path: %s\n", path);
-                }
-            } else {
-                fprintf(stderr, "Error: Unknown hardware '%s'\n", config->szHardwareInfoName);
-                return 1;
-            }
-            return 0;
-        }
-        if (config->szTestCpuFile[0] != '\0') {
-            Linapple_CpuTest(config->szTestCpuFile, config->uTestCpuTrap);
-            return 0;
-        }
-    }
-
     // 2. Init Core
     Linapple_Init();
     s_initialized = true;
@@ -99,6 +58,52 @@ auto AppController_Initialize(AppConfig* config) -> int {
     g_state.fullscreen = config->bFullscreen;
 
     return 0;
+}
+
+auto AppController_HandleDiagnosticCommands(const AppConfig* config) -> bool {
+    if (!config) return false;
+
+    if (config->intent == INTENT_HELP) {
+        AppArgs_PrintHelp();
+        return true;
+    }
+
+    if (config->intent == INTENT_DIAGNOSTIC) {
+        if (config->bListHardware) {
+            Linapple_ListHardware();
+            return true;
+        }
+        if (config->szHardwareInfoName[0] != '\0') {
+            Peripheral_t* p = Peripheral_Find_Internal(config->szHardwareInfoName);
+            if (p) {
+                printf("Hardware Info: %s\n", p->name);
+                printf("ABI Version: %d\n", p->abi_version);
+                printf("Compatible Slots: ");
+                bool first = true;
+                for (int i = 0; i < NUM_SLOTS; ++i) {
+                  if (p->compatible_slots & (1u << static_cast<uint32_t>(i))) {
+                    if (!first) printf(", ");
+                    printf("%d", i);
+                    first = false;
+                  }
+                }
+                printf("\n");
+                const char* path = Peripheral_GetPluginPath(config->szHardwareInfoName);
+                if (path) {
+                    printf("Plugin Path: %s\n", path);
+                }
+            } else {
+                fprintf(stderr, "Error: Unknown hardware '%s'\n", config->szHardwareInfoName);
+            }
+            return true;
+        }
+        if (config->szTestCpuFile[0] != '\0') {
+            Linapple_CpuTest(config->szTestCpuFile, config->uTestCpuTrap);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void AppController_LoadInitialMedia(const AppConfig* config) {

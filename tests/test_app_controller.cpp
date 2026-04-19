@@ -55,3 +55,16 @@ TEST_CASE("AppController: Media Loading") {
     remove("test_media.conf");
 }
 
+TEST_CASE("AppController: Diagnostic Commands") {
+    AppConfig config = {};
+    AppConfig_Default(&config);
+    config.intent = INTENT_HELP;
+    
+    // We don't want to actually print help to stdout during tests usually,
+    // but here we just verify it returns true as expected.
+    CHECK(AppController_HandleDiagnosticCommands(&config) == true);
+    
+    config.intent = INTENT_RUN;
+    CHECK(AppController_HandleDiagnosticCommands(&config) == false);
+}
+

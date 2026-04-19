@@ -31,6 +31,12 @@ auto AppController_ShouldRestart() -> bool;
 void AppController_SetRestart(bool restart);
 
 /**
+ * Handle diagnostic and help commands that should execute before UI init.
+ * @return true if a command was handled and the application should exit.
+ */
+auto AppController_HandleDiagnosticCommands(const AppConfig* config) -> bool;
+
+/**
  * Perform initial media loading and optionally boot the machine.
  * Should be called after Initialize but before the main loop.
  */
