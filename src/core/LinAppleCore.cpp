@@ -43,9 +43,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #include "apple2/Video.h"
 #include "core/Common.h"
 #include "core/ProgramLoader.h"
-#ifndef HEADLESS
 #include "Debugger/Debug.h"
-#endif
 #include "apple2/ParallelPrinter.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
@@ -72,14 +70,14 @@ const uint32_t KEY_REPEAT_RATE = 68000;
 
 // Callbacks
 static LinappleVideoCallback g_videoCB = nullptr;
-LinappleAudioCallback g_audioCB = nullptr;
 static LinappleTitleCallback g_titleCB = nullptr;
+extern LinappleAudioCallback g_frontendAudioCB;
 
 static uint32_t s_turboStartMs = 0;
 static bool s_wasTurbo = false;
 
 void Linapple_SetVideoCallback(LinappleVideoCallback cb) { g_videoCB = cb; }
-void Linapple_SetAudioCallback(LinappleAudioCallback cb) { g_audioCB = cb; }
+void Linapple_SetAudioCallback(LinappleAudioCallback cb) { g_frontendAudioCB = cb; }
 void Linapple_SetTitleCallback(LinappleTitleCallback cb) { g_titleCB = cb; }
 
 void Linapple_UpdateTitle(const char* title) {
@@ -103,45 +101,6 @@ void Linapple_KeyboardThink(uint32_t dwCycles) {
       KeybPushAppleKey(g_nRepeatKey);
     }
   }
-}
-
-extern "C" void Linapple_SetKeyState(uint8_t apple_code, bool bDown) {
-  if (bDown) {
-    if (g_nRepeatKey == apple_code) return;
-    g_nRepeatKey = apple_code;
-    g_nRepeatDelayCycles = 0;
-    g_bRepeating = false;
-    if (apple_code) KeybPushAppleKey(apple_code);
-  } else {
-    if (g_nRepeatKey == apple_code) {
-      g_nRepeatKey = 0;
-      g_bRepeating = false;
-    }
-  }
-}
-
-extern "C" void Linapple_SetCapsLockState(bool bEnabled) {
-  KeybSetCapsLock(bEnabled);
-}
-
-extern "C" void Linapple_SetAppleKey(int apple_key, bool bDown) {
-  JoySetRawButton(apple_key, bDown);
-}
-
-extern "C" void Linapple_SetJoystickAxis(int axis, int value) {
-  static int s_joyX = 127;
-  static int s_joyY = 127;
-  int joy_val = ((value + 32768) * 255) / 65535;
-  if (axis == 0) {
-    s_joyX = joy_val;
-  } else if (axis == 1) {
-    s_joyY = joy_val;
-  }
-  JoySetRawPosition(0, s_joyX, s_joyY);
-}
-
-extern "C" void Linapple_SetJoystickButton(int button, bool down) {
-  JoySetRawButton(button, down);
 }
 
 auto Linapple_GetTicks() -> uint32_t {
@@ -185,48 +144,28 @@ void Linapple_Init() {
   MemInitialize();
   CpuInitialize();
   VideoInitialize();
-
-  g_state.mode = MODE_RUNNING;
-
-  SpkrFrontend_Reset();
-
-  KeybReset();
-  JoyReset();
+  JoyInitialize();
 }
 
 void Linapple_RegisterPeripherals() {
-  Peripheral_Manager_Init();
-  Peripheral_Plugins_Init();
-  Peripheral_Register_Internal();
+    Peripheral_Register_Internal();
 }
 
 void Linapple_Shutdown() {
   Peripheral_Manager_Shutdown();
   Peripheral_Plugins_Shutdown();
+  SoundCore_Destroy();
   VideoDestroy();
   MemDestroy();
-  CpuDestroy();
-  SoundCore_Destroy();
   Asset_Quit();
 }
 
-int Linapple_LoadProgram(const char* path) {
-  return static_cast<int>(ProgramLoader_TryLoad(path));
-}
-
-static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t;
-
 void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr) {
-  if (!szTestFile) return;
-
   Linapple_Init();
-  g_state.mode = MODE_RUNNING;
-
-  FilePtr f(fopen(szTestFile, "rb"), fclose);
-  if (!f) return;
-
-  fread(mem, 1, APPLE_MEM_SIZE, f.get());
-
+  if (Linapple_LoadProgram(szTestFile) != 0) {
+    Error("Failed to load test file: %s\n", szTestFile);
+    return;
+  }
   regs.pc = 0x0400;  // NMOS 6502 functional test entry
   uint64_t count = 0;
   while (count < CPU_TEST_MAX_CYCLES) {
@@ -243,6 +182,46 @@ void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr) {
   Linapple_Shutdown();
 }
 
+int Linapple_LoadProgram(const char* path) {
+  auto res = ProgramLoader_TryLoad(path);
+  if (res == PROGRAM_LOAD_OK) return 0;
+  if (res != PROGRAM_LOAD_NOT_A_PROGRAM) return -1;
+
+  // Avoid trying to load known disk image formats as raw programs
+  const char* ext = strrchr(path, '.');
+  if (ext) {
+    static const char* disk_exts[] = {".woz", ".dsk", ".nib", ".2mg", ".po", ".do"};
+    for (auto d_ext : disk_exts) {
+      if (strcasecmp(ext, d_ext) == 0) return -1;
+    }
+  }
+
+  // Raw binary fallback
+  FILE* f = fopen(path, "rb");
+  if (!f) return -1;
+
+  fseek(f, 0, SEEK_END);
+  long size = ftell(f);
+  fseek(f, 0, SEEK_SET);
+
+  if (size <= 0 || size > 65536) {
+    fclose(f);
+    return -1;
+  }
+
+  uint16_t load_addr = (size == 65536) ? 0x0000 : 0x800;
+
+  if (fread(mem + load_addr, 1, size, f) != static_cast<size_t>(size)) {
+    fclose(f);
+    return -1;
+  }
+  fclose(f);
+
+  memset(memdirty, 0xFF, NUM_PAGES_48K);
+  regs.pc = load_addr;
+  return 0;
+}
+
 static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
   if (dwCycles == 0) return 0;
 
@@ -255,8 +234,6 @@ static auto Internal_RunCycles(uint32_t dwCycles) -> uint32_t {
   VideoUpdateVbl(dwExecutedCycles);
   JoyUpdatePosition(dwExecutedCycles);
 
-  SpkrUpdate(dwExecutedCycles);
-  SpkrFrontend_Update(dwExecutedCycles);
   Linapple_KeyboardThink(dwExecutedCycles);
 
   return dwExecutedCycles;
@@ -286,4 +263,35 @@ auto Linapple_RunFrame(uint32_t cycles) -> uint32_t {
     return executed;
   }
   return 0;
+}
+
+void Linapple_SetKeyState(uint8_t apple_code, bool down) {
+  if (down) {
+    KeybQueueKeypress(apple_code);
+    g_nRepeatKey = apple_code;
+    g_nRepeatDelayCycles = 0;
+    g_bRepeating = false;
+  } else {
+    if (g_nRepeatKey == apple_code) {
+      g_nRepeatKey = 0;
+    }
+  }
+  KeybSetAnyKeyDownStatus(down);
+}
+
+void Linapple_SetCapsLockState(bool enabled) { KeybSetCapsLock(enabled); }
+
+void Linapple_SetAppleKey(int key, bool down) {
+  if (key == 0)
+    g_bShiftKey = down;
+  else
+    g_bAltKey = down;
+}
+
+void Linapple_SetJoystickAxis(int axis, int value) {
+  JoySetTrim(static_cast<short>(value), axis == 0);
+}
+
+void Linapple_SetJoystickButton(int button, bool down) {
+  JoySetButton(static_cast<eBUTTON>(button), down ? BUTTON_DOWN : BUTTON_UP);
 }

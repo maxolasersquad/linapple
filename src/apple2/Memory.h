@@ -168,6 +168,8 @@ extern uint32_t       g_uMaxExPages;  // user requested ram pages (from cmd line
 void RegisterIoHandler(uint32_t uSlot, iofunction IOReadC0, iofunction IOWriteC0, iofunction IOReadCx, iofunction IOWriteCx,
                        void* lpSlotParameter, uint8_t *pExpansionRom);
 
+void RegisterDirectIoHandler(uint16_t addr, iofunction read, iofunction write, void* instance);
+
 void MemDestroy();
 
 bool MemGet80Store();
@@ -178,6 +180,7 @@ uint8_t* MemGetAuxPtr(uint16_t);
 uint8_t* MemGetMainPtr(uint16_t);
 
 uint8_t* MemGetCxRomPeripheral();
+uint8_t* GetMemPtr(uint16_t addr);
 uint8_t* MemGetBankPtr(const uint32_t nBank);
 
 uint32_t GetMemMode(void);

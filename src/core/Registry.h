@@ -32,5 +32,6 @@ auto ConfigLoadInt(const char* section, const char* key, uint32_t* value) -> boo
 auto ConfigLoadBool(const char* section, const char* key, bool* value) -> bool;
 auto ConfigLoadString(const char* section, const char* key, std::string* value) -> bool;
 void ConfigSaveInt(const char* section, const char* key, uint32_t value);
+void ConfigSaveString(const char* section, const char* key, const char* value);
 
 auto php_trim(char *c, int len) -> char *;

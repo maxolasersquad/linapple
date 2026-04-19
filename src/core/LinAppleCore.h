@@ -294,8 +294,6 @@ using LinappleAudioCallback = void (*)(const int16_t* samples,
 
 /**
  * @brief Callback signature for window title updates.
- *
- * @param title New window title.
  */
 using LinappleTitleCallback = void (*)(const char* title);
 

@@ -636,6 +636,19 @@ void RegisterIoHandler(uint32_t uSlot, iofunction IOReadC0, iofunction IOWriteC0
 
   ExpansionRom[uSlot] = pExpansionRom;
 }
+
+void RegisterDirectIoHandler(uint16_t addr, iofunction read, iofunction write, void* instance) {
+  if ((addr & 0xFF00) != 0xC000) return;
+  uint8_t index = static_cast<uint8_t>(addr & 0xFF);
+  
+  if (read) IORead[index] = read;
+  if (write) IOWrite[index] = write;
+  
+  // Note: we don't currently have a way to store the 'instance' 
+  // for the generic iofunction signature without changing the core.
+  // Peripherals using this must handle their own instance (e.g. via default global).
+  (void)instance;
+}
 //===========================================================================
 
 auto GetMemMode() -> uint32_t
@@ -907,6 +920,10 @@ auto MemGetBankPtr(const uint32_t nBank) -> uint8_t*
 auto MemGetCxRomPeripheral() -> uint8_t*
 {
   return pCxRomPeripheral;
+}
+
+auto GetMemPtr(uint16_t addr) -> uint8_t* {
+  return mem + addr;
 }
 
 //===========================================================================

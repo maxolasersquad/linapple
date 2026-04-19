@@ -195,6 +195,10 @@ void ConfigSaveInt(const char* section, const char* key, uint32_t value) {
     Configuration::Instance().SetInt(section, key, value);
 }
 
+void ConfigSaveString(const char* section, const char* key, const char* value) {
+    Configuration::Instance().SetString(section, key, value);
+}
+
 auto php_trim(char *c, int len) -> char * {
     std::string s(c, len);
     std::string t = trim(s);
