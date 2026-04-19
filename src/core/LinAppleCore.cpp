@@ -22,34 +22,36 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #include "core/LinAppleCore.h"
-#include "core/ProgramLoader.h"
-#include "core/Common.h"
-#include <cstdio>
-#include <cinttypes>
-#include <chrono>
+
 #include <array>
-#include <vector>
+#include <chrono>
+#include <cinttypes>
+#include <cstdio>
 #include <cstring>
-#include "apple2/Keyboard.h"
-#include "apple2/Speaker.h"
-#include "apple2/Mockingboard.h"
-#include "apple2/SoundCore.h"
-#include "apple2/Video.h"
-#include "apple2/Memory.h"
+#include <vector>
+
 #include "apple2/CPU.h"
 #include "apple2/Clock.h"
-#include "apple2/SerialComms.h"
 #include "apple2/Joystick.h"
+#include "apple2/Keyboard.h"
+#include "apple2/Memory.h"
+#include "apple2/Mockingboard.h"
 #include "apple2/SaveState.h"
+#include "apple2/SerialComms.h"
+#include "apple2/SoundCore.h"
+#include "apple2/Speaker.h"
+#include "apple2/Video.h"
+#include "core/Common.h"
+#include "core/ProgramLoader.h"
 #ifndef HEADLESS
 #include "Debugger/Debug.h"
 #endif
+#include "apple2/ParallelPrinter.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
-#include "apple2/ParallelPrinter.h"
-#include "core/asset.h"
 #include "core/Peripheral.h"
 #include "core/Peripheral_Internal.h"
+#include "core/asset.h"
 
 using Logger::Error;
 using Logger::Info;
@@ -57,7 +59,7 @@ using Logger::Info;
 // Constants from original implementation
 const int APPLE_MEM_SIZE = 65536;
 const uint16_t CPU_TEST_START_PC = 0x0800;
-const uint16_t CPU_TEST_TRAP_PC = 0x3469; // Example trap PC
+const uint16_t CPU_TEST_TRAP_PC = 0x3469;  // Example trap PC
 const uint64_t CPU_TEST_MAX_CYCLES = 100000000;
 const int FULL_SPEED_DISK_ITERATIONS = 100;
 
@@ -191,7 +193,7 @@ void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr) {
 
   fread(mem, 1, APPLE_MEM_SIZE, f.get());
 
-  regs.pc = 0x0400; // NMOS 6502 functional test entry
+  regs.pc = 0x0400;  // NMOS 6502 functional test entry
   uint64_t count = 0;
   while (count < CPU_TEST_MAX_CYCLES) {
     uint32_t executed = CpuExecute(1);
@@ -199,7 +201,8 @@ void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr) {
     g_nCumulativeCycles += executed;
     count += executed;
     if (regs.pc == trap_addr) {
-      printf("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc, count);
+      printf("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc,
+             count);
       break;
     }
   }
@@ -207,9 +210,10 @@ void Linapple_CpuTest(const char* szTestFile, uint16_t trap_addr) {
 }
 
 auto Linapple_GetTicks() -> uint32_t {
-    static auto start_time = std::chrono::steady_clock::now();
-    auto now = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
+  static auto start_time = std::chrono::steady_clock::now();
+  auto now = std::chrono::steady_clock::now();
+  return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time)
+      .count();
 }
 
 static auto ShouldRunFullSpeed() -> bool {
@@ -221,8 +225,8 @@ static auto ShouldRunFullSpeed() -> bool {
   bool spkr_active = Spkr_IsActive();
   bool peripheral_active = Peripheral_IsAnyActive();
 
-  bool shouldTurbo =
-      peripheral_active && (g_state.needsprecision == 0) && !mb_active && !spkr_active;
+  bool shouldTurbo = peripheral_active && (g_state.needsprecision == 0) &&
+                     !mb_active && !spkr_active;
 
   if (shouldTurbo && !s_wasTurbo) {
     s_turboStartMs = Linapple_GetTicks();

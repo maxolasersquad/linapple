@@ -472,6 +472,21 @@ target_compile_definitions(test-disk-config-runtime-eject PRIVATE ${PERIPHERAL_D
 target_link_libraries(test-disk-config-runtime-eject PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-disk-config-runtime-eject COMMAND test-disk-config-runtime-eject)
 
+# test-headless-boot
+add_executable(test-headless-boot
+    tests/test_headless_boot.cpp
+    ${SOURCES_CORE}
+    ${SOURCES_A2}
+    ${SOURCES_DBG}
+    src/frontends/headless/Stubs.cpp
+    src/frontends/headless/Headless_Path.cpp
+)
+add_dependencies(test-headless-boot generate_xpms)
+target_include_directories(test-headless-boot PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-headless-boot PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-headless-boot PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME test-headless-boot COMMAND test-headless-boot)
+
 # test-disk-ui
 add_executable(test-disk-ui
     tests/test_disk_ui.cpp

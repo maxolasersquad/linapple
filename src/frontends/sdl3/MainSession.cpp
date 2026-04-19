@@ -1,23 +1,23 @@
-#include "frontends/sdl3/Frontend.h"
-
 #include <SDL3/SDL.h>
 #include <curl/curl.h>
-#include <cstdio>
+
 #include <cinttypes>
+#include <cstdio>
 #include <string>
 
-#include "core/Common.h"
-#include "core/Common_Globals.h"
-#include "frontends/sdl3/Frame.h"
-#include "core/Log.h"
-#include "core/Registry.h"
 #include "apple2/CPU.h"
 #include "apple2/Memory.h"
-#include "apple2/Video.h"
 #include "apple2/SaveState.h"
+#include "apple2/Video.h"
+#include "core/Common.h"
+#include "core/Common_Globals.h"
 #include "core/LinAppleCore.h"
+#include "core/Log.h"
 #include "core/ProgramLoader.h"
+#include "core/Registry.h"
 #include "core/Util_Path.h"
+#include "frontends/sdl3/Frame.h"
+#include "frontends/sdl3/Frontend.h"
 
 using Logger::Error;
 using Logger::Info;
@@ -27,9 +27,7 @@ static bool g_bBudgetVideo = false;
 void SetBudgetVideo(bool b) { g_bBudgetVideo = b; }
 auto GetBudgetVideo() -> bool { return g_bBudgetVideo; }
 
-void SetCurrentCLK6502() {
-  g_fCurrentCLK6502 = 1.023 * 1000000.0;
-}
+void SetCurrentCLK6502() { g_fCurrentCLK6502 = 1.023 * 1000000.0; }
 
 void SoundCore_SetFade(int fade) { (void)fade; }
 
@@ -39,7 +37,7 @@ void SingleStep(bool bReinit) {
 }
 
 auto SysInit(bool bLog) -> int {
-  (void)bLog; // Logging is always enabled to XDG data dir
+  (void)bLog;  // Logging is always enabled to XDG data dir
 
   Logger::Initialize();
 
@@ -81,19 +79,20 @@ static void Frontend_SetWindowTitle(const char* title) {
 }
 
 auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
-                const char* szImageName_drive1, const char* szImageName_drive2,
-                const char* szSnapshotFile, bool bBoot, bool bPAL) -> int {
+                 const char* szImageName_drive1, const char* szImageName_drive2,
+                 const char* szProgramName, const char* szSnapshotFile,
+                 bool bBoot, bool bPAL) -> int {
   if (szConfigurationFile) {
     Configuration::Instance().Load(szConfigurationFile);
   } else {
     std::string configPath = Path::FindDataFile("linapple.conf");
     if (!configPath.empty()) {
-        Configuration::Instance().Load(configPath);
+      Configuration::Instance().Load(configPath);
     } else {
-        // Fallback if not found anywhere, config will save here later
-        std::string fallbackPath = Path::GetUserConfigDir();
-        Path::EnsureDirExists(fallbackPath);
-        Configuration::Instance().Load(fallbackPath + "linapple.conf");
+      // Fallback if not found anywhere, config will save here later
+      std::string fallbackPath = Path::GetUserConfigDir();
+      Path::EnsureDirExists(fallbackPath);
+      Configuration::Instance().Load(fallbackPath + "linapple.conf");
     }
   }
 
@@ -111,17 +110,27 @@ auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
   Snapshot_Startup();
 
   if (szImageName_drive1) {
-    if (Linapple_LoadProgram(szImageName_drive1) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE1, szImageName_drive1);
+    if (Linapple_LoadProgram(szImageName_drive1) ==
+        PROGRAM_LOAD_NOT_A_PROGRAM) {
+      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE1,
+                                          szImageName_drive1);
     }
   }
   if (szImageName_drive2) {
-    if (Linapple_LoadProgram(szImageName_drive2) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE2, szImageName_drive2);
+    if (Linapple_LoadProgram(szImageName_drive2) ==
+        PROGRAM_LOAD_NOT_A_PROGRAM) {
+      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE2,
+                                          szImageName_drive2);
     }
   }
 
   Linapple_RegisterPeripherals();
+
+  if (szProgramName) {
+    if (Linapple_LoadProgram(szProgramName) != 0) {
+      fprintf(stderr, "Error: Could not load program '%s'\n", szProgramName);
+    }
+  }
 
   if (bBoot) {
     // Immediate boot handled via specialized command or logic if needed,
@@ -133,7 +142,7 @@ auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
 }
 
 void SessionShutdown() {
-    // Session-specific cleanup if needed beyond core shutdown
+  // Session-specific cleanup if needed beyond core shutdown
 }
 
 void CpuTestHeadless(const char* szTestFile) {
@@ -144,7 +153,7 @@ void CpuTestHeadless(const char* szTestFile) {
   FilePtr f(fopen(szTestFile, "rb"), fclose);
   if (!f) {
     return;
-}
+  }
 
   fread(mem, 1, 65536, f.get());
 
