@@ -47,8 +47,9 @@ static Speaker_t g_defaultSpeaker;
 static constexpr int SPKR_QUIET_CYCLES_DIVISOR = 5;
 static constexpr uint8_t INVALID_SAMPLE_DATA = 0xFF;
 
-// Forward declaration of core-bridge callback (to be removed in 6.5)
+// Forward declaration of core-bridge callbacks for legacy fallback (Task 6.5 will eventually clean this up)
 extern LinappleAudioCallback g_audioCB;
+extern void DSUploadBuffer(int16_t* buffer, uint32_t num_samples);
 
 auto Speaker_Destroy(Speaker_t* instance) -> void {
   (void)instance;
@@ -65,6 +66,7 @@ auto Speaker_Initialize(Speaker_t* instance) -> void {
   
   instance->last_sample_state = false;
   instance->next_sample_cycle = static_cast<double>(g_nCumulativeCycles);
+  // NOTE: We do NOT clear instance->host here as it is set during ABI init.
 }
 
 auto Speaker_Reset(Speaker_t* instance) -> void {
@@ -171,10 +173,16 @@ auto Speaker_GenerateSamples(Speaker_t* instance, uint32_t dwExecutedCycles) -> 
   }
 
   if (numSamples > 0) {
-    if (g_audioCB) {
-      g_audioCB(instance->sample_buffer.data(), static_cast<size_t>(numSamples));
+    auto* host = static_cast<HostInterface_t*>(instance->host);
+    if (host && host->AudioPushSamples) {
+      host->AudioPushSamples(instance, instance->sample_buffer.data(), static_cast<size_t>(numSamples));
     } else {
-      DSUploadBuffer(instance->sample_buffer.data(), static_cast<unsigned>(numSamples));
+      // Fallback for tests and legacy non-ABI usage (Task 6.5 will eventually clean this up)
+      if (g_audioCB) {
+        g_audioCB(instance->sample_buffer.data(), static_cast<size_t>(numSamples));
+      } else {
+        DSUploadBuffer(instance->sample_buffer.data(), static_cast<unsigned>(numSamples));
+      }
     }
   }
 }

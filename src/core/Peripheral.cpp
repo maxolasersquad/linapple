@@ -325,6 +325,18 @@ static void Host_RequestPreciseTiming() {
   g_state.needsprecision = static_cast<uint32_t>(cumulativecycles);
 }
 
+extern LinappleAudioCallback g_audioCB;
+extern void DSUploadBuffer(int16_t* buffer, uint32_t num_samples);
+
+static void Host_AudioPushSamples(void* instance, const int16_t* buffer, size_t num_samples) {
+  (void)instance;
+  if (g_audioCB) {
+    g_audioCB(buffer, num_samples);
+  } else {
+    DSUploadBuffer(const_cast<int16_t*>(buffer), static_cast<uint32_t>(num_samples));
+  }
+}
+
 // Justification: Global immutable dispatch table for services provided to
 // peripherals.
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -343,7 +355,8 @@ static const HostInterface_t g_host_interface = {Host_Log,
                                                  Host_RequestPreciseTiming,
                                                  RiffInitWriteFile,
                                                  RiffFinishWriteFile,
-                                                 RiffPutSamples};
+                                                 RiffPutSamples,
+                                                 Host_AudioPushSamples};
 
 // --- Command Queue ---
 

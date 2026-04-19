@@ -81,6 +81,9 @@ typedef struct {
     int (*RiffInitWriteFile)(char *pszFile, uint32_t sample_rate, uint32_t NumChannels);
     int (*RiffFinishWriteFile)(void);
     int (*RiffPutSamples)(short *buf, uint32_t uSamples);
+
+    // Modern Audio Routing
+    void (*AudioPushSamples)(void* instance, const int16_t* buffer, size_t num_samples);
 } HostInterface_t;
 
 /**
