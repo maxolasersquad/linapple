@@ -143,37 +143,6 @@ typedef struct {
   SS_CARD_HDR Hdr;
 } SS_CARD_EMPTY;
 
-const uint32_t NIBBLES_PER_TRACK = 0x1A00;
-
-// DEPRECATED: SS_CARD_DISK2 and DISK2_Unit are legacy AppleWin snapshot structures.
-// They will be removed in #254. Peripherals should now use their own private
-// state serialization through the save_state/load_state ABI.
-typedef struct {
-  char szFileName[PATH_MAX_LEN];
-  int track;
-  int phase;
-  int byte;
-  bool writeprotected;
-  bool trackimagedata;
-  bool trackimagedirty;
-  uint32_t spinning;
-  uint32_t writelight;
-  int nibbles;
-  uint8_t nTrack[NIBBLES_PER_TRACK];
-} DISK2_Unit;
-
-typedef struct tagSS_CARD_DISK2 {
-  SS_CARD_HDR Hdr;
-  DISK2_Unit Unit[2];
-  uint16_t phases;
-  uint16_t currdrive;
-  bool diskaccessed;
-  bool enhancedisk;
-  uint8_t floppylatch;
-  bool floppymotoron;
-  bool floppywritemode;
-} SS_CARD_DISK2;
-
 typedef struct {
   union {
     struct {
@@ -246,7 +215,7 @@ typedef struct {
   SS_CARD_EMPTY Empty3;        // Slot3
   SS_CARD_MOCKINGBOARD Mockingboard1;  // Slot4
   SS_CARD_MOCKINGBOARD Mockingboard2;  // Slot5
-  SS_CARD_DISK2 Disk2;        // Slot6
+  SS_CARD_EMPTY Empty6;        // Slot6
   SS_CARD_EMPTY Empty7;        // Slot7
 } APPLEWIN_SNAPSHOT;
 #endif // STRUCTS_H

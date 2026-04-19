@@ -758,7 +758,7 @@ void MB_SetVolume(uint32_t dwVolume, uint32_t dwVolumeMax) {
 
 auto MB_GetSnapshot(SS_CARD_MOCKINGBOARD *pSS, uint32_t dwSlot) -> uint32_t
 {
-  pSS->Hdr.UnitHdr.dwLength = sizeof(SS_CARD_DISK2);
+  pSS->Hdr.UnitHdr.dwLength = sizeof(SS_CARD_EMPTY);
   pSS->Hdr.UnitHdr.dwVersion = MAKE_VERSION(1, 0, 0, 0);
 
   pSS->Hdr.dwSlot = dwSlot;

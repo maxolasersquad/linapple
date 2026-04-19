@@ -10,7 +10,6 @@
 #include "core/LinAppleCore.h"
 #include "apple2/DiskCommands.h"
 #include "apple2/Memory.h"
-#include "apple2/Disk.h"
 #include "apple2/DiskFTP.h"
 
 #include "apple2/CPU.h"

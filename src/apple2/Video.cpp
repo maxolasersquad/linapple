@@ -56,7 +56,6 @@ static auto GetTickCount() -> uint32_t {
 #include "core/Util_Text.h"
 #include "apple2/stretch.h"
 #include "apple2/Structs.h"
-#include "apple2/Disk.h"
 #include "apple2/Harddisk.h"
 
 #include "charset40.xpm"

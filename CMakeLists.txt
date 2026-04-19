@@ -158,9 +158,10 @@ set(SOURCES_CORE
 set(SOURCES_A2
     src/apple2/6821.cpp
     src/apple2/CPU.cpp
+    src/apple2/Disk.cpp
     src/apple2/DiskGCR.cpp
-    src/apple2/DiskImage.cpp
     src/apple2/DiskLoader.cpp
+
     src/apple2/formats/DoDriver.cpp
     src/apple2/formats/IieDriver.cpp
     src/apple2/formats/Nb2Driver.cpp
@@ -411,9 +412,9 @@ add_executable(test-program-loader
     src/apple2/stretch.cpp
     src/apple2/Harddisk.cpp
     src/apple2/Disk.cpp
-    src/apple2/DiskImage.cpp
-    src/apple2/DiskLoader.cpp
     src/apple2/DiskGCR.cpp
+    src/apple2/DiskLoader.cpp
+    src/apple2/6821.cpp
     src/apple2/formats/DoDriver.cpp
     src/apple2/formats/IieDriver.cpp
     src/apple2/formats/Nb2Driver.cpp
@@ -426,6 +427,21 @@ add_dependencies(test-program-loader generate_xpms)
 target_include_directories(test-program-loader PRIVATE src src/core src/apple2 ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR})
 target_link_libraries(test-program-loader PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-program-loader COMMAND test-program-loader)
+
+# test-disk-smoke
+add_executable(test-disk-smoke
+    tests/test_disk_smoke.cpp
+    ${SOURCES_CORE}
+    ${SOURCES_A2}
+    ${SOURCES_DBG}
+    src/frontends/headless/Stubs.cpp
+    src/frontends/headless/Headless_Path.cpp
+)
+add_dependencies(test-disk-smoke generate_xpms)
+target_include_directories(test-disk-smoke PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-disk-smoke PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-disk-smoke PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME test-disk-smoke COMMAND test-disk-smoke)
 
 # Integration Tests
 add_executable(test-disk-config-startup

@@ -1,5 +1,5 @@
 #include "apple2/DiskGCR.h"
-#include "apple2/Disk.h"
+#include "apple2/DiskCommands.h"
 #include "apple2/Memory.h"
 #include <cstring>
 #include <algorithm>
@@ -190,8 +190,8 @@ uint32_t GCR_NibblizeTrackCustomOrder(uint8_t* workbuf, uint8_t* trackImageBuffe
   uint8_t sector = 0;
 
   // Write gap one, which contains 48 self-sync bytes
-  const int GAP1_SIZE = 48;
-  for (int loop = 0; loop < GAP1_SIZE; loop++) {
+  const int gap1_size = 48;
+  for (int loop = 0; loop < gap1_size; loop++) {
     trackImageBuffer[offset++] = 0xFF;
   }
 
@@ -225,8 +225,8 @@ uint32_t GCR_NibblizeTrackCustomOrder(uint8_t* workbuf, uint8_t* trackImageBuffe
     trackImageBuffer[offset++] = 0xEB;
 
     // Write gap two, which contains six self-sync bytes
-    const int GAP2_SIZE = 6;
-    for (int loop = 0; loop < GAP2_SIZE; loop++) {
+    const int gap2_size = 6;
+    for (int loop = 0; loop < gap2_size; loop++) {
       trackImageBuffer[offset++] = 0xFF;
     }
 
@@ -244,7 +244,7 @@ uint32_t GCR_NibblizeTrackCustomOrder(uint8_t* workbuf, uint8_t* trackImageBuffe
     trackImageBuffer[offset++] = 0xEB;
 
     // Write gap three, which contains 27 self-sync bytes
-    for (int loop = 0; loop < GAP3_SIZE; loop++) {
+    for (int loop = 0; loop < GCR_GAP3_SIZE; loop++) {
       trackImageBuffer[offset++] = 0xFF;
     }
 

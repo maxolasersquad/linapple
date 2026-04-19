@@ -9,7 +9,6 @@
 #include "apple2/Keyboard.h"
 #include "apple2/Joystick.h"
 #include "apple2/Speaker.h"
-#include "apple2/Disk.h"
 #include "apple2/Mockingboard.h"
 #include "apple2/Video.h"
 #include "apple2/SerialComms.h"
@@ -131,7 +130,7 @@ void Snapshot_LoadState() {
             case 3: slot_state = &pSS->Empty3; slot_size = sizeof(pSS->Empty3); break;
             case 4: slot_state = &pSS->Mockingboard1; slot_size = sizeof(pSS->Mockingboard1); break;
             case 5: slot_state = &pSS->Mockingboard2; slot_size = sizeof(pSS->Mockingboard2); break;
-            case 6: slot_state = &pSS->Disk2; slot_size = sizeof(pSS->Disk2); break;
+            case 6: break; // Slot 6 handled via manifest/ABI
             case 7: slot_state = &pSS->Empty7; slot_size = sizeof(pSS->Empty7); break;
         }
         if (slot_state) {
@@ -189,7 +188,7 @@ void Snapshot_SaveState() {
           case 3: slot_state = &pSS->Empty3; slot_size = sizeof(pSS->Empty3); break;
           case 4: slot_state = &pSS->Mockingboard1; slot_size = sizeof(pSS->Mockingboard1); break;
           case 5: slot_state = &pSS->Mockingboard2; slot_size = sizeof(pSS->Mockingboard2); break;
-          case 6: slot_state = &pSS->Disk2; slot_size = sizeof(pSS->Disk2); break;
+          case 6: break; // Slot 6 handled via manifest/ABI
           case 7: slot_state = &pSS->Empty7; slot_size = sizeof(pSS->Empty7); break;
       }
       if (slot_state) {

@@ -16,17 +16,15 @@ constexpr uint8_t BUFFER_INIT_VAL = 0xAA;
 constexpr uint32_t BAD_VERSION = 0xdeadbeef;
 }
 
-static_assert(sizeof(DiskInsertCmd_t) == DISK_ABI_CMD_SIZE, "DiskInsertCmd_t must be exactly 512 bytes to fit one queue slot");
-
 TEST_CASE("DiskABI: [DISK-01] DiskInsertCmd_t is exactly 512 bytes") {
   CHECK(sizeof(DiskInsertCmd_t) == DISK_ABI_CMD_SIZE);
 }
 
 TEST_CASE("DiskABI: [DISK-02] DiskInsertCmd_t field offsets are stable") {
   CHECK(offsetof(DiskInsertCmd_t, drive)                == 0);
-  CHECK(offsetof(DiskInsertCmd_t, path)                 == 4);
-  CHECK(offsetof(DiskInsertCmd_t, write_protected)      == 508);
-  CHECK(offsetof(DiskInsertCmd_t, create_if_necessary)  == 509);
+  CHECK(offsetof(DiskInsertCmd_t, path)                 == 1);
+  CHECK(offsetof(DiskInsertCmd_t, write_protected)      == 505);
+  CHECK(offsetof(DiskInsertCmd_t, create_if_necessary)  == 506);
 }
 
 TEST_CASE("DiskABI: [DISK-03] Enum values match ABI specification") {

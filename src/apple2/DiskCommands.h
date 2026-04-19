@@ -1,33 +1,80 @@
 /*
  * DiskCommands.h - LinApple Disk Peripheral Command Interface
- *
- * Command payloads sent through the queue must fit in a 512-byte slot.
- * DiskStatus_t exceeds this limit and is retrieved synchronously via
- * DISK_CMD_GET_STATUS instead.
  */
 
-#pragma once
-
-// NOLINTBEGIN(modernize-deprecated-headers,modernize-use-using,cppcoreguidelines-pro-type-member-init)
-// Rationale: intentional C99 ABI header. <cstdint> and friends, 'using', and
-// struct constructors are C++ only and cannot appear in a C99-compatible interface.
+#ifndef DISKCOMMANDS_H
+#define DISKCOMMANDS_H
 
 #include <stdint.h>
 #include <stdbool.h>
-// DiskError_e (used in DiskStatus_t) is defined here; extract to DiskError.h if
-// the command layer ever needs to decouple from the full driver ABI.
-#include "apple2/DiskFormatDriver.h"
+#include "apple2/DiskError.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// Forward declarations
+struct DiskFormatDriver_t;
+
+extern bool enhancedisk;
+
 enum { DISK_DEFAULT_SLOT = 6 };
 
 typedef enum {
   DISK_DRIVE_0 = 0,
-  DISK_DRIVE_1 = 1
+  DISK_DRIVE_1 = 1,
+  DISK_DRIVE_COUNT = 2
 } DiskDrive_e;
+
+// Legacy constants for compatibility
+#define DRIVE_1 DISK_DRIVE_0
+#define DRIVE_2 DISK_DRIVE_1
+
+#define MAX_DISK_IMAGE_NAME 15
+#define MAX_DISK_FULL_NAME 255
+
+// Shared constants for Disk II emulation
+#define TRACKS 40
+#define NIBBLES_PER_TRACK 0x1A00
+#define SECTORS_PER_TRACK_16 16
+#define NUM_INTERLEAVE_MODES 3
+
+// GCR encoding constants
+#define GCR_ENCODE_TABLE_SIZE 64
+#define GCR_DECODE_TABLE_SIZE 128
+#define GCR_SECTOR_DATA_SIZE 342
+#define GCR_SECTOR_WITH_CHECKSUM_SIZE 343
+
+// GCR work buffer offsets
+#define GCR_WORK_BUFFER_OFFSET 0x1000
+#define GCR_CHECKSUM_BUFFER_OFFSET 0x1400
+
+// GAP sizes
+#define GCR_GAP1_SIZE 16
+#define GCR_GAP2_SIZE 10
+#define GCR_GAP3_SIZE 16
+
+#define DRIVES DISK_DRIVE_COUNT
+
+// Disk internal structures
+typedef struct {
+  char fullname[MAX_DISK_FULL_NAME + 1];
+  char imagename[MAX_DISK_IMAGE_NAME + 1];
+  int track;
+  int phase;
+  uint32_t byte;
+  bool user_write_protected;
+  bool os_readonly;
+  bool trackimagedata;
+  bool trackimagedirty;
+  uint32_t spinning;
+  uint32_t writelight;
+  int nibbles;
+  uint8_t* trackimage;
+  struct DiskFormatDriver_t* driver;
+  void* driver_instance;
+  DiskError_e last_error;
+} Disk_t;
 
 typedef enum {
   DISK_CMD_INSERT      = 0x0001,  /* payload: DiskInsertCmd_t */
@@ -38,45 +85,31 @@ typedef enum {
   DISK_CMD_BOOT        = 0x0006   /* no payload */
 } DiskCmd_e;
 
-/*
- * DISK_INSERT_PATH_MAX: DiskInsertCmd_t must fit in one 512-byte queue slot.
- * Field layout: 4 (DiskDrive_e) + 504 (path) + 1 (bool) + 1 (bool) = 510,
- * plus 2 bytes of implicit tail padding for 4-byte struct alignment = 512.
- */
-enum {
-  DISK_INSERT_PATH_MAX = 504,
-  DISK_STATUS_NAME_MAX =  64,  /* filename without path */
-  DISK_STATUS_PATH_MAX = 512   /* absolute path; silently truncated if longer */
-};
+#define DISK_INSERT_PATH_MAX 504
 
 #pragma pack(push, 1)
-
-/* sizeof(DiskInsertCmd_t) == 512; enforced by static_assert in the implementation */
 typedef struct {
-  int32_t     drive;                       /* DiskDrive_e */
-  char        path[DISK_INSERT_PATH_MAX];  /* absolute path, null-terminated */
-  uint8_t     write_protected;
-  uint8_t     create_if_necessary;
-  uint8_t     reserved[2];                 /* explicit padding for 512-byte size */
+  uint8_t drive;
+  char    path[DISK_INSERT_PATH_MAX];
+  uint8_t write_protected;
+  uint8_t create_if_necessary;
+  uint8_t padding[5]; // Pad to 512
 } DiskInsertCmd_t;
 
 typedef struct {
-  int32_t     drive;                       /* DiskDrive_e */
+  uint8_t drive;
 } DiskEjectCmd_t;
 
 typedef struct {
-  int32_t     drive;                       /* DiskDrive_e */
-  uint8_t     write_protected;
-  uint8_t     reserved[3];                 /* padding to 4-byte boundary */
+  uint8_t drive;
+  uint8_t write_protected;
 } DiskSetProtectCmd_t;
 
-/*
- * Too large for a queue slot (~1168 bytes). Used synchronously: caller passes
- * a pointer and the peripheral fills it before returning.
- * All char fields are null-terminated; paths are silently truncated to fit.
- */
+#define DISK_STATUS_NAME_MAX 32
+#define DISK_STATUS_PATH_MAX 256
+
 typedef struct {
-  int32_t     drive0_last_error;           /* DiskError_e */
+  int32_t     drive0_last_error;
   uint8_t     drive0_loaded;
   uint8_t     drive0_spinning;
   uint8_t     drive0_writing;
@@ -84,7 +117,7 @@ typedef struct {
   char        drive0_name[DISK_STATUS_NAME_MAX];
   char        drive0_full_path[DISK_STATUS_PATH_MAX];
 
-  int32_t     drive1_last_error;           /* DiskError_e */
+  int32_t     drive1_last_error;
   uint8_t     drive1_loaded;
   uint8_t     drive1_spinning;
   uint8_t     drive1_writing;
@@ -95,8 +128,8 @@ typedef struct {
 
 #pragma pack(pop)
 
-// NOLINTEND(modernize-deprecated-headers,modernize-use-using,cppcoreguidelines-pro-type-member-init)
-
 #ifdef __cplusplus
 }
 #endif
+
+#endif // DISKCOMMANDS_H
