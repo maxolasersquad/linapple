@@ -512,7 +512,7 @@ void MB_Update() {
 
     #ifndef HEADLESS
     if (g_pMBHost && g_pMBHost->RiffPutSamples) {
-      g_pMBHost->RiffPutSamples(&g_nMixBuffer[0], nNumSamples);
+      g_pMBHost->RiffPutSamples(&g_nMixBuffer[0], static_cast<uint32_t>(nNumSamples * 2));
     }
     #endif
   }

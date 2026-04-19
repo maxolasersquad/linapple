@@ -77,6 +77,7 @@ auto Spkr_IsActive() -> bool {
 
 auto SpkrToggle(void* instance, uint16_t, uint16_t, uint8_t, uint8_t, uint32_t nCyclesLeft) -> uint8_t {
   (void)instance;
+  CpuCalcCycles(nCyclesLeft);
   g_bSpkrToggleFlag = true;
 
   if (!g_bFullSpeed) {
