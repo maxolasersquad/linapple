@@ -31,6 +31,14 @@ extern "C" {
 void Linapple_Init();
 
 /**
+ * @brief Register standard peripherals in their slots.
+ *
+ * Peripherals will read their startup configuration from the registry
+ * during this call.
+ */
+void Linapple_RegisterPeripherals();
+
+/**
  * @brief Clean up resources and shut down the emulator core.
  */
 void Linapple_Shutdown();

@@ -15,6 +15,7 @@ constexpr int SL6 = 6;
 
 TEST_CASE("DiskIntegration: [INT-04] WOZ Integration Check") {
     Linapple_Init();
+    Linapple_RegisterPeripherals();
     DiskInsertCmd_t cmd{};
     cmd.drive = DISK_DRIVE_0;
     cmd.write_protected = false;
@@ -29,7 +30,7 @@ TEST_CASE("DiskIntegration: [INT-04] WOZ Integration Check") {
     REQUIRE(ps == PERIPHERAL_OK);
     CHECK(status.drive0_loaded != 0);
     CHECK(strstr(status.drive0_full_path, "minimal.woz") != nullptr);
-    CHECK(status.drive0_write_protected != 0);
+    CHECK(status.drive0_write_protected == 0);
     
     Peripheral_Manager_Shutdown();
     Linapple_Shutdown();

@@ -420,8 +420,15 @@ void Peripheral_Manager_Shutdown() {
     if (ap.api && ap.api->shutdown) {
       ap.api->shutdown(ap.instance);
     }
-    ap.api = nullptr;
-    ap.instance = nullptr;
+  }
+  // Fully clear the state to allow re-initialization in tests
+  memset(g_active_peripherals.data(), 0, sizeof(g_active_peripherals));
+  memset(g_peripheral_activity_state.data(), 0, sizeof(g_peripheral_activity_state));
+
+  // Clear command queue
+  std::lock_guard<std::mutex> lock(g_command_queue_mutex);
+  while (!g_command_queue.empty()) {
+    g_command_queue.pop();
   }
 }
 

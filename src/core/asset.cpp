@@ -5,9 +5,13 @@
 #include <cstdlib>
 
 #include "core/asset.h"
+#include "core/LinAppleCore.h"
 #include "core/Util_Path.h"
 #include "core/Util_Text.h"
-#include "apple2/Disk.h"
+#include "core/Peripheral.h"
+#include "core/Peripheral_Internal.h"
+#include "core/Registry.h"
+#include "apple2/DiskCommands.h"
 #include "apple2/Video.h"
 
 #include "font.xpm"
@@ -75,5 +79,17 @@ auto Asset_InsertMasterDisk() -> int {
     return 255;
   }
 
-  return DiskInsert(0, path.get(), false, false);
+  // 1. Write to registry for persistence and startup loading
+  Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE1, path.get());
+
+  // 2. Send immediate command for runtime effect if peripherals are already running
+  DiskInsertCmd_t cmd{};
+  cmd.drive = DISK_DRIVE_0;
+  Util_SafeStrCpy(cmd.path, path.get(), DISK_INSERT_PATH_MAX);
+  cmd.write_protected = 0;
+  cmd.create_if_necessary = 0;
+
+  Peripheral_Command(DISK_DEFAULT_SLOT, DISK_CMD_INSERT, &cmd, sizeof(cmd));
+
+  return 0;
 }

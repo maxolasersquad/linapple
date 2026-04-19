@@ -257,7 +257,7 @@ static void Woz2ReadTrack(void* instance, int track, int phase,
 
 extern "C" const DiskFormatDriver_t g_woz2_driver = {
     LINAPPLE_DISK_ABI_VERSION,
-    0,  // capabilities (no write yet)
+    0x01,  // capabilities (bit 0 = write)
     "WOZ 2",
     nullptr,  // creatable_exts
     Woz2Probe,

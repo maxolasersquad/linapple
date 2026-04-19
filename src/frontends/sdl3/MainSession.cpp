@@ -14,7 +14,6 @@
 #include "apple2/CPU.h"
 #include "apple2/Memory.h"
 #include "apple2/Video.h"
-#include "apple2/Disk.h"
 #include "apple2/SaveState.h"
 #include "core/LinAppleCore.h"
 #include "core/ProgramLoader.h"
@@ -113,16 +112,21 @@ auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
 
   if (szImageName_drive1) {
     if (Linapple_LoadProgram(szImageName_drive1) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-      DiskInsert(DRIVE_1, szImageName_drive1, false, false);
+      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE1, szImageName_drive1);
     }
   }
   if (szImageName_drive2) {
     if (Linapple_LoadProgram(szImageName_drive2) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-      DiskInsert(DRIVE_2, szImageName_drive2, false, false);
+      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE2, szImageName_drive2);
     }
   }
 
-  if (bBoot) DiskBoot();
+  Linapple_RegisterPeripherals();
+
+  if (bBoot) {
+    // Immediate boot handled via specialized command or logic if needed,
+    // but standard boot is just CPU execution starting at CX00.
+  }
 
   DSInit();
   return 0;

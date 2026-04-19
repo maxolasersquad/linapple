@@ -154,12 +154,14 @@ void Linapple_Init() {
 
   g_state.mode = MODE_RUNNING;
 
+  KeybReset();
+  JoyReset();
+}
+
+void Linapple_RegisterPeripherals() {
   Peripheral_Manager_Init();
   Peripheral_Plugins_Init();
   Peripheral_Register_Internal();
-
-  KeybReset();
-  JoyReset();
 }
 
 void Linapple_Shutdown() {

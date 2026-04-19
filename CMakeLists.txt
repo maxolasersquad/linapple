@@ -427,7 +427,51 @@ target_link_libraries(test-program-loader PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRA
 add_test(NAME test-program-loader COMMAND test-program-loader)
 
 # Integration Tests
-foreach(T disk_config;disk_motor;disk_prot;disk_woz;disk_savestate;disk_errors)
+add_executable(test-disk-config-startup
+    tests/test_disk_config_startup.cpp
+    ${SOURCES_CORE}
+    ${SOURCES_A2}
+    ${SOURCES_DBG}
+    src/frontends/headless/Stubs.cpp
+    src/frontends/headless/Headless_Path.cpp
+)
+add_dependencies(test-disk-config-startup generate_xpms)
+target_include_directories(test-disk-config-startup PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-disk-config-startup PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-disk-config-startup PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME test-disk-config-startup COMMAND test-disk-config-startup)
+
+# test-disk-config-runtime-insert
+add_executable(test-disk-config-runtime-insert
+    tests/test_disk_config_runtime_insert.cpp
+    ${SOURCES_CORE}
+    ${SOURCES_A2}
+    ${SOURCES_DBG}
+    src/frontends/headless/Stubs.cpp
+    src/frontends/headless/Headless_Path.cpp
+)
+add_dependencies(test-disk-config-runtime-insert generate_xpms)
+target_include_directories(test-disk-config-runtime-insert PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-disk-config-runtime-insert PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-disk-config-runtime-insert PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME test-disk-config-runtime-insert COMMAND test-disk-config-runtime-insert)
+
+# test-disk-config-runtime-eject
+add_executable(test-disk-config-runtime-eject
+    tests/test_disk_config_runtime_eject.cpp
+    ${SOURCES_CORE}
+    ${SOURCES_A2}
+    ${SOURCES_DBG}
+    src/frontends/headless/Stubs.cpp
+    src/frontends/headless/Headless_Path.cpp
+)
+add_dependencies(test-disk-config-runtime-eject generate_xpms)
+target_include_directories(test-disk-config-runtime-eject PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${DOCTEST_INCLUDE_DIR} ${RES_DIR})
+target_compile_definitions(test-disk-config-runtime-eject PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-disk-config-runtime-eject PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME test-disk-config-runtime-eject COMMAND test-disk-config-runtime-eject)
+
+foreach(T disk_motor;disk_prot;disk_woz;disk_savestate;disk_errors)
     string(REPLACE "_" "-" TEST_NAME ${T})
     add_executable(test-${TEST_NAME}
         tests/test_${T}.cpp

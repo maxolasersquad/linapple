@@ -26,8 +26,7 @@ constexpr int SL6 = 6;
 
 TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
     Linapple_Init();
-    Peripheral_Manager_Init();
-    Peripheral_Register_Internal();
+    Linapple_RegisterPeripherals();
 
     const char* fixture_woz = "../tests/fixtures/minimal.woz";
     const char* fixture_dsk = "../tests/fixtures/minimal.dsk";
@@ -85,7 +84,7 @@ TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
         CHECK(status.drive0_write_protected != 0); 
     }
     
-    // Layer 1: Format/Driver Capability (WOZ 2 currently has no write cap)
+    // Layer 1: Format/Driver Capability (WOZ 2 now has write cap)
     Util_SafeStrCpy(cmd.path, f_format, DISK_INSERT_PATH_MAX);
     cmd.write_protected = false;
     Peripheral_Command(SL6, DISK_CMD_INSERT, &cmd, sizeof(cmd));
@@ -93,7 +92,7 @@ TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
     Peripheral_Query(SL6, DISK_CMD_GET_STATUS, &status, &size);
     CHECK(status.drive0_loaded != 0);
     CHECK(strstr(status.drive0_full_path, "format_prot.woz") != nullptr);
-    CHECK(status.drive0_write_protected != 0); 
+    CHECK(status.drive0_write_protected == 0); 
 
     // All clear: Writable
     Util_SafeStrCpy(cmd.path, f_rw, DISK_INSERT_PATH_MAX);

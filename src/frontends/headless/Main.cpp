@@ -6,7 +6,6 @@
 #include "core/Log.h"
 #include "core/Registry.h"
 #include "core/Util_Path.h"
-#include "apple2/Disk.h"
 #include "apple2/SaveState.h"
 #include <cstdio>
 #include <iostream>
@@ -145,14 +144,16 @@ auto main(int argc, char* argv[]) -> int {
 
     if (disk1) {
         if (Linapple_LoadProgram(disk1) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-            DiskInsert(0, disk1, false, false);
+            Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE1, disk1);
         }
     }
     if (disk2) {
         if (Linapple_LoadProgram(disk2) == PROGRAM_LOAD_NOT_A_PROGRAM) {
-            DiskInsert(1, disk2, false, false);
+            Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE2, disk2);
         }
     }
+
+    Linapple_RegisterPeripherals();
 
     g_state.mode = MODE_RUNNING;
 
