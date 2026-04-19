@@ -141,7 +141,6 @@ function(add_peripheral_target name option_name sources extra_libs force_builtin
         endif()
     endif()
 endfunction()
-
 # --- Source Discovery ---
 set(SOURCES_CORE
     src/core/Common.cpp
@@ -152,6 +151,7 @@ set(SOURCES_CORE
     src/core/asset.cpp
     src/core/Peripheral.cpp
     src/core/Peripheral_Internal.cpp
+    src/frontends/common/AppArgs.cpp
 )
 
 # Mandatory Apple II hardware
@@ -316,6 +316,10 @@ enable_testing()
 add_executable(test-app-config tests/test_app_config.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
 target_include_directories(test-app-config PRIVATE src src/core tests ${DOCTEST_INCLUDE_DIR})
 add_test(NAME AppConfig COMMAND test-app-config)
+
+add_executable(test-app-args tests/test_app_args.cpp src/frontends/common/AppArgs.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
+target_include_directories(test-app-args PRIVATE src src/core tests ${DOCTEST_INCLUDE_DIR})
+add_test(NAME AppArgs COMMAND test-app-args)
 
 
 # Test Integration
