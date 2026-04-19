@@ -260,6 +260,7 @@ static auto Spkr_ABI_Shutdown(void* instance) -> void {
 
 static auto Spkr_ABI_Think(void* instance, uint32_t cycles) -> void {
   Speaker_Update(static_cast<Speaker_t*>(instance), cycles);
+  Speaker_GenerateSamples(static_cast<Speaker_t*>(instance), cycles);
 }
 
 static auto Spkr_ABI_SaveState(void* instance, void* buffer, size_t* size) -> PeripheralStatus {
