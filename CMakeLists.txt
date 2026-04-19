@@ -313,6 +313,11 @@ install(FILES "${RES_DIR}/linapple.conf" DESTINATION ${CONF_DIR})
 # --- Tests ---
 enable_testing()
 
+add_executable(test-app-config tests/test_app_config.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
+target_include_directories(test-app-config PRIVATE src src/core tests ${DOCTEST_INCLUDE_DIR})
+add_test(NAME AppConfig COMMAND test-app-config)
+
+
 # Test Integration
 add_executable(test-integration tests/test_main.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
 add_dependencies(test-integration generate_xpms)
