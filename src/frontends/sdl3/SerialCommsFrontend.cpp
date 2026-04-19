@@ -1,5 +1,7 @@
 #include "SerialCommsFrontend.h"
 #include "apple2/SerialComms.h"
+#include "core/LinAppleCore.h"
+#include "core/Peripheral.h"
 #include <unistd.h>
 #include <termios.h>
 #include <fcntl.h>
@@ -17,8 +19,6 @@ static pthread_mutex_t g_CriticalSection = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t g_CommThread;
 static volatile bool g_bThreadRunning = false;
 static volatile bool g_bThreadTerminate = false;
-
-extern auto DiskIsSpinning() -> bool; // from Disk.cpp or elsewhere
 
 void SSCFrontend_UpdateCommState(uint32_t baud, uint32_t bits, SscParity parity, SscStopBits stop) {
   if (g_hCommHandle == -1) {
@@ -150,7 +150,7 @@ void SSCFrontend_Update(SuperSerialCard* pSSC, uint32_t totalcycles) {
   }
 
   if ((g_dwCommInactivity += totalcycles) > 1000000) {
-    if (DiskIsSpinning()) {
+    if (Peripheral_IsAnyActive()) {
       g_dwCommInactivity = 0;
     }
   }

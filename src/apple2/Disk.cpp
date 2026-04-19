@@ -787,6 +787,9 @@ static auto Disk_ABI_Command(void* instance, uint32_t cmd, const void* data,
     case DISK_CMD_SWAP_DRIVES:
       DiskDriveSwap();
       return PERIPHERAL_OK;
+    case DISK_CMD_BOOT:
+      DiskBoot();
+      return PERIPHERAL_OK;
     case DISK_CMD_SET_PROTECT: {
       if (!data || size < sizeof(DiskSetProtectCmd_t)) return PERIPHERAL_ERROR;
       auto* c = static_cast<const DiskSetProtectCmd_t*>(data);

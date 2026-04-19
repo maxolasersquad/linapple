@@ -69,6 +69,12 @@ const char* Peripheral_GetPluginPath(const char* name);
  * @brief Check if any peripheral is currently active (e.g. activity LED on).
  * @return true if any peripheral has reported activity.
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
 bool Peripheral_IsAnyActive(void);
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // LINAPPLE_PERIPHERAL_INTERNAL_H

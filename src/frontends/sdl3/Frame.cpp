@@ -38,7 +38,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 auto SDLSurfaceToVideoSurface(SDL_Surface* s) -> VideoSurface;
 #include "Debugger/Debug.h"
 #include "apple2/CPU.h"
-#include "apple2/Disk.h"
 #include "apple2/Harddisk.h"
 #include "apple2/Joystick.h"
 #include "apple2/Keyboard.h"
@@ -54,7 +53,10 @@ auto SDLSurfaceToVideoSurface(SDL_Surface* s) -> VideoSurface;
 #include "core/Common_Globals.h"
 #include "core/Registry.h"
 #include "core/asset.h"
+#include "core/LinAppleCore.h"
+#include "apple2/DiskCommands.h"
 #include "frontends/sdl3/DiskChoose.h"
+#include "frontends/sdl3/DiskUI.h"
 
 #define ENABLE_MENU 0
 
@@ -87,6 +89,10 @@ BUTTONS = 8
 };
 
 static bool g_bAppActive = false;
+
+static DiskStatus_t g_lastDiskStatus{};
+static int g_drive0_last_reported_error = DISK_ERR_NONE;
+static int g_drive1_last_reported_error = DISK_ERR_NONE;
 
 int buttondown = -1;
 
@@ -198,7 +204,6 @@ void DrawStatusArea(int drawflags) {
     srect.w = static_cast<int16_t>(STATUS_PANEL_W - 8);
     srect.h = static_cast<int16_t>(STATUS_PANEL_H - 25);
 
-    // Fill background of status surface
     for (int y = srect.y; y < srect.y + srect.h; ++y) {
       memset(g_hStatusSurface->pixels + static_cast<ptrdiff_t>(y * g_hStatusSurface->pitch) + srect.x,
              mybluez, static_cast<size_t>(srect.w));
@@ -210,7 +215,18 @@ void DrawStatusArea(int drawflags) {
     int iDrive2Status = DISK_STATUS_OFF;
     int iHDDStatus = DISK_STATUS_OFF;
 
-    DiskGetLightStatus(&iDrive1Status, &iDrive2Status);
+    if (g_lastDiskStatus.drive0_spinning) {
+      iDrive1Status = g_lastDiskStatus.drive0_writing ? DISK_STATUS_WRITE : DISK_STATUS_READ;
+    } else if (g_lastDiskStatus.drive0_loaded && g_lastDiskStatus.drive0_write_protected) {
+      iDrive1Status = DISK_STATUS_PROT;
+    }
+
+    if (g_lastDiskStatus.drive1_spinning) {
+      iDrive2Status = g_lastDiskStatus.drive1_writing ? DISK_STATUS_WRITE : DISK_STATUS_READ;
+    } else if (g_lastDiskStatus.drive1_loaded && g_lastDiskStatus.drive1_write_protected) {
+      iDrive2Status = DISK_STATUS_PROT;
+    }
+
     iHDDStatus = HD_GetStatus();
 
     leds[0] = static_cast<char>(LEDS + iDrive1Status);
@@ -445,8 +461,8 @@ auto PSP_SaveStateSelectImage(bool saveit) -> bool {
   static int backdx = 0;
   static int dirdx = 0;
 
-  std::string filename;
-  std::string fullPath;
+  std::string filename;      // given filename
+  std::string fullPath;  // full path for it
   bool isDirectory = true;
 
   fileIndex = backdx;
@@ -531,7 +547,7 @@ void ProcessButtonClick(int button, int mod) {
       if ((mod & (SDL_KMOD_LCTRL)) == (SDL_KMOD_LCTRL) ||
           (mod & (SDL_KMOD_RCTRL)) == (SDL_KMOD_RCTRL)) {
         if (g_state.mode == MODE_LOGO) {
-          DiskBoot();
+          Peripheral_Command(DISK_DEFAULT_SLOT, DISK_CMD_BOOT, nullptr, 0);
         } else if (g_state.mode == MODE_RUNNING) {
           ResetMachineState();
         }
@@ -558,7 +574,9 @@ void ProcessButtonClick(int button, int mod) {
           HD_Eject(button - BTN_DRIVE1);
         } else {
           printf("Disk Eject Drive #%d\n", (button - BTN_DRIVE1) + 1);
-          DiskEject(button - BTN_DRIVE1);
+          DiskEjectCmd_t ecmd{};
+          ecmd.drive = static_cast<uint8_t>(button - BTN_DRIVE1);
+          Peripheral_Command(DISK_DEFAULT_SLOT, DISK_CMD_EJECT, &ecmd, sizeof(ecmd));
         }
         break;
       }
@@ -570,6 +588,8 @@ void ProcessButtonClick(int button, int mod) {
           HD_Select(button - BTN_DRIVE1);
         }
       } else {
+        extern void DiskSelect(int drive);
+        extern void Disk_FTP_SelectImage(int drive);
         if (mod & SDL_KMOD_ALT) {
           Disk_FTP_SelectImage(button - BTN_DRIVE1);
         } else {
@@ -579,7 +599,7 @@ void ProcessButtonClick(int button, int mod) {
       break;
 
     case BTN_DRIVESWAP:
-      DiskDriveSwap();
+      Peripheral_Command(DISK_DEFAULT_SLOT, DISK_CMD_SWAP_DRIVES, nullptr, 0);
       break;
 
     case BTN_FULLSCR:
@@ -694,7 +714,7 @@ void ResetMachineState() {
 
   MemReset();
   Peripheral_Manager_Reset();
-  DiskBoot();
+  Peripheral_Command(DISK_DEFAULT_SLOT, DISK_CMD_BOOT, nullptr, 0);
   VideoResetState();
   JoyReset();
 }
@@ -810,4 +830,36 @@ auto InitSDL() -> int {
   return 0;
 }
 
-void FrameRefreshStatus(int drawflags) { DrawStatusArea(drawflags); }
+void FrameRefreshStatus(int drawflags) {
+  if (drawflags & DRAW_LEDS) {
+    size_t size = sizeof(g_lastDiskStatus);
+    if (Peripheral_Query(DISK_DEFAULT_SLOT, DISK_CMD_GET_STATUS, &g_lastDiskStatus, &size) == PERIPHERAL_OK) {
+      if (g_lastDiskStatus.drive0_last_error != DISK_ERR_NONE && 
+          g_lastDiskStatus.drive0_last_error != g_drive0_last_reported_error) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Disk 1 Error", 
+                                 DiskUI_GetErrorMessage(g_lastDiskStatus.drive0_last_error), g_window);
+        g_drive0_last_reported_error = g_lastDiskStatus.drive0_last_error;
+      } else if (g_lastDiskStatus.drive0_last_error == DISK_ERR_NONE) {
+        g_drive0_last_reported_error = DISK_ERR_NONE;
+      }
+
+      if (g_lastDiskStatus.drive1_last_error != DISK_ERR_NONE && 
+          g_lastDiskStatus.drive1_last_error != g_drive1_last_reported_error) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Disk 2 Error", 
+                                 DiskUI_GetErrorMessage(g_lastDiskStatus.drive1_last_error), g_window);
+        g_drive1_last_reported_error = g_lastDiskStatus.drive1_last_error;
+      } else if (g_lastDiskStatus.drive1_last_error == DISK_ERR_NONE) {
+        g_drive1_last_reported_error = DISK_ERR_NONE;
+      }
+
+      char s_title[512];
+      if (g_lastDiskStatus.drive0_loaded) {
+        snprintf(s_title, sizeof(s_title), "%s - %s", g_pAppTitle, g_lastDiskStatus.drive0_name);
+      } else {
+        snprintf(s_title, sizeof(s_title), "%s", g_pAppTitle);
+      }
+      Linapple_UpdateTitle(s_title);
+    }
+  }
+  DrawStatusArea(drawflags);
+}

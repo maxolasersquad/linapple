@@ -6,7 +6,6 @@
 #include <sys/stat.h>
 
 #include "apple2/Harddisk.h"
-#include "apple2/Disk.h"
 #include "apple2/DiskFTP.h"
 #include "apple2/ftpparse.h"
 #include "core/Common_Globals.h"

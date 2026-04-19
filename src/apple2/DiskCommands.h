@@ -34,7 +34,8 @@ typedef enum {
   DISK_CMD_EJECT       = 0x0002,  /* payload: DiskEjectCmd_t */
   DISK_CMD_SWAP_DRIVES = 0x0003,  /* no payload */
   DISK_CMD_SET_PROTECT = 0x0004,  /* payload: DiskSetProtectCmd_t */
-  DISK_CMD_GET_STATUS  = 0x0005   /* synchronous only; payload: DiskStatus_t* */
+  DISK_CMD_GET_STATUS  = 0x0005,  /* synchronous only; payload: DiskStatus_t* */
+  DISK_CMD_BOOT        = 0x0006   /* no payload */
 } DiskCmd_e;
 
 /*

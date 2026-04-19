@@ -25,6 +25,13 @@ TEST_CASE("DiskIntegration: [INT-04] Runtime Insert Updates Config") {
     
     std::string saved = Configuration::Instance().GetString("Slots", REGVALUE_DISK_IMAGE1);
     CHECK(saved == "../tests/fixtures/minimal.woz");
+
+    DiskStatus_t status{};
+    size_t size = sizeof(status);
+    PeripheralStatus ps = Peripheral_Query(6, DISK_CMD_GET_STATUS, &status, &size);
+    REQUIRE(ps == PERIPHERAL_OK);
+    CHECK(status.drive0_loaded == true);
+    CHECK(status.drive0_last_error == DISK_ERR_NONE);
     
     Peripheral_Manager_Shutdown();
     Linapple_Shutdown();

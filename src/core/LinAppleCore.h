@@ -294,9 +294,29 @@ void Linapple_SetVideoCallback(LinappleVideoCallback cb);
 void Linapple_SetAudioCallback(LinappleAudioCallback cb);
 
 /**
+ * @brief Check if any peripheral is currently active (e.g. disk motor spinning).
+ */
+bool Peripheral_IsAnyActive();
+
+/**
+ * @brief Legacy disk status enum for LED display.
+ */
+enum Disk_Status_e {
+  DISK_STATUS_OFF   = 0x00,
+  DISK_STATUS_READ  = 0x01,
+  DISK_STATUS_WRITE = 0x02,
+  DISK_STATUS_PROT  = 0x03
+};
+
+/**
  * @brief Register a callback for window title updates.
  */
 void Linapple_SetTitleCallback(LinappleTitleCallback cb);
+
+/**
+ * @brief Update the window title through the registered callback.
+ */
+void Linapple_UpdateTitle(const char* title);
 
 
 #ifdef __cplusplus

@@ -230,6 +230,7 @@ if(FRONTEND STREQUAL "sdl3")
         src/frontends/sdl3/DiskChoose.cpp
         src/frontends/sdl3/DiskFTP.cpp
         src/frontends/sdl3/DiskSelect.cpp
+        src/frontends/sdl3/DiskUI.cpp
         src/frontends/sdl3/Frame.cpp
         src/frontends/sdl3/Harddisk.cpp
         src/frontends/sdl3/JoystickFrontend.cpp
@@ -470,6 +471,14 @@ target_include_directories(test-disk-config-runtime-eject PRIVATE src src/core s
 target_compile_definitions(test-disk-config-runtime-eject PRIVATE ${PERIPHERAL_DEFINITIONS})
 target_link_libraries(test-disk-config-runtime-eject PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-disk-config-runtime-eject COMMAND test-disk-config-runtime-eject)
+
+# test-disk-ui
+add_executable(test-disk-ui
+    tests/test_disk_ui.cpp
+    src/frontends/sdl3/DiskUI.cpp
+)
+target_include_directories(test-disk-ui PRIVATE src src/core src/apple2 ${DOCTEST_INCLUDE_DIR})
+add_test(NAME test-disk-ui COMMAND test-disk-ui)
 
 foreach(T disk_motor;disk_prot;disk_woz;disk_savestate;disk_errors)
     string(REPLACE "_" "-" TEST_NAME ${T})
