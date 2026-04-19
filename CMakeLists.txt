@@ -152,6 +152,7 @@ set(SOURCES_CORE
     src/core/Peripheral.cpp
     src/core/Peripheral_Internal.cpp
     src/frontends/common/AppArgs.cpp
+    src/frontends/common/AppEnvironment.cpp
 )
 
 # Mandatory Apple II hardware
@@ -320,6 +321,11 @@ add_test(NAME AppConfig COMMAND test-app-config)
 add_executable(test-app-args tests/test_app_args.cpp src/frontends/common/AppArgs.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
 target_include_directories(test-app-args PRIVATE src src/core tests ${DOCTEST_INCLUDE_DIR})
 add_test(NAME AppArgs COMMAND test-app-args)
+
+add_executable(test-app-env tests/test_app_env.cpp ${SOURCES_CORE} src/frontends/headless/Headless_Path.cpp)
+target_include_directories(test-app-env PRIVATE src src/core tests ${DOCTEST_INCLUDE_DIR} ${GEN_RES_DIR} ${RES_DIR})
+add_dependencies(test-app-env generate_xpms)
+add_test(NAME AppEnv COMMAND test-app-env)
 
 
 # Test Integration
