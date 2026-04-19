@@ -153,6 +153,7 @@ set(SOURCES_CORE
     src/core/Peripheral_Internal.cpp
     src/frontends/common/AppArgs.cpp
     src/frontends/common/AppEnvironment.cpp
+    src/frontends/common/AppController.cpp
 )
 
 # Mandatory Apple II hardware
@@ -326,6 +327,13 @@ add_executable(test-app-env tests/test_app_env.cpp ${SOURCES_CORE} src/frontends
 target_include_directories(test-app-env PRIVATE src src/core tests ${DOCTEST_INCLUDE_DIR} ${GEN_RES_DIR} ${RES_DIR})
 add_dependencies(test-app-env generate_xpms)
 add_test(NAME AppEnv COMMAND test-app-env)
+
+add_executable(test-app-controller tests/test_app_controller.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
+add_dependencies(test-app-controller generate_xpms)
+target_include_directories(test-app-controller PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
+target_compile_definitions(test-app-controller PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-app-controller PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME AppController COMMAND test-app-controller)
 
 
 # Test Integration
