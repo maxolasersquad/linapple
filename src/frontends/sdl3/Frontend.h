@@ -4,14 +4,14 @@
 
 #include "core/LinAppleCore.h"
 
-// Tier 3: Core Application Logic (Applewin.cpp)
-auto SysInit(bool bLog) -> int;
+#include "frontends/common/AppConfig.h"
+
+// Lifecycle
+auto SysInit() -> int;
 void SysShutdown();
-auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
-                 const char* szImageName_drive1, const char* szImageName_drive2,
-                 const char* szProgramName, const char* szSnapshotFile,
-                 bool bBoot, bool bPAL) -> int;
+auto SessionInit(AppConfig* config) -> int;
 void SessionShutdown();
+
 void ContinueExecution(uint32_t dwCycles);
 void CpuTestHeadless(const char* szTestFile);
 

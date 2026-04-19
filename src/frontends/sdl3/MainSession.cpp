@@ -15,9 +15,9 @@
 #include "core/Log.h"
 #include "core/ProgramLoader.h"
 #include "core/Registry.h"
-#include "core/Util_Path.h"
 #include "frontends/sdl3/Frame.h"
 #include "frontends/sdl3/Frontend.h"
+#include "frontends/common/AppController.h"
 
 using Logger::Error;
 using Logger::Info;
@@ -36,11 +36,7 @@ void SingleStep(bool bReinit) {
   Linapple_RunFrame(1);
 }
 
-auto SysInit(bool bLog) -> int {
-  (void)bLog;  // Logging is always enabled to XDG data dir
-
-  Logger::Initialize();
-
+auto SysInit() -> int {
   if (InitSDL() != 0) {
     return 1;
   }
@@ -53,14 +49,10 @@ auto SysInit(bool bLog) -> int {
   }
   curl_easy_setopt(g_curl, CURLOPT_USERPWD, g_state.sFTPUserPass);
 
-  Linapple_Init();
-
   return 0;
 }
 
 void SysShutdown() {
-  Linapple_Shutdown();
-
   DSShutdown();
 
   SDL_Quit();
@@ -68,7 +60,6 @@ void SysShutdown() {
     curl_easy_cleanup(g_curl);
     curl_global_cleanup();
   }
-  Logger::Destroy();
 }
 
 static void Frontend_SetWindowTitle(const char* title) {
@@ -78,93 +69,21 @@ static void Frontend_SetWindowTitle(const char* title) {
   }
 }
 
-auto SessionInit(const char* szConfigurationFile, bool bSetFullScreen,
-                 const char* szImageName_drive1, const char* szImageName_drive2,
-                 const char* szProgramName, const char* szSnapshotFile,
-                 bool bBoot, bool bPAL) -> int {
-  if (szConfigurationFile) {
-    Configuration::Instance().Load(szConfigurationFile);
-  } else {
-    std::string configPath = Path::FindDataFile("linapple.conf");
-    if (!configPath.empty()) {
-      Configuration::Instance().Load(configPath);
-    } else {
-      // Fallback if not found anywhere, config will save here later
-      std::string fallbackPath = Path::GetUserConfigDir();
-      Path::EnsureDirExists(fallbackPath);
-      Configuration::Instance().Load(fallbackPath + "linapple.conf");
-    }
+auto SessionInit(AppConfig* config) -> int {
+  if (AppController_Initialize(config) != 0) {
+    return 1;
   }
 
   Linapple_SetTitleCallback(Frontend_SetWindowTitle);
 
-  if (bSetFullScreen) g_state.fullscreen = true;
-
   if (FrameCreateWindow() != 0) return 1;
 
-  if (bPAL) g_videotype = VT_COLOR_TVEMU;
-
-  if (szSnapshotFile) {
-    Snapshot_SetFilename(szSnapshotFile);
-  }
-  Snapshot_Startup();
-
-  if (szImageName_drive1) {
-    if (Linapple_LoadProgram(szImageName_drive1) ==
-        PROGRAM_LOAD_NOT_A_PROGRAM) {
-      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE1,
-                                          szImageName_drive1);
-    }
-  }
-  if (szImageName_drive2) {
-    if (Linapple_LoadProgram(szImageName_drive2) ==
-        PROGRAM_LOAD_NOT_A_PROGRAM) {
-      Configuration::Instance().SetString("Slots", REGVALUE_DISK_IMAGE2,
-                                          szImageName_drive2);
-    }
-  }
-
-  Linapple_RegisterPeripherals();
-
-  if (szProgramName) {
-    if (Linapple_LoadProgram(szProgramName) != 0) {
-      fprintf(stderr, "Error: Could not load program '%s'\n", szProgramName);
-    }
-  }
-
-  if (bBoot) {
-    // Immediate boot handled via specialized command or logic if needed,
-    // but standard boot is just CPU execution starting at CX00.
-  }
+  AppController_LoadInitialMedia(config);
 
   DSInit();
   return 0;
 }
 
 void SessionShutdown() {
-  // Session-specific cleanup if needed beyond core shutdown
-}
-
-void CpuTestHeadless(const char* szTestFile) {
-  if (!szTestFile) return;
-
-  Linapple_Init();
-
-  FilePtr f(fopen(szTestFile, "rb"), fclose);
-  if (!f) {
-    return;
-  }
-
-  fread(mem, 1, 65536, f.get());
-
-  regs.pc = 0x0400;
-  uint64_t count = 0;
-  while (count < 100000000) {
-    uint32_t executed = CpuExecute(1);
-    count += executed;
-    if (regs.pc == 0x3469) {
-      Info("CPU trapped at 0x%04X after %" PRIu64 " cycles\n", regs.pc, count);
-      break;
-    }
-  }
+  AppController_Shutdown();
 }
