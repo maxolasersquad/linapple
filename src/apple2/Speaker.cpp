@@ -6,6 +6,8 @@
 #include "apple2/Memory.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
+#include "core/Peripheral.h"
+
 /*
 linapple : An Apple //e emulator for Linux
 
@@ -35,124 +37,177 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  * Sample generation and SDL audio are handled by the frontend.
  */
 
-static SpkrEvent g_spkrEvents[MAX_SPKR_EVENTS];
-static int g_nNumSpkrEvents = 0;
-static bool g_bSpkrState = false;
-static uint64_t g_nSpkrLastCycle = 0;
-static uint64_t g_nSpkrQuietCycleCount = 0;
-static bool g_bSpkrRecentlyActive = false;
-static bool g_bSpkrToggleFlag = false;
-
 uint32_t soundtype = SOUND_WAVE;
 
-void SpkrDestroy() {}
+// Internal default instance for legacy API
+static Speaker_t g_defaultSpeaker;
 
-void SpkrInitialize() {
-  g_nNumSpkrEvents = 0;
-  g_bSpkrState = false;
-  g_nSpkrLastCycle = g_nCumulativeCycles;
-  g_nSpkrQuietCycleCount = 0;
-  g_bSpkrRecentlyActive = false;
-  g_bSpkrToggleFlag = false;
-}
+static constexpr int SPKR_QUIET_CYCLES_DIVISOR = 5;
+static constexpr uint8_t INVALID_SAMPLE_DATA = 0xFF;
 
-void SpkrReinitialize() {}
-
-void SpkrReset() {
-  g_nNumSpkrEvents = 0;
-  g_bSpkrState = false;
-  g_nSpkrLastCycle = g_nCumulativeCycles;
-  g_nSpkrQuietCycleCount = 0;
-  g_bSpkrRecentlyActive = false;
-  g_bSpkrToggleFlag = false;
-}
-
-static void Spkr_SetActive(bool bActive) {
-  g_bSpkrRecentlyActive = bActive;
-}
-
-auto Spkr_IsActive() -> bool {
-  return g_bSpkrRecentlyActive;
-}
-
-auto SpkrToggle(void* instance, uint16_t, uint16_t, uint8_t, uint8_t, uint32_t nCyclesLeft) -> uint8_t {
+auto Speaker_Destroy(Speaker_t* instance) -> void {
   (void)instance;
+}
+
+auto Speaker_Initialize(Speaker_t* instance) -> void {
+  if (!instance) return;
+  instance->num_events = 0;
+  instance->state = false;
+  instance->last_cycle = g_nCumulativeCycles;
+  instance->quiet_cycle_count = 0;
+  instance->recently_active = false;
+  instance->toggle_flag = false;
+}
+
+auto Speaker_Reset(Speaker_t* instance) -> void {
+  Speaker_Initialize(instance);
+}
+
+auto Speaker_Update(Speaker_t* instance, uint32_t totalcycles) -> void {
+  (void)totalcycles;
+  if (!instance) return;
+
+  if (!instance->toggle_flag) {
+    if (!instance->quiet_cycle_count) {
+      instance->quiet_cycle_count = g_nCumulativeCycles;
+    } else if (g_nCumulativeCycles - instance->quiet_cycle_count > static_cast<uint64_t>(g_fCurrentCLK6502) / SPKR_QUIET_CYCLES_DIVISOR) {
+      // After 0.2 sec of Apple time, deactivate spkr voice
+      instance->recently_active = false;
+    }
+  } else {
+    instance->quiet_cycle_count = 0;
+    instance->toggle_flag = false;
+  }
+  instance->last_cycle = g_nCumulativeCycles;
+}
+
+auto Speaker_IsActive(Speaker_t* instance) -> bool {
+  return instance ? instance->recently_active : false;
+}
+
+auto Speaker_Toggle(Speaker_t* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+  (void)pc; (void)addr; (void)bWrite; (void)d;
+  if (!instance) return INVALID_SAMPLE_DATA;
+
   CpuCalcCycles(nCyclesLeft);
-  g_bSpkrToggleFlag = true;
+  instance->toggle_flag = true;
 
   if (!g_bFullSpeed) {
-    Spkr_SetActive(true);
+    instance->recently_active = true;
   }
 
   // Record toggle event
-  if (soundtype == SOUND_WAVE && g_nNumSpkrEvents < MAX_SPKR_EVENTS) {
-    g_spkrEvents[g_nNumSpkrEvents].cycle = g_nCumulativeCycles;
-    g_spkrEvents[g_nNumSpkrEvents].state = g_bSpkrState = !g_bSpkrState;
-    g_nNumSpkrEvents++;
+  if (soundtype == SOUND_WAVE && instance->num_events < MAX_SPKR_EVENTS) {
+    const size_t idx = static_cast<size_t>(instance->num_events);
+    instance->events[idx].cycle = g_nCumulativeCycles;
+    instance->events[idx].state = instance->state = !instance->state;
+    instance->num_events++;
   }
 
   return MemReadFloatingBus(nCyclesLeft);
 }
 
-#include "core/Peripheral.h"
+auto Speaker_GetEvents(Speaker_t* instance, SpkrEvent *events, int max_events) -> int {
+  if (!instance) return 0;
+  int count = (instance->num_events < max_events) ? instance->num_events : max_events;
+  if (count > 0) {
+    memcpy(events, instance->events, static_cast<size_t>(count) * sizeof(SpkrEvent));
+    instance->num_events = 0;
+  }
+  return count;
+}
 
-// Justification: Peripheral Host Interface requires storage of core callback 
-// services and active slot information for the migrated Speaker instance.
-// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
-static HostInterface_t* g_pSpkrHost = nullptr;
+auto Speaker_GetLastCycle(Speaker_t* instance) -> uint64_t {
+  return instance ? instance->last_cycle : 0;
+}
+
+auto Speaker_GetCurrentState(Speaker_t* instance) -> bool {
+  return instance ? instance->state : false;
+}
+
+// --- Legacy API Wrappers ---
+
+auto SpkrDestroy() -> void { Speaker_Destroy(&g_defaultSpeaker); }
+auto SpkrInitialize() -> void { Speaker_Initialize(&g_defaultSpeaker); }
+auto SpkrReinitialize() -> void { /* No-op */ }
+auto SpkrReset() -> void { Speaker_Reset(&g_defaultSpeaker); }
+auto SpkrUpdate(uint32_t totalcycles) -> void { Speaker_Update(&g_defaultSpeaker, totalcycles); }
+auto Spkr_IsActive() -> bool { return Speaker_IsActive(&g_defaultSpeaker); }
+
+auto SpkrToggle(void* instance, uint16_t pc, uint16_t addr, uint8_t bWrite, uint8_t d, uint32_t nCyclesLeft) -> uint8_t {
+  Speaker_t* spkr = instance ? static_cast<Speaker_t*>(instance) : &g_defaultSpeaker;
+  return Speaker_Toggle(spkr, pc, addr, bWrite, d, nCyclesLeft);
+}
+
+auto SpkrGetEvents(SpkrEvent *events, int max_events) -> int { return Speaker_GetEvents(&g_defaultSpeaker, events, max_events); }
+auto SpkrGetLastCycle() -> uint64_t { return Speaker_GetLastCycle(&g_defaultSpeaker); }
+auto SpkrGetCurrentState() -> bool { return Speaker_GetCurrentState(&g_defaultSpeaker); }
+
+auto SpkrGetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
+  pSS->g_nSpkrLastCycle = Speaker_GetLastCycle(&g_defaultSpeaker);
+  return 0;
+}
+
+auto SpkrSetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
+  g_defaultSpeaker.last_cycle = pSS->g_nSpkrLastCycle;
+  return 0;
+}
+
+// --- Peripheral ABI ---
 
 static constexpr uint16_t ADDR_SPEAKER = 0xC030;
 
 static auto Spkr_ABI_Init(int slot, HostInterface_t* host) -> void* {
   (void)slot;
-  g_pSpkrHost = host;
-  SpkrInitialize();
+  // Use the default instance for now until multiple instances are fully supported
+  g_defaultSpeaker.host = static_cast<void*>(host);
+  Speaker_Initialize(&g_defaultSpeaker);
   
   // Speaker is at $C030
-  g_pSpkrHost->RegisterDirectIO(nullptr, ADDR_SPEAKER, SpkrToggle, SpkrToggle);
+  // Note: we pass g_defaultSpeaker as the instance pointer to the IO handler
+  host->RegisterDirectIO(&g_defaultSpeaker, ADDR_SPEAKER, SpkrToggle, SpkrToggle);
   
-  return reinterpret_cast<void*>(1); // Dummy instance
+  return &g_defaultSpeaker;
 }
 
-static void Spkr_ABI_Reset(void* instance) {
-  (void)instance;
-  SpkrReset();
+static auto Spkr_ABI_Reset(void* instance) -> void {
+  Speaker_Reset(static_cast<Speaker_t*>(instance));
 }
 
-static void Spkr_ABI_Shutdown(void* instance) {
-  (void)instance;
-  SpkrDestroy();
+static auto Spkr_ABI_Shutdown(void* instance) -> void {
+  Speaker_Destroy(static_cast<Speaker_t*>(instance));
 }
 
-static void Spkr_ABI_Think(void* instance, uint32_t cycles) {
-  (void)instance;
-  SpkrUpdate(cycles);
+static auto Spkr_ABI_Think(void* instance, uint32_t cycles) -> void {
+  Speaker_Update(static_cast<Speaker_t*>(instance), cycles);
 }
 
 static auto Spkr_ABI_SaveState(void* instance, void* buffer, size_t* size) -> PeripheralStatus {
-  (void)instance;
   if (!buffer || !size || *size < sizeof(SS_IO_Speaker)) {
     if (size) *size = sizeof(SS_IO_Speaker);
     return PERIPHERAL_ERROR;
   }
-  SpkrGetSnapshot(static_cast<SS_IO_Speaker*>(buffer));
+  auto* spkr = static_cast<Speaker_t*>(instance);
+  auto* pSS = static_cast<SS_IO_Speaker*>(buffer);
+  pSS->g_nSpkrLastCycle = spkr->last_cycle;
   *size = sizeof(SS_IO_Speaker);
   return PERIPHERAL_OK;
 }
 
 static auto Spkr_ABI_LoadState(void* instance, const void* buffer, size_t size) -> PeripheralStatus {
-  (void)instance;
   if (!buffer || size < sizeof(SS_IO_Speaker)) {
     return PERIPHERAL_ERROR;
   }
-  SpkrSetSnapshot(const_cast<SS_IO_Speaker*>(static_cast<const SS_IO_Speaker*>(buffer)));
+  auto* spkr = static_cast<Speaker_t*>(instance);
+  const auto* pSS = static_cast<const SS_IO_Speaker*>(buffer);
+  spkr->last_cycle = pSS->g_nSpkrLastCycle;
   return PERIPHERAL_OK;
 }
 
 Peripheral_t g_speaker_peripheral = {
     LINAPPLE_ABI_VERSION,
     "Speaker",
-    LINAPPLE_ANY_SLOT_MASK, // Compatible with any "slot"
+    LINAPPLE_ANY_SLOT_MASK,
     Spkr_ABI_Init,
     Spkr_ABI_Reset,
     Spkr_ABI_Shutdown,
@@ -167,47 +222,3 @@ Peripheral_t g_speaker_peripheral = {
 #ifdef BUILD_SHARED_PERIPHERAL
 EXPORT_PERIPHERAL(g_speaker_peripheral)
 #endif
-// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
-
-void SpkrUpdate(uint32_t totalcycles) {
-  (void)totalcycles;
-  if (!g_bSpkrToggleFlag) {
-    if (!g_nSpkrQuietCycleCount) {
-      g_nSpkrQuietCycleCount = g_nCumulativeCycles;
-    } else if (g_nCumulativeCycles - g_nSpkrQuietCycleCount > static_cast<uint64_t>(g_fCurrentCLK6502) / 5) {
-      // After 0.2 sec of Apple time, deactivate spkr voice
-      Spkr_SetActive(false);
-    }
-  } else {
-    g_nSpkrQuietCycleCount = 0;
-    g_bSpkrToggleFlag = false;
-  }
-  g_nSpkrLastCycle = g_nCumulativeCycles;
-}
-
-auto SpkrGetEvents(SpkrEvent *events, int max_events) -> int {
-  int count = (g_nNumSpkrEvents < max_events) ? g_nNumSpkrEvents : max_events;
-  if (count > 0) {
-    memcpy(events, g_spkrEvents, count * sizeof(SpkrEvent));
-    g_nNumSpkrEvents = 0;
-  }
-  return count;
-}
-
-auto SpkrGetLastCycle() -> uint64_t {
-  return g_nSpkrLastCycle;
-}
-
-auto SpkrGetCurrentState() -> bool {
-  return g_bSpkrState;
-}
-
-auto SpkrGetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
-  pSS->g_nSpkrLastCycle = g_nSpkrLastCycle;
-  return 0;
-}
-
-auto SpkrSetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
-  g_nSpkrLastCycle = pSS->g_nSpkrLastCycle;
-  return 0;
-}

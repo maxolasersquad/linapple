@@ -1,6 +1,8 @@
 #include "frontends/sdl3/DiskUI.h"
+#include "apple2/DiskError.h"
+#include <cstring>
 
-extern "C" const char* DiskUI_GetErrorMessage(int error_code) {
+extern "C" auto DiskUI_GetErrorMessage(int error_code) -> const char* {
   switch (static_cast<DiskError_e>(error_code)) {
     case DISK_ERR_NONE:
       return "Success";
