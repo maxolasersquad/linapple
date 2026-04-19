@@ -293,6 +293,8 @@ static auto Host_GetCycles() -> uint64_t { return cumulativecycles; }
 
 #include "core/Registry.h"
 
+extern void FrameRefreshStatus(int);
+
 static auto Host_GetConfig(const char* section, const char* key) -> const
     char* {
   static std::string s_buffer;
@@ -303,9 +305,13 @@ static auto Host_GetConfig(const char* section, const char* key) -> const
 static void Host_SetConfig(const char* section, const char* key,
                            const char* value) {
   Configuration::Instance().SetString(section, key, value);
+  Configuration::Instance().Save();
 }
 
-static void Host_NotifyStatusChanged(int /*slot*/) {}
+static void Host_NotifyStatusChanged(int /*slot*/) {
+  // Move UI refresh responsibility to the host layer.
+  FrameRefreshStatus(static_cast<int>(DRAW_LEDS | DRAW_BUTTON_DRIVES));
+}
 
 static void Host_NotifyActivityChanged(int slot, bool active) {
   if (slot >= 0 && slot < NUM_SLOTS) {
@@ -313,7 +319,11 @@ static void Host_NotifyActivityChanged(int slot, bool active) {
   }
 }
 
-static void Host_RequestPreciseTiming() {}
+static void Host_RequestPreciseTiming() {
+  // Sets precision timing based on the truncated low 32 bits of cumulative cycles,
+  // matching legacy disk timing behavior.
+  g_state.needsprecision = static_cast<uint32_t>(cumulativecycles);
+}
 
 // Justification: Global immutable dispatch table for services provided to
 // peripherals.
