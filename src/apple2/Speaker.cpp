@@ -4,9 +4,11 @@
 #include "apple2/Structs.h"
 #include "apple2/CPU.h"
 #include "apple2/Memory.h"
+#include "apple2/SoundCore.h"
 #include "core/Common_Globals.h"
 #include "core/Log.h"
 #include "core/Peripheral.h"
+#include "core/LinAppleCore.h"
 
 /*
 linapple : An Apple //e emulator for Linux
@@ -45,6 +47,9 @@ static Speaker_t g_defaultSpeaker;
 static constexpr int SPKR_QUIET_CYCLES_DIVISOR = 5;
 static constexpr uint8_t INVALID_SAMPLE_DATA = 0xFF;
 
+// Forward declaration of core-bridge callback (to be removed in 6.5)
+extern LinappleAudioCallback g_audioCB;
+
 auto Speaker_Destroy(Speaker_t* instance) -> void {
   (void)instance;
 }
@@ -57,6 +62,9 @@ auto Speaker_Initialize(Speaker_t* instance) -> void {
   instance->quiet_cycle_count = 0;
   instance->recently_active = false;
   instance->toggle_flag = false;
+  
+  instance->last_sample_state = false;
+  instance->next_sample_cycle = static_cast<double>(g_nCumulativeCycles);
 }
 
 auto Speaker_Reset(Speaker_t* instance) -> void {
@@ -98,13 +106,77 @@ auto Speaker_Toggle(Speaker_t* instance, uint16_t pc, uint16_t addr, uint8_t bWr
 
   // Record toggle event
   if (soundtype == SOUND_WAVE && instance->num_events < MAX_SPKR_EVENTS) {
-    const size_t idx = static_cast<size_t>(instance->num_events);
+    const auto idx = static_cast<size_t>(instance->num_events);
     instance->events[idx].cycle = g_nCumulativeCycles;
     instance->events[idx].state = instance->state = !instance->state;
     instance->num_events++;
   }
 
   return MemReadFloatingBus(nCyclesLeft);
+}
+
+auto Speaker_GenerateSamples(Speaker_t* instance, uint32_t dwExecutedCycles) -> void {
+  if (!instance || dwExecutedCycles == 0) return;
+
+  double clksPerSample = g_fCurrentCLK6502 / SPKR_SAMPLE_RATE;
+
+  // Local event capture
+  SpkrEvent events[MAX_SPKR_EVENTS];
+  int num_events = Speaker_GetEvents(instance, events, MAX_SPKR_EVENTS);
+  int event_idx = 0;
+
+  uint64_t startCycle = g_nCumulativeCycles - dwExecutedCycles;
+  uint64_t endCycle = g_nCumulativeCycles;
+
+  if (instance->next_sample_cycle < static_cast<double>(startCycle)) {
+    instance->next_sample_cycle = static_cast<double>(startCycle);
+  }
+
+  int numSamples = 0;
+  while (instance->next_sample_cycle <= static_cast<double>(endCycle) &&
+         numSamples < (SPKR_BUFFER_SIZE - 2)) {
+    double sampleStart = instance->next_sample_cycle;
+    double sampleEnd = instance->next_sample_cycle + clksPerSample;
+
+    double sum = 0.0;
+    double currentTime = sampleStart;
+
+    while (event_idx < num_events &&
+           static_cast<double>(events[static_cast<size_t>(event_idx)].cycle) <
+               sampleEnd) {
+      const auto event_idx_st = static_cast<size_t>(event_idx);
+      double eventTime =
+          static_cast<double>(events[event_idx_st].cycle);
+
+      if (eventTime <= sampleStart) {
+        instance->last_sample_state = events[event_idx_st].state;
+      } else {
+        sum += (eventTime - currentTime) * (instance->last_sample_state ? 1.0 : -1.0);
+        instance->last_sample_state = events[event_idx_st].state;
+        currentTime = eventTime;
+      }
+      event_idx++;
+    }
+
+    sum += (sampleEnd - currentTime) * (instance->last_sample_state ? 1.0 : -1.0);
+
+    double average = sum / clksPerSample;
+    const auto val = static_cast<int16_t>(average * SPKR_SAMPLE_VOLUME);
+
+    const auto left_idx = static_cast<size_t>(numSamples++);
+    const auto right_idx = static_cast<size_t>(numSamples++);
+    instance->sample_buffer[left_idx] = val; // Left
+    instance->sample_buffer[right_idx] = val; // Right
+    instance->next_sample_cycle += clksPerSample;
+  }
+
+  if (numSamples > 0) {
+    if (g_audioCB) {
+      g_audioCB(instance->sample_buffer.data(), static_cast<size_t>(numSamples));
+    } else {
+      DSUploadBuffer(instance->sample_buffer.data(), static_cast<unsigned>(numSamples));
+    }
+  }
 }
 
 auto Speaker_GetEvents(Speaker_t* instance, SpkrEvent *events, int max_events) -> int {
@@ -151,6 +223,14 @@ auto SpkrGetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
 auto SpkrSetSnapshot(SS_IO_Speaker *pSS) -> uint32_t {
   g_defaultSpeaker.last_cycle = pSS->g_nSpkrLastCycle;
   return 0;
+}
+
+auto SpkrFrontend_Reset() -> void {
+  Speaker_Initialize(&g_defaultSpeaker);
+}
+
+auto SpkrFrontend_Update(uint32_t dwExecutedCycles) -> void {
+  Speaker_GenerateSamples(&g_defaultSpeaker, dwExecutedCycles);
 }
 
 // --- Peripheral ABI ---

@@ -72,7 +72,7 @@ const uint32_t KEY_REPEAT_RATE = 68000;
 
 // Callbacks
 static LinappleVideoCallback g_videoCB = nullptr;
-static LinappleAudioCallback g_audioCB = nullptr;
+LinappleAudioCallback g_audioCB = nullptr;
 static LinappleTitleCallback g_titleCB = nullptr;
 
 static uint32_t s_turboStartMs = 0;
@@ -174,79 +174,6 @@ static auto ShouldRunFullSpeed() -> bool {
   s_wasTurbo = shouldTurbo;
   g_bFullSpeed = shouldTurbo;
   return shouldTurbo;
-}
-
-const int SPKR_BUFFER_SIZE = 8192;
-const int16_t SPKR_SAMPLE_VOLUME = 0x4000;
-
-static std::array<int16_t, SPKR_BUFFER_SIZE> g_spkrBuffer;
-static bool s_spkrLastState = false;
-static double s_spkrNextSampleCycle = 0;
-
-void SpkrFrontend_Reset() {
-  s_spkrLastState = false;
-  s_spkrNextSampleCycle = static_cast<double>(g_nCumulativeCycles);
-}
-
-void SpkrFrontend_Update(uint32_t dwExecutedCycles) {
-  if (dwExecutedCycles == 0) return;
-
-  double clksPerSample = g_fCurrentCLK6502 / SPKR_SAMPLE_RATE;
-
-  std::array<SpkrEvent, MAX_SPKR_EVENTS> events{};
-  int num_events =
-      SpkrGetEvents(events.data(), static_cast<int>(events.size()));
-  int event_idx = 0;
-
-  uint64_t startCycle = g_nCumulativeCycles - dwExecutedCycles;
-  uint64_t endCycle = g_nCumulativeCycles;
-
-  if (s_spkrNextSampleCycle < static_cast<double>(startCycle)) {
-    s_spkrNextSampleCycle = static_cast<double>(startCycle);
-  }
-
-  int numSamples = 0;
-  while (s_spkrNextSampleCycle <= static_cast<double>(endCycle) &&
-         numSamples < (SPKR_BUFFER_SIZE - 2)) {
-    double sampleStart = s_spkrNextSampleCycle;
-    double sampleEnd = s_spkrNextSampleCycle + clksPerSample;
-
-    double sum = 0.0;
-    double currentTime = sampleStart;
-
-    while (event_idx < num_events &&
-           static_cast<double>(events[static_cast<size_t>(event_idx)].cycle) <
-               sampleEnd) {
-      double eventTime =
-          static_cast<double>(events[static_cast<size_t>(event_idx)].cycle);
-
-      if (eventTime <= sampleStart) {
-        s_spkrLastState = events[static_cast<size_t>(event_idx)].state;
-      } else {
-        sum += (eventTime - currentTime) * (s_spkrLastState ? 1.0 : -1.0);
-        s_spkrLastState = events[static_cast<size_t>(event_idx)].state;
-        currentTime = eventTime;
-      }
-      event_idx++;
-    }
-
-    sum += (sampleEnd - currentTime) * (s_spkrLastState ? 1.0 : -1.0);
-
-    double average = sum / clksPerSample;
-    int16_t val = static_cast<int16_t>(average * SPKR_SAMPLE_VOLUME);
-
-    g_spkrBuffer[static_cast<size_t>(numSamples++)] = val; // Left
-    g_spkrBuffer[static_cast<size_t>(numSamples++)] = val; // Right
-    s_spkrNextSampleCycle += clksPerSample;
-  }
-
-  if (numSamples > 0) {
-    if (g_audioCB) {
-      g_audioCB(g_spkrBuffer.data(), static_cast<size_t>(numSamples));
-    } else {
-      DSUploadBuffer(g_spkrBuffer.data(), static_cast<unsigned>(numSamples));
-    }
-  }
 }
 
 void Linapple_Init() {
