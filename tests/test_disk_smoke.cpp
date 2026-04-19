@@ -55,7 +55,7 @@ TEST_CASE("DiskSmoke: [SMK-05] Error - Missing File") {
 
 TEST_CASE("DiskSmoke: [SMK-06] Error - Corrupt WOZ") {
     FILE* f = fopen("corrupt.woz", "wb");
-    fwrite("NOTWOZ", 1, 8, f);
+    fwrite("NOTWOZXX", 1, 8, f);
     fclose(f);
     
     setup_smoke_test("corrupt.woz");

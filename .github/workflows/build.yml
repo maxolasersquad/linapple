@@ -116,6 +116,31 @@ jobs:
       - name: Install
         run: sudo cmake --install build
 
+  # 5. Headless Build with Sanitizers (ASAN/UBSAN)
+  headless-sanitizers:
+    name: Headless Sanitizers (ASAN/UBSAN)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ cmake imagemagick libzip-dev \
+            libcurl4-openssl-dev zlib1g-dev git libxkbcommon-dev
+      - name: Configure
+        run: >
+          cmake -B build -DFRONTEND=headless -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -g"
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -g"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build
+        run: cmake --build build -j$(nproc)
+      - name: Test
+        env:
+          ASAN_OPTIONS: "detect_leaks=1"
+          UBSAN_OPTIONS: "print_stacktrace=1"
+        run: cd build && ctest --output-on-failure
+
   # 5. Raspberry Pi OS (64-bit) - Native
   rpi-arm64:
     name: Raspberry Pi OS (arm64)

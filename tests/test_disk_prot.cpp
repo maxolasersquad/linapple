@@ -32,10 +32,12 @@ TEST_CASE("DiskIntegration: [PROT-01] Three-Layer Write Protection") {
     const char* fixture_dsk = "../tests/fixtures/minimal.dsk";
     
     char f_user[PATH_MAX], f_os[PATH_MAX], f_format[PATH_MAX], f_rw[PATH_MAX];
-    snprintf(f_user, sizeof(f_user), "%s/user_prot.dsk", get_current_dir_name());
-    snprintf(f_os, sizeof(f_os), "%s/os_prot.dsk", get_current_dir_name());
-    snprintf(f_format, sizeof(f_format), "%s/format_prot.woz", get_current_dir_name());
-    snprintf(f_rw, sizeof(f_rw), "%s/rw.dsk", get_current_dir_name());
+    char* cwd = get_current_dir_name();
+    snprintf(f_user, sizeof(f_user), "%s/user_prot.dsk", cwd);
+    snprintf(f_os, sizeof(f_os), "%s/os_prot.dsk", cwd);
+    snprintf(f_format, sizeof(f_format), "%s/format_prot.woz", cwd);
+    snprintf(f_rw, sizeof(f_rw), "%s/rw.dsk", cwd);
+    free(cwd);
 
     auto copy_fix = [](const char* src_p, const char* dst_p, size_t size) {
       FilePtr src(fopen(src_p, "rb"), fclose);

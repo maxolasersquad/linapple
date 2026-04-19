@@ -409,6 +409,7 @@ add_executable(test-program-loader
     src/apple2/Memory.cpp
     src/apple2/CPU.cpp
     src/apple2/Video.cpp
+    src/apple2/Keyboard.cpp
     src/apple2/stretch.cpp
     src/apple2/Harddisk.cpp
     src/apple2/Disk.cpp
@@ -538,3 +539,11 @@ add_custom_target(linapple-core DEPENDS linapple)
 if(PERIPHERAL_MODULES)
     add_custom_target(linapple-peripherals-standard DEPENDS ${PERIPHERAL_MODULES})
 endif()
+
+# Test Speaker Subsystem
+add_executable(test-speaker tests/test_main.cpp tests/test_speaker.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
+add_dependencies(test-speaker generate_xpms)
+target_include_directories(test-speaker PRIVATE src src/core src/apple2 src/Debugger ${GEN_RES_DIR} ${RES_DIR} ${DOCTEST_INCLUDE_DIR})
+target_compile_definitions(test-speaker PRIVATE ${PERIPHERAL_DEFINITIONS})
+target_link_libraries(test-speaker PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
+add_test(NAME test-speaker COMMAND test-speaker)
