@@ -58,18 +58,7 @@ endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
 
-# Doctest include path
-find_path(DOCTEST_INCLUDE_DIR doctest.h PATH_SUFFIXES doctest)
-if(NOT DOCTEST_INCLUDE_DIR)
-    include(FetchContent)
-    FetchContent_Declare(
-      doctest
-      GIT_REPOSITORY https://github.com/doctest/doctest.git
-      GIT_TAG v2.4.11
-    )
-    FetchContent_MakeAvailable(doctest)
-    set(DOCTEST_INCLUDE_DIR ${doctest_SOURCE_DIR}/doctest)
-endif()
+
 
 # --- Tools ---
 find_program(MAGICK_EXECUTABLE NAMES magick convert)
@@ -313,7 +302,21 @@ install(FILES "${RES_DIR}/Master.dsk" DESTINATION ${DATA_DIR})
 install(FILES "${RES_DIR}/linapple.conf" DESTINATION ${CONF_DIR})
 
 # --- Tests ---
-enable_testing()
+include(CTest)
+
+if(BUILD_TESTING)
+    # Doctest include path
+    find_path(DOCTEST_INCLUDE_DIR doctest.h PATH_SUFFIXES doctest)
+    if(NOT DOCTEST_INCLUDE_DIR)
+        include(FetchContent)
+        FetchContent_Declare(
+          doctest
+          GIT_REPOSITORY https://github.com/doctest/doctest.git
+          GIT_TAG v2.4.11
+        )
+        FetchContent_MakeAvailable(doctest)
+        set(DOCTEST_INCLUDE_DIR ${doctest_SOURCE_DIR}/doctest)
+    endif()
 
 add_executable(test-app-config tests/test_app_config.cpp src/core/Common.cpp src/core/Log.cpp src/frontends/headless/Headless_Path.cpp)
 target_include_directories(test-app-config PRIVATE src src/core tests ${DOCTEST_INCLUDE_DIR})
@@ -556,13 +559,6 @@ endforeach()
 add_test(NAME test-cpu COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cpu_tests.sh")
 set_tests_properties(test-cpu PROPERTIES ENVIRONMENT "EMULATOR=$<TARGET_FILE:linapple>")
 
-# --- Packaging Aliases (Issue #231) ---
-add_custom_target(linapple-core DEPENDS linapple)
-
-if(PERIPHERAL_MODULES)
-    add_custom_target(linapple-peripherals-standard DEPENDS ${PERIPHERAL_MODULES})
-endif()
-
 # Test Speaker Subsystem
 add_executable(test-speaker tests/test_main.cpp tests/test_speaker.cpp ${SOURCES_CORE} ${SOURCES_A2} ${SOURCES_DBG} src/frontends/headless/Stubs.cpp src/frontends/headless/Headless_Path.cpp)
 add_dependencies(test-speaker generate_xpms)
@@ -570,3 +566,12 @@ target_include_directories(test-speaker PRIVATE src src/core src/apple2 src/Debu
 target_compile_definitions(test-speaker PRIVATE ${PERIPHERAL_DEFINITIONS})
 target_link_libraries(test-speaker PRIVATE ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES} ${CMAKE_DL_LIBS} Threads::Threads)
 add_test(NAME test-speaker COMMAND test-speaker)
+
+endif() # BUILD_TESTING
+
+# --- Packaging Aliases (Issue #231) ---
+add_custom_target(linapple-core DEPENDS linapple)
+
+if(PERIPHERAL_MODULES)
+    add_custom_target(linapple-peripherals-standard DEPENDS ${PERIPHERAL_MODULES})
+endif()

@@ -34,8 +34,8 @@ cd linapple
 ### Configure and Compile
 
 ```bash
-# Create a build directory and configure with CMake
-cmake -B build
+# Create a build directory and configure with CMake (skipping tests for a faster build)
+cmake -B build -DBUILD_TESTING=OFF
 
 # Compile using all available CPU cores
 cmake --build build -j$(nproc)
@@ -45,6 +45,7 @@ cmake --build build -j$(nproc)
 You can pass various options to the `cmake` configuration step:
 - `-DFRONTEND=sdl3` : (Default) Build the emulator with the SDL3-based graphical frontend.
 - `-DFRONTEND=headless` : Build the emulator without GUI or SDL dependencies (useful for automated testing or server environments).
+- `-DBUILD_TESTING=OFF` : Skip building the test suite (saves compilation time and dependency fetching).
 - `-DREGISTRY_WRITEABLE=ON` : Enable saving emulator configuration settings back to the config file.
 - `-DPROFILING=ON` : Enable `gprof` profiling output.
 - `-DCMAKE_BUILD_TYPE=Debug` : Build with debugging symbols instead of release optimizations.
